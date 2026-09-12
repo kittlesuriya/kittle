@@ -7,6 +7,9 @@ export class InMemoryCacheAdapter implements CacheAdapter {
   // tag generations are linearizable, but only within a single JS process.
   // Correctness-critical callers must compose this adapter with a shared
   // generation store (SharedGenerationCacheAdapter) to fence across instances.
+  // Memory bounds: every map is pruned. `delete`/`deleteTag` remove revisions
+  // and tag memberships immediately; expired values and rate-limit buckets
+  // are swept by an amortized prune (no background timer to manage).
   readonly capabilities = {
     tagGenerationConsistency: "linearizable" as const,
     coherenceScope: "process" as const,
@@ -22,6 +25,40 @@ export class InMemoryCacheAdapter implements CacheAdapter {
     string,
     { count: number; resetAt: number }
   >()
+  private mutationsSincePrune = 0
+  private static readonly PRUNE_EVERY_MUTATIONS = 128
+
+  /**
+   * Removes expired values (with their revisions), tag memberships of keys
+   * that no longer exist, and expired rate-limit buckets.
+   */
+  private pruneExpired(now: number = Date.now()): void {
+    for (const [key, record] of this.values) {
+      if (record.expiresAt !== undefined && record.expiresAt <= now) {
+        this.values.delete(key)
+        this.revisions.delete(key)
+      }
+    }
+    for (const [tagKey, keys] of this.tags) {
+      for (const key of keys.keys()) {
+        if (!this.values.has(key)) keys.delete(key)
+      }
+      if (keys.size === 0) this.tags.delete(tagKey)
+    }
+    for (const [key, bucket] of this.rateLimitBuckets) {
+      if (bucket.resetAt <= now) this.rateLimitBuckets.delete(key)
+    }
+  }
+
+  private noteMutation(): void {
+    this.mutationsSincePrune += 1
+    if (
+      this.mutationsSincePrune >= InMemoryCacheAdapter.PRUNE_EVERY_MUTATIONS
+    ) {
+      this.mutationsSincePrune = 0
+      this.pruneExpired()
+    }
+  }
 
   private isExpired(record: { expiresAt?: number } | undefined): boolean {
     return record?.expiresAt !== undefined && record.expiresAt <= Date.now()
@@ -35,6 +72,7 @@ export class InMemoryCacheAdapter implements CacheAdapter {
     const record = this.values.get(key)
     if (this.isExpired(record)) {
       this.values.delete(key)
+      this.revisions.delete(key)
     }
   }
 
@@ -56,11 +94,15 @@ export class InMemoryCacheAdapter implements CacheAdapter {
         ? { value, expiresAt: Date.now() + ttlMs, revision }
         : { value, revision }
     )
+    this.noteMutation()
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await
   async delete(key: string): Promise<boolean> {
-    return this.values.delete(key)
+    const existed = this.values.delete(key)
+    this.revisions.delete(key)
+    this.noteMutation()
+    return existed
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await
@@ -76,6 +118,7 @@ export class InMemoryCacheAdapter implements CacheAdapter {
     this.tags.clear()
     this.generations.clear()
     this.rateLimitBuckets.clear()
+    this.mutationsSincePrune = 0
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await
@@ -98,11 +141,14 @@ export class InMemoryCacheAdapter implements CacheAdapter {
     const keys = this.tags.get(tagKey)
     if (keys) {
       for (const [key, taggedRevision] of keys) {
-        if (taggedRevision === this.values.get(key)?.revision)
+        if (taggedRevision === this.values.get(key)?.revision) {
           this.values.delete(key)
+          this.revisions.delete(key)
+        }
       }
     }
     this.tags.delete(tagKey)
+    this.noteMutation()
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await
@@ -132,6 +178,7 @@ export class InMemoryCacheAdapter implements CacheAdapter {
         : { count: 0, resetAt: now + windowMs }
     bucket.count += 1
     this.rateLimitBuckets.set(key, bucket)
+    this.noteMutation()
     return { ...bucket }
   }
 }
