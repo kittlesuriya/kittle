@@ -15,6 +15,7 @@ coverage/
 test-results/
 vitest-report/
 playwright-report/
+ci-artifacts/
 
 # next.js
 /.next/
