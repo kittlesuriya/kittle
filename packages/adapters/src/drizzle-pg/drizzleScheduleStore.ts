@@ -1,21 +1,21 @@
 import { and, asc, eq, gt, lte, lt, or, sql } from "drizzle-orm"
 import type { AnyPgTable } from "drizzle-orm/pg-core"
-import { ConfigurationError, ValidationError } from "core/domain"
+import { ConfigurationError, ValidationError } from "kittle-core/domain"
 import type {
   FencedScheduleClaim,
   ScheduleStore,
   FencedAdvanceScheduleArgs,
   FencedReleaseScheduleArgs,
   RenewScheduleLeaseArgs,
-} from "core/execution/scheduleStore"
+} from "kittle-core/execution/scheduleStore"
 import type {
   ClaimDueSchedulesArgs,
   ScheduleClaim,
   ScheduleScope,
   OverlapPolicy,
   MisfirePolicy,
-} from "core/execution/types"
-import { assertDurableIdentifier } from "core/execution/types"
+} from "kittle-core/execution/types"
+import { assertDurableIdentifier } from "kittle-core/execution/types"
 import type { DrizzleColumnMap } from "./drizzlePredicateCompiler"
 import type { DrizzleSessionLike } from "./drizzleRepository"
 import { getAffectedRows } from "./pgUtils"

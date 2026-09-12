@@ -6,8 +6,8 @@ import {
   text,
 } from "drizzle-orm/sqlite-core"
 import type { SQL } from "drizzle-orm"
-import type { CacheAdapter } from "core/ports"
-import { CacheService } from "core/ports"
+import type { CacheAdapter } from "kittle-core/ports"
+import { CacheService } from "kittle-core/ports"
 import { InMemoryCacheAdapter } from "../inMemoryCacheAdapter"
 import { SharedGenerationCacheAdapter } from "../sharedGenerationCacheAdapter"
 import {

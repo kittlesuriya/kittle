@@ -4,8 +4,8 @@ import {
   evaluatePredicate,
   evaluateAbacRecordAction,
   hasRecordDependentFieldWrite,
-} from "core/domain"
-import type { AbacPolicyBundle, NormalizedAbacPolicy } from "core/domain"
+} from "kittle-core/domain"
+import type { AbacPolicyBundle, NormalizedAbacPolicy } from "kittle-core/domain"
 
 const noConditions = {
   version: 2 as const,

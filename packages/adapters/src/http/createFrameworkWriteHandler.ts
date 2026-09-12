@@ -1,5 +1,5 @@
-import type { ValidationSchema } from "core/ports"
-import { createOperationContext } from "core/operation"
+import type { ValidationSchema } from "kittle-core/ports"
+import { createOperationContext } from "kittle-core/operation"
 import {
   enforceRateLimit,
   isAtomicBatchIdempotencyPort,
@@ -10,7 +10,7 @@ import {
   type RateLimitConfig,
   type RateLimitStore,
   type AbacWriteEnforcer,
-} from "core/ports"
+} from "kittle-core/ports"
 import {
   CapabilityError,
   ConfigurationError,
@@ -20,21 +20,21 @@ import {
   ValidationError,
   assertVerifiedAbacBundle,
   createAbacAuthorizer,
-} from "core/domain"
+} from "kittle-core/domain"
 import { redactPhiDeep } from "../utils/redact"
 import type {
   FrameworkAdapterDeps,
   FrameworkScope,
   FrameworkSession,
 } from "../server"
-import type { OperationDefinition } from "core/operation"
-import { runOperation } from "core/operation"
-import type { CapabilityCheckConfig } from "core/entity/capabilityCheck"
-import type { PersistenceProvider } from "core/ports"
-import { createTenantScopedPersistenceProvider } from "core/ports"
-import type { RuntimeCapabilities } from "core/ports"
+import type { OperationDefinition } from "kittle-core/operation"
+import { runOperation } from "kittle-core/operation"
+import type { CapabilityCheckConfig } from "kittle-core/entity/capabilityCheck"
+import type { PersistenceProvider } from "kittle-core/ports"
+import { createTenantScopedPersistenceProvider } from "kittle-core/ports"
+import type { RuntimeCapabilities } from "kittle-core/ports"
 import { CacheBackedRateLimitStore } from "../cache"
-import { CacheService } from "core/ports"
+import { CacheService } from "kittle-core/ports"
 import {
   createFrameworkErrorHandler,
   frameworkJson,
@@ -44,8 +44,8 @@ import {
   parseUniqueQueryParameters,
   resolveRequestMetadata,
 } from "./requestBody"
-import type { CacheAdapter } from "core/ports"
-import type { AuditSink, OutboxSink } from "core/ports"
+import type { CacheAdapter } from "kittle-core/ports"
+import type { AuditSink, OutboxSink } from "kittle-core/ports"
 import {
   boundRateLimitKeyMaterial,
   buildIdempotencyScopeIdentity,
@@ -138,7 +138,7 @@ export function createFrameworkWriteHandler<
     rateLimit?: {
       config: RateLimitConfig
       consistency?: "atomic" | "best-effort"
-      failureMode?: import("core/ports").RateLimitFailureMode
+      failureMode?: import("kittle-core/ports").RateLimitFailureMode
       key?: (request: Request, session: FrameworkSession) => string
     }
     getRateLimitStore?: () => Promise<RateLimitStore>
@@ -633,7 +633,7 @@ export function createFrameworkWriteHandler<
         ? args.resolveResourceIdentity({ input, session })
         : undefined
 
-      const commitMarkers: import("core/operation").CommitMarkerEntry[] =
+      const commitMarkers: import("kittle-core/operation").CommitMarkerEntry[] =
         idempotency
           ? (() => {
               const idemPort = idempotency.port
@@ -651,9 +651,10 @@ export function createFrameworkWriteHandler<
                   ? { invalidations: invalidationTags }
                   : {}),
               }
-              const marker: import("core/operation").CommitMarkerEntry = {
-                name: "idempotency-commit",
-              }
+              const marker: import("kittle-core/operation").CommitMarkerEntry =
+                {
+                  name: "idempotency-commit",
+                }
               if (isTransactionalIdempotencyPort(idemPort)) {
                 marker.commit = async (_businessResult, persistence) => {
                   await idemPort.markCommittedInTransaction.call(

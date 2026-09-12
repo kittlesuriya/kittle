@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/require-await */
-import type { OperationDefinition } from "core/operation"
+import type { OperationDefinition } from "kittle-core/operation"
 import {
   ConfigurationError,
   assertAbacSecurityDigest,
@@ -10,7 +10,7 @@ import {
   projectResponseRecord,
   resolveFieldReadOverrides,
   type PredicateNode,
-} from "core/domain"
+} from "kittle-core/domain"
 import { createFrameworkWriteHandler } from "../createFrameworkWriteHandler"
 import { frameworkJson } from "../handleFrameworkCoreError"
 import type {

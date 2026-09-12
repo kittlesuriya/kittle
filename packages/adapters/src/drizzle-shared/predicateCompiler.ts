@@ -22,7 +22,7 @@ import type {
   PredicatePrimitive,
   PredicateRangeValue,
   PredicateValue,
-} from "core/domain"
+} from "kittle-core/domain"
 
 export type DrizzleColumnMap = Record<string, AnyColumn>
 

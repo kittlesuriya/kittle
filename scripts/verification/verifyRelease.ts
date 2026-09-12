@@ -64,7 +64,7 @@ function releaseEvidence() {
     ]),
   }
   const packageHashes = Object.fromEntries(
-    ["core", "adapters", "testing"].map((pkg) => [
+    ["kittle-core", "kittle-adapters", "testing"].map((pkg) => [
       pkg,
       {
         treeSha256: treeHash(join(root, "packages", pkg)),

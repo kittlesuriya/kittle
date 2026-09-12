@@ -4,17 +4,23 @@ import { join, relative, resolve } from "node:path"
 const root = resolve(import.meta.dirname, "..")
 const targets = [
   {
-    name: "core",
-    source: join(root, "packages", "core", "src"),
-    coverage: join(root, "packages", "core", "coverage", "coverage-final.json"),
-  },
-  {
-    name: "adapters",
-    source: join(root, "packages", "adapters", "src"),
+    name: "kittle-core",
+    source: join(root, "packages", "kittle-core", "src"),
     coverage: join(
       root,
       "packages",
-      "adapters",
+      "kittle-core",
+      "coverage",
+      "coverage-final.json"
+    ),
+  },
+  {
+    name: "kittle-adapters",
+    source: join(root, "packages", "kittle-adapters", "src"),
+    coverage: join(
+      root,
+      "packages",
+      "kittle-adapters",
       "coverage",
       "coverage-final.json"
     ),

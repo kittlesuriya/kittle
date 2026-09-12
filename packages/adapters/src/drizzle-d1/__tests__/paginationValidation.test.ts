@@ -6,13 +6,13 @@ import {
 } from "drizzle-orm/sqlite-core"
 import type { AnyColumn, SQL } from "drizzle-orm"
 import { describe, expect, it, vi } from "vitest"
-import { ConfigurationError, ValidationError } from "core/domain"
+import { ConfigurationError, ValidationError } from "kittle-core/domain"
 import {
   createDrizzlePersistenceProvider,
   createDrizzleRepository,
   type DrizzleSessionLike,
   DrizzleEntityRegistry,
-} from "adapters/drizzle-d1"
+} from "kittle-adapters/drizzle-d1"
 import type { DrizzleD1Database } from "drizzle-orm/d1"
 
 const table = sqliteTable("pagination_rows", {

@@ -1,5 +1,5 @@
-import { buildKey, type CacheAdapter } from "core/ports"
-import type { AtomicRateLimitStore, RateLimitStore } from "core/ports"
+import { buildKey, type CacheAdapter } from "kittle-core/ports"
+import type { AtomicRateLimitStore, RateLimitStore } from "kittle-core/ports"
 
 interface Bucket {
   count: number

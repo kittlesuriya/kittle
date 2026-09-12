@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
-import type { JobStore } from "core/execution"
-import type { ScheduleStore } from "core/execution/scheduleStore"
-import type { OutboxRecord, OutboxSink } from "core/ports"
+import type { JobStore } from "kittle-core/execution"
+import type { ScheduleStore } from "kittle-core/execution/scheduleStore"
+import type { OutboxRecord, OutboxSink } from "kittle-core/ports"
 
 export interface JobStoreConcurrencyContractOptions {
   createStore: () => JobStore

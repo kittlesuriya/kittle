@@ -1,7 +1,7 @@
 import type {
   ClaimedPendingInvalidation,
   FinalizerPort as CoreFinalizerPort,
-} from "core/ports"
+} from "kittle-core/ports"
 
 export type FinalizerPort = CoreFinalizerPort
 

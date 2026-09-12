@@ -1,8 +1,28 @@
 {
-  "name": "adapters",
+  "name": "kittle-adapters",
   "version": "0.1.0",
+  "description": "Drizzle (D1/Postgres), HTTP, cache, and server adapters implementing the kittle-core ports.",
+  "keywords": [
+    "typescript",
+    "drizzle-orm",
+    "cloudflare-d1",
+    "postgres",
+    "http",
+    "cache",
+    "multi-tenancy"
+  ],
+  "license": "MIT",
+  "author": "Suriyaprakash",
   "type": "module",
-  "private": true,
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tsc -b tsconfig.build.json && tsx ../../scripts/verification/rewriteBuildExtensions.ts packages/adapters",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -41,7 +61,7 @@
     }
   },
   "dependencies": {
-    "core": "*",
+    "kittle-core": "^0.1.0",
     "drizzle-orm": "^0.45.2",
     "uuidv7": "^1.2.1",
     "zod": "^4.3.6"

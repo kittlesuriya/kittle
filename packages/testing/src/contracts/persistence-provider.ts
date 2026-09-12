@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest"
-import { Predicate } from "core/domain"
+import { Predicate } from "kittle-core/domain"
 import type {
   EntityDescriptor,
   PersistenceProvider,
   Repository,
-} from "core/ports"
+} from "kittle-core/ports"
 
 interface ContractRow {
   id: string

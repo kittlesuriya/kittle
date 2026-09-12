@@ -8,7 +8,7 @@ import type {
   IdempotencyCommitItem,
   IdempotencyFinalizationPort,
   IdempotencyRequest,
-} from "core/ports"
+} from "kittle-core/ports"
 import type { DrizzleSessionLike } from "./drizzleRepository"
 import {
   d1CurrentEpochMilliseconds,
@@ -166,7 +166,7 @@ export class DrizzleD1IdempotencyStore<TResult>
 
   createCommitBatchItem(
     completion: IdempotencyCommitItem
-  ): import("core/ports").AtomicBatchItem<unknown> {
+  ): import("kittle-core/ports").AtomicBatchItem<unknown> {
     // The atomic item is a durable commit receipt: stable identity + durable
     // obligations only. The provider pairs it with a DB-enforced ownership
     // assertion that aborts the whole batch on a stale token, and never stores
@@ -188,7 +188,7 @@ export class DrizzleD1IdempotencyStore<TResult>
 
   async findCommittedWithPendingInvalidations(
     limit = 100
-  ): Promise<import("core/ports").PendingInvalidation[]> {
+  ): Promise<import("kittle-core/ports").PendingInvalidation[]> {
     const columns = this.table as IdempotencyColumns
     const rows = await this.db
       .select()
@@ -200,7 +200,7 @@ export class DrizzleD1IdempotencyStore<TResult>
         )
       )
       .limit(limit)
-    const pending: import("core/ports").PendingInvalidation[] = []
+    const pending: import("kittle-core/ports").PendingInvalidation[] = []
     for (const rawRow of rows) {
       const row = rawRow as Record<string, unknown>
       try {

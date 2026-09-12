@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "adapters": {
+  "kittle-adapters": {
     "d1": {
       "label": "D1 / Drizzle",
       "implementation": "packages/adapters/src/drizzle-d1",

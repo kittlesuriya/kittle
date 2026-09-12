@@ -3,8 +3,8 @@ import type {
   EntityDescriptor,
   PersistenceProvider,
   TenantScopedAtomicBatchProvider,
-} from "core/ports"
-import { Predicate, type PredicateNode } from "core/domain"
+} from "kittle-core/ports"
+import { Predicate, type PredicateNode } from "kittle-core/domain"
 import { z } from "zod"
 import { createCreateHandler } from "../create"
 import { createUpdateHandler } from "../update"

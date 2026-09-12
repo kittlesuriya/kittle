@@ -4,10 +4,10 @@
     "baseUrl": ".",
     "noEmit": true,
     "paths": {
-      "core": ["../core/src"],
-      "core/*": ["../core/src/*"],
-      "adapters": ["../adapters/src"],
-      "adapters/*": ["../adapters/src/*"]
+      "kittle-core": ["../core/src"],
+      "kittle-core/*": ["../core/src/*"],
+      "kittle-adapters": ["../adapters/src"],
+      "kittle-adapters/*": ["../adapters/src/*"]
     }
   },
   "include": ["src", "tests"]

@@ -1,4 +1,4 @@
-import type { CacheAdapter } from "core/ports"
+import type { CacheAdapter } from "kittle-core/ports"
 
 const TAG_PREFIX = "__tag__"
 

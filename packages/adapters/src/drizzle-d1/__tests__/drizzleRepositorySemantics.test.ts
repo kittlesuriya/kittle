@@ -5,13 +5,13 @@ import {
   OptimisticConcurrencyError,
   Predicate,
   ValidationError,
-} from "core/domain"
+} from "kittle-core/domain"
 import {
   createDrizzleRepository,
   type DrizzleSessionLike,
   type DrizzleUpdateResult,
-} from "adapters/drizzle-d1"
-import type { DrizzleColumnMap } from "adapters/drizzle-d1"
+} from "kittle-adapters/drizzle-d1"
+import type { DrizzleColumnMap } from "kittle-adapters/drizzle-d1"
 
 const drugFormulary = sqliteTable("drug_formulary", {
   id: text("id"),

@@ -6,11 +6,11 @@ import {
   text,
 } from "drizzle-orm/sqlite-core"
 import type { SQL } from "drizzle-orm/sql/sql"
-import { ConfigurationError } from "core/domain"
+import { ConfigurationError } from "kittle-core/domain"
 import {
   createDrizzleJobStore,
   type DrizzleSessionLike,
-} from "adapters/drizzle-d1"
+} from "kittle-adapters/drizzle-d1"
 
 const jobsTable = sqliteTable("platform_jobs", {
   id: text("id"),

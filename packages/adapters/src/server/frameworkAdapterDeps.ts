@@ -1,7 +1,10 @@
-import type { VerifiedAbacPolicyBundle, AbacReadScope } from "core/domain"
+import type {
+  VerifiedAbacPolicyBundle,
+  AbacReadScope,
+} from "kittle-core/domain"
 import type { HttpRequestMetadata } from "../http/trustedClientIp"
 import type { TrustedClientIpResolver } from "../http/requestBody"
-import type { IdempotencyPort, RateLimitStore } from "core/ports"
+import type { IdempotencyPort, RateLimitStore } from "kittle-core/ports"
 
 export type AbacBundle = VerifiedAbacPolicyBundle
 

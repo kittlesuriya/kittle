@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest"
 import { pgTable, text } from "drizzle-orm/pg-core"
-import { ConfigurationError } from "core/domain"
+import { ConfigurationError } from "kittle-core/domain"
 import {
   DrizzleOutboxSink,
   computeOutboxFingerprint,
 } from "../drizzleOutboxSink"
 import type { DrizzleSessionLike } from "../drizzleRepository"
-import type { OutboxRecord } from "core/ports"
+import type { OutboxRecord } from "kittle-core/ports"
 
 const tenantOutboxTable = pgTable("outbox_events", {
   id: text("id"),

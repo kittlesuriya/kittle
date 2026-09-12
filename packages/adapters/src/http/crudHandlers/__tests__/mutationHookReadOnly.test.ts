@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { describe, expect, it } from "vitest"
-import type { EntityDescriptor, PersistenceProvider } from "core/ports"
+import type { EntityDescriptor, PersistenceProvider } from "kittle-core/ports"
 import { z } from "zod"
 import { createCreateHandler } from "../create"
 import type { CrudShared } from "../types"

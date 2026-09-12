@@ -1,5 +1,5 @@
-import type { ValidationSchema } from "core/ports"
-import { ValidationError } from "core/domain"
+import type { ValidationSchema } from "kittle-core/ports"
+import { ValidationError } from "kittle-core/domain"
 import type { HttpRequestMetadata } from "./trustedClientIp"
 
 export const DEFAULT_MAX_JSON_BODY_BYTES = 1024 * 1024

@@ -14,8 +14,8 @@ import type {
   Repository,
   TenantScopedAtomicBatchCommandEncoder,
   TenantScopedWriteCommand,
-} from "core/ports"
-import { canonicalJsonString } from "core/ports"
+} from "kittle-core/ports"
+import { canonicalJsonString } from "kittle-core/ports"
 import type { DrizzleD1Adapter } from "./d1Session"
 import type { DrizzleSessionLike } from "./drizzleRepository"
 import { createDrizzleD1Adapter } from "./d1Session"
@@ -26,8 +26,8 @@ import {
   ConflictError,
   ImmutableFieldViolationError,
   TenantScopeViolationError,
-} from "core/domain"
-import { Predicate } from "core/domain"
+} from "kittle-core/domain"
+import { Predicate } from "kittle-core/domain"
 import { compileDrizzlePredicate } from "./drizzlePredicateCompiler"
 import { assertD1BatchLimits, estimateD1Statement } from "./d1BatchLimits"
 import { d1CurrentEpochMilliseconds } from "./d1Utils"
@@ -803,7 +803,8 @@ export function createDrizzlePersistenceProvider(
         await adapter.raw.batch(batchStatements)
       // Align batch results back to plan items (an idempotency item expands to
       // an assertion + a receipt statement).
-      const perItemResults: import("core/ports").AtomicBatchItemResult[] = []
+      const perItemResults: import("kittle-core/ports").AtomicBatchItemResult[] =
+        []
       let offset = 0
       for (const [itemIndex, item] of plan.items.entries()) {
         const count =

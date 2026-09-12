@@ -4,8 +4,8 @@ import type {
   OutboxSink,
   OutboxSinkFactory,
   PersistenceProvider,
-} from "core/ports"
-import { ConflictError } from "core/domain"
+} from "kittle-core/ports"
+import { ConflictError } from "kittle-core/domain"
 import type { DrizzleSessionLike } from "./drizzleRepository"
 import type { AnyColumn } from "drizzle-orm"
 import type { AnySQLiteTable } from "drizzle-orm/sqlite-core"

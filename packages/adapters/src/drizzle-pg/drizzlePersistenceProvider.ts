@@ -4,12 +4,12 @@ import type {
   TransactionOptions,
   PersistenceCapabilities,
   PersistenceProvider,
-} from "core/ports"
-import type { EntityDescriptor, Repository } from "core/ports"
+} from "kittle-core/ports"
+import type { EntityDescriptor, Repository } from "kittle-core/ports"
 import type { DrizzleSessionLike } from "./drizzleRepository"
 import { createDrizzleRepository } from "./drizzleRepository"
 import type { DrizzleColumnMap } from "./drizzlePredicateCompiler"
-import { ConfigurationError } from "core/domain"
+import { ConfigurationError } from "kittle-core/domain"
 import { createPgSession, type PgDatabaseLike } from "./pgSession"
 
 const sessionByProvider = new WeakMap<PersistenceProvider, DrizzleSessionLike>()

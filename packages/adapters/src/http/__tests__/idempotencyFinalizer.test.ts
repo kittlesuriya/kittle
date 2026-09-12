@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import type { FinalizerPort, PendingInvalidation } from "core/ports"
+import type { FinalizerPort, PendingInvalidation } from "kittle-core/ports"
 import { drainPendingInvalidations } from "../idempotencyFinalizer"
 
 const pending: PendingInvalidation = {

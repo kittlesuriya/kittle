@@ -6,19 +6,19 @@ import type {
   PersistenceProvider,
   RuntimeCapabilities,
   ValidationSchema,
-} from "core/ports"
+} from "kittle-core/ports"
 import type {
   CapabilityCheckConfig,
   CrudLifecycle,
   TenantScopingChoice,
-} from "core/entity"
-import type { EntityDescriptor } from "core/ports"
+} from "kittle-core/entity"
+import type { EntityDescriptor } from "kittle-core/ports"
 import type { FrameworkAdapterDeps, FrameworkSession } from "../../server"
 import type {
   CrudScopeConfig,
   ScopedFrameworkValidatedContext,
 } from "../createFrameworkWriteHandler"
-import type { FilterFieldMeta } from "core/domain"
+import type { FilterFieldMeta } from "kittle-core/domain"
 
 export type SelectableRow = Record<string, unknown>
 export type AuditObject = Record<string, unknown>
@@ -47,11 +47,11 @@ export type MutationOutsideReadScope = {
 export type MutationResult<TRow> = { record: TRow } | MutationOutsideReadScope
 
 export type RateLimitConfigs = {
-  list?: import("core/entity").EntityRateLimitSetting
-  detail?: import("core/entity").EntityRateLimitSetting
-  create?: import("core/entity").EntityRateLimitSetting
-  update?: import("core/entity").EntityRateLimitSetting
-  delete?: import("core/entity").EntityRateLimitSetting
+  list?: import("kittle-core/entity").EntityRateLimitSetting
+  detail?: import("kittle-core/entity").EntityRateLimitSetting
+  create?: import("kittle-core/entity").EntityRateLimitSetting
+  update?: import("kittle-core/entity").EntityRateLimitSetting
+  delete?: import("kittle-core/entity").EntityRateLimitSetting
 }
 export type ValidationSchemas = {
   idParams?: ValidationSchema
@@ -65,7 +65,7 @@ export interface AuditConfig {
   emitOn?: ("create" | "update" | "delete")[]
   includeValues?: boolean
   readAudit?: boolean
-  fieldClassification?: import("core/ports").AuditFieldClassifications
+  fieldClassification?: import("kittle-core/ports").AuditFieldClassifications
   required?: boolean
   auditGuarantee?: "atomic" | "durable" | "best-effort"
   requiredStateSemantics?: "committed-state"
@@ -83,7 +83,7 @@ export interface CrudRoutesConfig {
 }
 
 export type EntityQueryLimitsWithBytes =
-  import("core/entity").EntityQueryLimits & {
+  import("kittle-core/entity").EntityQueryLimits & {
     maxFilterJsonBytes?: number
     maxSortJsonBytes?: number
     maxFilterValueBytes?: number
@@ -104,7 +104,7 @@ export interface CrudOptions<
   policy: CapabilityCheckConfig
   cache: { enabled?: boolean; tag: string; keyPrefix: string }
   getCacheAdapter: () => Promise<CacheAdapter>
-  getRateLimitStore?: () => Promise<import("core/ports").RateLimitStore>
+  getRateLimitStore?: () => Promise<import("kittle-core/ports").RateLimitStore>
   createPersistence: (session: FrameworkSession) => PersistenceProvider
   auditSinkFactory?: (
     session: FrameworkSession,
@@ -118,12 +118,12 @@ export interface CrudOptions<
   validation?: ValidationSchemas
   rateLimit?: RateLimitConfigs
   crud?: CrudLifecycle<TRow, TCreateBody, TUpdateBody, TListRow, TDetailRow>
-  crudHooks?: import("core/entity").EntityCrudHooksConfig
+  crudHooks?: import("kittle-core/entity").EntityCrudHooksConfig
   routes?: Partial<CrudRoutesConfig>
   audit?: AuditConfig
   searchableColumns?: string[]
   queryLimits?: EntityQueryLimitsWithBytes
-  searchStrategy?: import("core/entity").EntitySearchStrategy
+  searchStrategy?: import("kittle-core/entity").EntitySearchStrategy
   filterableColumns?: string[]
   sortableColumns?: string[]
   filterFieldMeta?: Record<string, FilterFieldMeta>
@@ -171,10 +171,10 @@ export type CrudShared<
     session: FrameworkSession
   ) => string[] | Promise<string[]>
   buildReadTags: (session: FrameworkSession) => string[]
-  resolveDefaultSort: () => import("core/ports").SortSpec[] | undefined
+  resolveDefaultSort: () => import("kittle-core/ports").SortSpec[] | undefined
   enforceReadRateLimit: (
     route: "list" | "detail",
-    config: import("core/entity").EntityRateLimitSetting | undefined,
+    config: import("kittle-core/entity").EntityRateLimitSetting | undefined,
     request: Request,
     session: FrameworkSession
   ) => Promise<void>
@@ -183,11 +183,11 @@ export type CrudShared<
     session: FrameworkSession
   ) => Promise<import("../../server").AbacBundle | undefined>
   buildReadScope: (bundle: import("../../server").AbacBundle | undefined) => {
-    filter: import("core/domain").PredicateNode | undefined
+    filter: import("kittle-core/domain").PredicateNode | undefined
     cacheScopeKey?: string
   }
   resolveReadScopeForSession: (session: FrameworkSession) => Promise<{
-    filter: import("core/domain").PredicateNode | undefined
+    filter: import("kittle-core/domain").PredicateNode | undefined
     cacheScopeKey?: string
   }>
 }

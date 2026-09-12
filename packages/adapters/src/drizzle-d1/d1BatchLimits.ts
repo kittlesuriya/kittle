@@ -1,4 +1,4 @@
-import { ConfigurationError } from "core/domain"
+import { ConfigurationError } from "kittle-core/domain"
 
 export type D1BatchLimit =
   "maxBindParams" | "maxStatementBytes" | "maxBatchItems"

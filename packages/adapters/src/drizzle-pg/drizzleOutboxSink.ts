@@ -3,12 +3,12 @@ import type {
   OutboxSink,
   OutboxSinkFactory,
   PersistenceProvider,
-} from "core/ports"
-import { canonicalJsonString } from "core/ports"
+} from "kittle-core/ports"
+import { canonicalJsonString } from "kittle-core/ports"
 import type { DrizzleSessionLike } from "./drizzleRepository"
 import type { AnyPgTable } from "drizzle-orm/pg-core"
 import { getTableColumns, sql, type AnyColumn } from "drizzle-orm"
-import { ConfigurationError, ConflictError } from "core/domain"
+import { ConfigurationError, ConflictError } from "kittle-core/domain"
 import { getDrizzleSession } from "./drizzlePersistenceProvider"
 
 const OUTBOX_FINGERPRINT_VERSION = "v2"

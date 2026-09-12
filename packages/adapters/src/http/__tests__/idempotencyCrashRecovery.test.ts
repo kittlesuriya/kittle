@@ -11,7 +11,7 @@ import type {
   IdempotencyPort,
   PersistenceProvider,
   TransactionalIdempotencyPort,
-} from "core/ports"
+} from "kittle-core/ports"
 
 const persistence = {
   dialect: "test",

@@ -18,9 +18,9 @@ import type {
   Repository,
   SortSpec,
   UpdateWhereOptions,
-} from "core/ports"
-import { assertVersionedWriteHasExpectedVersion } from "core/ports"
-import { Predicate, type PredicateNode } from "core/domain"
+} from "kittle-core/ports"
+import { assertVersionedWriteHasExpectedVersion } from "kittle-core/ports"
+import { Predicate, type PredicateNode } from "kittle-core/domain"
 import type {
   DrizzleColumnMap,
   DrizzlePredicateCompiler,
@@ -33,7 +33,7 @@ import {
   ValidationError,
   ConfigurationError,
   OptimisticConcurrencyError,
-} from "core/domain"
+} from "kittle-core/domain"
 import { getAffectedRows } from "./d1Utils"
 
 type SelectableRow = Record<string, unknown>

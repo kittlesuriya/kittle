@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
-import type { EntityDescriptor, PersistenceProvider } from "core/ports"
+import type { EntityDescriptor, PersistenceProvider } from "kittle-core/ports"
 import {
   bindAbacSecurityDigest,
   deriveAbacSecurityDigest,
   type AbacPolicyBundle,
   type VerifiedAbacPolicyBundle,
-} from "core/domain"
+} from "kittle-core/domain"
 import { createCrudHandlersInternal } from "../createCrudHandlers"
 import { createFrameworkWriteHandler } from "../createFrameworkWriteHandler"
 import type { FrameworkAdapterDeps, FrameworkSession } from "../../server"

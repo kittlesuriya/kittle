@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/require-await */
 import { uuidv7 } from "uuidv7"
-import type { OperationDefinition } from "core/operation"
+import type { OperationDefinition } from "kittle-core/operation"
 import {
   ConfigurationError,
   assertAbacSecurityDigest,
   projectResponseRecord,
   resolveFieldReadOverrides,
-} from "core/domain"
+} from "kittle-core/domain"
 import { createFrameworkWriteHandler } from "../createFrameworkWriteHandler"
 import { frameworkJson } from "../handleFrameworkCoreError"
 import type {

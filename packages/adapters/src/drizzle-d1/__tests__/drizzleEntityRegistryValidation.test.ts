@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core"
-import { ConfigurationError } from "core/domain"
-import type { EntityDescriptor } from "core/ports"
-import { DrizzleEntityRegistry } from "adapters/drizzle-d1"
+import { ConfigurationError } from "kittle-core/domain"
+import type { EntityDescriptor } from "kittle-core/ports"
+import { DrizzleEntityRegistry } from "kittle-adapters/drizzle-d1"
 
 const table = sqliteTable("registry_rows", {
   id: text("id").primaryKey(),

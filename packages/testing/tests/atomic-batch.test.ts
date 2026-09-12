@@ -4,7 +4,7 @@ import {
   type AtomicBatchPlan,
   type AtomicBatchProvider,
   type Repository,
-} from "core/ports"
+} from "kittle-core/ports"
 
 type CreateUser = { kind: "create-user"; email: string }
 

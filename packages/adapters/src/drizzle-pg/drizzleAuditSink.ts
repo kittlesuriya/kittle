@@ -3,7 +3,7 @@ import type {
   AuditSink,
   AuditSinkFactory,
   PersistenceProvider,
-} from "core/ports"
+} from "kittle-core/ports"
 import type { DrizzleSessionLike } from "./drizzleRepository"
 import type { AnyPgTable } from "drizzle-orm/pg-core"
 import { getDrizzleSession } from "./drizzlePersistenceProvider"

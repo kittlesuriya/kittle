@@ -5,14 +5,14 @@ import {
   type PredicatePrimitive,
   type PredicateRangeValue,
   type PredicateValue,
-} from "core/domain/predicate"
+} from "kittle-core/domain/predicate"
 import type {
   FilterFieldMeta,
   FilterFieldType,
-} from "core/domain/filterFieldMeta"
-import { ConfigurationError, ValidationError } from "core/domain"
-import type { EntitySearchStrategy } from "core/entity"
-import type { SortSpec } from "core/ports"
+} from "kittle-core/domain/filterFieldMeta"
+import { ConfigurationError, ValidationError } from "kittle-core/domain"
+import type { EntitySearchStrategy } from "kittle-core/entity"
+import type { SortSpec } from "kittle-core/ports"
 
 export type { FilterFieldMeta, FilterFieldType }
 

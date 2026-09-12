@@ -5,7 +5,7 @@ import {
   ForbiddenError,
   UnauthorizedError,
   ValidationError,
-} from "core/domain"
+} from "kittle-core/domain"
 import { createFrameworkErrorHandler } from "../handleFrameworkCoreError"
 import {
   RequestBodyTooLargeError,

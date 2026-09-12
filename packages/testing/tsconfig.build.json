@@ -10,10 +10,10 @@
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
-      "core": ["../core/dist/index.d.ts"],
-      "core/*": ["../core/dist/*"],
-      "adapters": ["../adapters/dist/index.d.ts"],
-      "adapters/*": ["../adapters/dist/*"]
+      "kittle-core": ["../core/dist/index.d.ts"],
+      "kittle-core/*": ["../core/dist/*"],
+      "kittle-adapters": ["../adapters/dist/index.d.ts"],
+      "kittle-adapters/*": ["../adapters/dist/*"]
     }
   },
   "references": [

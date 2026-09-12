@@ -13,7 +13,7 @@ import {
   RuntimeCapabilityError,
   UnauthorizedError,
   ValidationError,
-} from "core/domain"
+} from "kittle-core/domain"
 import {
   InvalidJsonError,
   RequestBodyTooLargeError,

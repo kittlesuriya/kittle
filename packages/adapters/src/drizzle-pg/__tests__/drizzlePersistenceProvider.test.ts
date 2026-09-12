@@ -7,24 +7,24 @@ import {
   Predicate,
   OptimisticConcurrencyError,
   RetryablePersistenceError,
-} from "core/domain"
+} from "kittle-core/domain"
 import type {
   AuditRecord,
   EntityDescriptor,
   InteractiveTransactionProvider,
-} from "core/ports"
+} from "kittle-core/ports"
 import {
   createDrizzlePersistenceProvider,
   DrizzleEntityRegistry,
   getDrizzleSession,
-} from "adapters/drizzle-pg"
-import { createDrizzleRepository } from "adapters/drizzle-pg"
+} from "kittle-adapters/drizzle-pg"
+import { createDrizzleRepository } from "kittle-adapters/drizzle-pg"
 import {
   createPgSession,
   createDrizzleAuditSinkFactory,
   type PgDatabaseLike,
-} from "adapters/drizzle-pg"
-import { defineEntity } from "core/entity"
+} from "kittle-adapters/drizzle-pg"
+import { defineEntity } from "kittle-core/entity"
 
 const table = pgTable("test_rows", {
   id: text("id").primaryKey(),

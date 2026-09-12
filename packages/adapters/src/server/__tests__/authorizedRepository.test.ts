@@ -5,14 +5,14 @@ import {
   evaluatePredicate,
   bindAbacSecurityDigest,
   type VerifiedAbacPolicyBundle,
-} from "core/domain"
+} from "kittle-core/domain"
 import { createAuthorizedRepository } from "../authorizedRepository"
 import type {
   AbacAuthorizer,
   AbacCollectionDecision,
   NormalizedAbacPolicy,
-} from "core/domain"
-import type { EntityDescriptor, Repository } from "core/ports"
+} from "kittle-core/domain"
+import type { EntityDescriptor, Repository } from "kittle-core/ports"
 
 interface TestRow {
   id: string

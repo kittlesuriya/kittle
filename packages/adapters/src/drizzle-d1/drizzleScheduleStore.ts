@@ -1,22 +1,22 @@
 import { and, asc, eq, gt, lte, or, sql } from "drizzle-orm"
 import { uuidv7 } from "uuidv7"
 import type { AnySQLiteTable } from "drizzle-orm/sqlite-core"
-import { ConfigurationError, ValidationError } from "core/domain"
+import { ConfigurationError, ValidationError } from "kittle-core/domain"
 import type {
   ScheduleStore,
   RenewScheduleLeaseArgs,
   FencedScheduleClaim,
   FencedAdvanceScheduleArgs,
   FencedReleaseScheduleArgs,
-} from "core/execution/scheduleStore"
+} from "kittle-core/execution/scheduleStore"
 import type {
   ClaimDueSchedulesArgs,
   ScheduleClaim,
   ScheduleScope,
   OverlapPolicy,
   MisfirePolicy,
-} from "core/execution/types"
-import { assertDurableIdentifier } from "core/execution/types"
+} from "kittle-core/execution/types"
+import { assertDurableIdentifier } from "kittle-core/execution/types"
 import type { DrizzleColumnMap } from "./drizzlePredicateCompiler"
 import type { DrizzleSessionLike } from "./drizzleRepository"
 import {

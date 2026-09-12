@@ -8,8 +8,8 @@ import {
   type SerializedResponseIdempotencyPort,
 } from "../idempotency"
 import type { FrameworkAdapterDeps } from "../../server"
-import type { IdempotencyPort, PersistenceProvider } from "core/ports"
-import { bindAbacSecurityDigest } from "core/domain"
+import type { IdempotencyPort, PersistenceProvider } from "kittle-core/ports"
+import { bindAbacSecurityDigest } from "kittle-core/domain"
 
 const persistence = {
   dialect: "test",
@@ -56,7 +56,7 @@ function createDeps(
 
 function createPort(
   acquire: SerializedResponseIdempotencyPort["acquire"]
-): import("core/ports").TransactionalIdempotencyPort<SerializedResponse> {
+): import("kittle-core/ports").TransactionalIdempotencyPort<SerializedResponse> {
   return {
     acquire,
     renew: vi.fn(async () => undefined),

@@ -3,8 +3,11 @@ import type {
   CacheAdapter,
   EntityDescriptor,
   PersistenceProvider,
-} from "core/ports"
-import { bindAbacSecurityDigest, type AbacPolicyBundle } from "core/domain"
+} from "kittle-core/ports"
+import {
+  bindAbacSecurityDigest,
+  type AbacPolicyBundle,
+} from "kittle-core/domain"
 import {
   InMemoryCacheAdapter,
   SharedGenerationCacheAdapter,

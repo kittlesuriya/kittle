@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import { sqliteTable, text } from "drizzle-orm/sqlite-core"
-import type { OutboxRecord } from "core/ports"
+import type { OutboxRecord } from "kittle-core/ports"
 import type { DrizzleSessionLike } from "../drizzleRepository"
 import { DrizzleOutboxSink } from "../drizzleOutboxSink"
 

@@ -1,1 +1,1 @@
-export { buildActionScope } from "core/domain"
+export { buildActionScope } from "kittle-core/domain"

@@ -1,9 +1,9 @@
-import { ConfigurationError } from "core/domain"
+import { ConfigurationError } from "kittle-core/domain"
 import {
   ENTITY_DEFINITION_BRAND,
   validateEntity,
   type BrandedEntityDefinition,
-} from "core/entity"
+} from "kittle-core/entity"
 import type {
   AuditSink,
   CacheAdapter,
@@ -11,7 +11,7 @@ import type {
   PersistenceProvider,
   RateLimitStore,
   RuntimeCapabilities,
-} from "core/ports"
+} from "kittle-core/ports"
 import type { FrameworkAdapterDeps, FrameworkSession } from "../server"
 import { createCrudHandlersInternal } from "./createCrudHandlers"
 import type { CrudScopeConfig } from "./createFrameworkWriteHandler"
@@ -23,7 +23,7 @@ export interface CrudRuntime {
   scope: CrudScopeConfig
   createPersistence: (session: FrameworkSession) => PersistenceProvider
   getCacheAdapter: () => Promise<CacheAdapter>
-  getRateLimitStore?: () => Promise<import("core/ports").RateLimitStore>
+  getRateLimitStore?: () => Promise<import("kittle-core/ports").RateLimitStore>
   auditSinkFactory?: (
     session: FrameworkSession,
     persistence?: PersistenceProvider

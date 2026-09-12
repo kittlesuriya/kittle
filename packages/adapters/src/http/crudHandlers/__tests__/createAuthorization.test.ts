@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 import { describe, expect, it, vi } from "vitest"
-import type { EntityDescriptor, PersistenceProvider } from "core/ports"
-import { ForbiddenError } from "core/domain"
+import type { EntityDescriptor, PersistenceProvider } from "kittle-core/ports"
+import { ForbiddenError } from "kittle-core/domain"
 import { assertProtectedCreateFields } from "../shared"
 import type { FrameworkAdapterDeps, FrameworkSession } from "../../../server"
 import { createFrameworkWriteHandler } from "../../createFrameworkWriteHandler"

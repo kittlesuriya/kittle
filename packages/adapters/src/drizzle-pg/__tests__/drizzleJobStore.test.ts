@@ -3,11 +3,11 @@ import { describe, expect, it, vi } from "vitest"
 import { integer, pgTable, text } from "drizzle-orm/pg-core"
 import { PgDialect } from "drizzle-orm/pg-core/dialect"
 import type { SQL } from "drizzle-orm/sql/sql"
-import { ConfigurationError } from "core/domain"
+import { ConfigurationError } from "kittle-core/domain"
 import {
   createDrizzleJobStore,
   type DrizzleSessionLike,
-} from "adapters/drizzle-pg"
+} from "kittle-adapters/drizzle-pg"
 
 const jobsTable = pgTable("platform_jobs", {
   id: text("id"),

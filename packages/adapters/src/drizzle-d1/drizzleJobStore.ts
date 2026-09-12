@@ -13,7 +13,7 @@ import {
   sql,
   type AnyColumn,
 } from "drizzle-orm"
-import { ConfigurationError } from "core/domain"
+import { ConfigurationError } from "kittle-core/domain"
 import type { AnySQLiteTable } from "drizzle-orm/sqlite-core"
 import type {
   JobStore,
@@ -31,7 +31,7 @@ import type {
   EnqueueJobArgs,
   StoredJob,
   JobTransitionResult,
-} from "core/execution/types"
+} from "kittle-core/execution/types"
 import {
   assertRequesterCanEnqueueScope,
   assertJobScopeCanEnqueue,
@@ -42,11 +42,11 @@ import {
   scheduleCorrelationId,
   CorruptJobMetadataError,
   JobIdempotencyConflictError,
-} from "core/execution/types"
+} from "kittle-core/execution/types"
 import {
   buildJobFingerprintInput,
   fingerprintJob,
-} from "core/execution/jobFingerprint"
+} from "kittle-core/execution/jobFingerprint"
 import { uuidv7 } from "uuidv7"
 import type { DrizzleColumnMap } from "./drizzlePredicateCompiler"
 import type { DrizzleSessionLike } from "./drizzleRepository"

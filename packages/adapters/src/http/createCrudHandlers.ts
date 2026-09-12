@@ -14,7 +14,7 @@ import {
   type SelectableRow,
 } from "./crudHandlers/types"
 import type { FrameworkSession } from "../server"
-import type { RuntimeCapabilities, SortSpec } from "core/ports"
+import type { RuntimeCapabilities, SortSpec } from "kittle-core/ports"
 import { frameworkJson } from "./handleFrameworkCoreError"
 
 export type { CrudOptions }

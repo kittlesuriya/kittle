@@ -6,19 +6,19 @@ import {
   assertVerifiedAbacBundle,
   resolveFieldQueryDenials,
   type PredicateNode,
-} from "core/domain"
+} from "kittle-core/domain"
 import {
   projectResponseRecord,
   type AbacAuthorizer,
   type VerifiedAbacPolicyBundle,
-} from "core/domain"
+} from "kittle-core/domain"
 import type {
   EntityDescriptor,
   ListResult,
   PaginationSpec,
   Repository,
   SortSpec,
-} from "core/ports"
+} from "kittle-core/ports"
 
 export interface AuthorizedRepository<
   TRow extends Record<string, unknown>,

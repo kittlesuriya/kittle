@@ -2,7 +2,7 @@ import {
   evaluatePredicate,
   OptimisticConcurrencyError,
   type PredicateNode,
-} from "core/domain"
+} from "kittle-core/domain"
 import type {
   PersistenceProvider,
   EntityDescriptor,
@@ -11,7 +11,7 @@ import type {
   ListResult,
   DeleteOptions,
   UpdateWhereOptions,
-} from "core/ports"
+} from "kittle-core/ports"
 import { runRepositoryContractTests } from "../src/repository-contracts"
 
 function createInMemoryPersistenceProvider(): PersistenceProvider {

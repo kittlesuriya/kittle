@@ -5,18 +5,18 @@ import {
   createReadOnlyPersistenceProvider,
   serializeCacheKeyPart,
   type PersistenceProvider,
-} from "core/ports"
+} from "kittle-core/ports"
 import {
   createOperationContext,
   runOperation,
   type OperationDefinition,
-} from "core/operation"
+} from "kittle-core/operation"
 import {
   Predicate,
   projectResponseRecord,
   resolveFieldReadOverrides,
   NotFoundError,
-} from "core/domain"
+} from "kittle-core/domain"
 import {
   frameworkJson,
   createFrameworkErrorHandler,

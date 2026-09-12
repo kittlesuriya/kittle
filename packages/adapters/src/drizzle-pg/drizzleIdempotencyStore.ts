@@ -9,8 +9,8 @@ import type {
   IdempotencyRequest,
   PersistenceProvider,
   TransactionalIdempotencyPort,
-} from "core/ports"
-import { ConflictError } from "core/domain"
+} from "kittle-core/ports"
+import { ConflictError } from "kittle-core/domain"
 import type { DrizzleSessionLike } from "./drizzleRepository"
 import { getAffectedRows } from "./pgUtils"
 import { getDrizzleSession } from "./drizzlePersistenceProvider"
@@ -183,7 +183,7 @@ export class DrizzlePgIdempotencyStore<TResult>
 
   async findCommittedWithPendingInvalidations(
     limit = 100
-  ): Promise<import("core/ports").PendingInvalidation[]> {
+  ): Promise<import("kittle-core/ports").PendingInvalidation[]> {
     const rows = await this.db
       .select()
       .from(this.table)
@@ -191,7 +191,7 @@ export class DrizzlePgIdempotencyStore<TResult>
         sql`status = 'business-committed' AND pending_invalidations IS NOT NULL`
       )
       .limit(limit)
-    const pending: import("core/ports").PendingInvalidation[] = []
+    const pending: import("kittle-core/ports").PendingInvalidation[] = []
     for (const rawRow of rows) {
       const row = rawRow as Record<string, unknown>
       try {

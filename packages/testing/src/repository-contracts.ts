@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll } from "vitest"
-import { Predicate } from "core/domain"
+import { Predicate } from "kittle-core/domain"
 import type {
   PersistenceProvider,
   EntityDescriptor,
   Repository,
-} from "core/ports"
+} from "kittle-core/ports"
 
 interface TestEntity {
   id: string
@@ -102,7 +102,7 @@ export function runRepositoryContractTests(
       })
 
       const { createTenantScopedPersistenceProvider } =
-        await import("core/ports")
+        await import("kittle-core/ports")
       const scopedPersistence = createTenantScopedPersistenceProvider(
         persistence,
         "tenant-a"

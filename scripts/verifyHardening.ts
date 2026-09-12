@@ -346,8 +346,8 @@ scanExplicitCompatibilitySurfaces()
 
 // Sweep package source for any remaining locale-sensitive ordering in
 // durable security digests. No legacy exemption exists anymore.
-scanLocaleCompare(join(root, "packages", "core", "src"))
-scanLocaleCompare(join(root, "packages", "adapters", "src"))
+scanLocaleCompare(join(root, "packages", "kittle-core", "src"))
+scanLocaleCompare(join(root, "packages", "kittle-adapters", "src"))
 
 for (const packagePath of packageRoots) {
   const packageRoot = join(root, packagePath)

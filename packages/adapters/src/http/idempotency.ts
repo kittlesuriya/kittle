@@ -2,8 +2,8 @@ import type {
   IdempotencyCompletion,
   IdempotencyPort,
   IdempotencyRequest,
-} from "core/ports"
-import { canonicalJsonString } from "core/ports"
+} from "kittle-core/ports"
+import { canonicalJsonString } from "kittle-core/ports"
 
 export const IDEMPOTENCY_FINGERPRINT_VERSION = "v2"
 export const SERIALIZED_RESPONSE_VERSION = "v1"

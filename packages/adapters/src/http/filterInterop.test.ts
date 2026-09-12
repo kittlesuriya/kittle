@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { ConfigurationError, ValidationError } from "core/domain"
+import { ConfigurationError, ValidationError } from "kittle-core/domain"
 import {
   filtersToPredicate,
   parseSortString,

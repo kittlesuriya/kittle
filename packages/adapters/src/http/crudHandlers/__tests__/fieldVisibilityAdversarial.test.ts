@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { describe, expect, it } from "vitest"
-import type { EntityDescriptor, PersistenceProvider } from "core/ports"
+import type { EntityDescriptor, PersistenceProvider } from "kittle-core/ports"
 import {
   Predicate,
   bindAbacSecurityDigest,
   type AbacPolicyBundle,
   type NormalizedAbacPolicy,
-} from "core/domain"
+} from "kittle-core/domain"
 import { createDetailHandler } from "../detail"
 import { createListHandler } from "../list"
 import type { CrudShared } from "../types"

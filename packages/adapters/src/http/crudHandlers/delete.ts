@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/require-await */
-import type { OperationDefinition } from "core/operation"
+import type { OperationDefinition } from "kittle-core/operation"
 import {
   ConfigurationError,
   ConflictError,
   NotFoundError,
   Predicate,
   projectResponseRecord,
-} from "core/domain"
+} from "kittle-core/domain"
 import { createFrameworkWriteHandler } from "../createFrameworkWriteHandler"
 import { frameworkJson } from "../handleFrameworkCoreError"
 import type { CrudShared, DeleteOperationInput, SelectableRow } from "./types"

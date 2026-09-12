@@ -1,5 +1,5 @@
 import type { JobScope, NewJob } from "./types"
-import { canonicalJsonString } from "core/ports"
+import { canonicalJsonString } from "kittle-core/ports"
 
 export const JOB_FINGERPRINT_VERSION = 2
 

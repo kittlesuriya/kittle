@@ -5,12 +5,12 @@ import {
   ConfigurationError,
   OptimisticConcurrencyError,
   NotFoundError,
-} from "core/domain"
+} from "kittle-core/domain"
 import {
   createDrizzleRepository,
   type DrizzleSessionLike,
-} from "adapters/drizzle-pg"
-import type { DrizzleColumnMap } from "adapters/drizzle-pg"
+} from "kittle-adapters/drizzle-pg"
+import type { DrizzleColumnMap } from "kittle-adapters/drizzle-pg"
 
 const productTable = pgTable("products", {
   id: text("id"),

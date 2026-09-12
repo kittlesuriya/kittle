@@ -56,7 +56,7 @@ for (const [name, adapter] of Object.entries(matrix.adapters)) {
   }
 }
 
-const packageManifests = ["core", "adapters", "testing"]
+const packageManifests = ["kittle-core", "kittle-adapters", "testing"]
 for (const pkg of packageManifests) {
   const manifest = JSON.parse(
     readFileSync(join(root, `packages/${pkg}/package.json`), "utf8")

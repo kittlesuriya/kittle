@@ -6,7 +6,7 @@ import type {
   PersistenceProvider,
   Repository,
   EntityDescriptor,
-} from "core/ports"
+} from "kittle-core/ports"
 
 type TestRow = {
   id: string
@@ -141,7 +141,7 @@ function createHandler(
       execute: async ({
         operation,
       }: {
-        operation: import("core/operation").OperationContext
+        operation: import("kittle-core/operation").OperationContext
       }) => {
         const scopedRepo = operation.persistence.repository(testEntity)
         await scopedRepo.findById("row-1")

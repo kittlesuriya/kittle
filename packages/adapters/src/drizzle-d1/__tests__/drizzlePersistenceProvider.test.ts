@@ -10,7 +10,7 @@ import {
   ConfigurationError,
   OptimisticConcurrencyError,
   Predicate,
-} from "core/domain"
+} from "kittle-core/domain"
 import {
   createDrizzlePersistenceProvider,
   createDrizzleRepository,
@@ -19,7 +19,7 @@ import {
   DrizzleOutboxSink,
   D1BatchLimitExceededError,
   type DrizzleD1Command,
-} from "adapters/drizzle-d1"
+} from "kittle-adapters/drizzle-d1"
 import type {
   AtomicBatchPlan,
   AtomicBatchResult,
@@ -27,12 +27,12 @@ import type {
   OutboxRecord,
   TenantScopedAtomicBatchPlan,
   TenantScopedWriteCommand,
-} from "core/ports"
+} from "kittle-core/ports"
 import type { AnySQLiteTable } from "drizzle-orm/sqlite-core"
 import type { DrizzleD1Database } from "drizzle-orm/d1"
-import type { DrizzleSessionLike } from "adapters/drizzle-d1"
-import { defineEntity } from "core/entity"
-import { createTenantScopedPersistenceProvider } from "core/ports"
+import type { DrizzleSessionLike } from "kittle-adapters/drizzle-d1"
+import { defineEntity } from "kittle-core/entity"
+import { createTenantScopedPersistenceProvider } from "kittle-core/ports"
 
 const auditTable = { name: "audit" } as unknown as AnySQLiteTable
 const outboxTable = { name: "outbox" } as unknown as AnySQLiteTable

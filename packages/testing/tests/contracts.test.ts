@@ -1,10 +1,10 @@
-import { OptimisticConcurrencyError } from "core/domain"
+import { OptimisticConcurrencyError } from "kittle-core/domain"
 import type {
   AtomicBatchPlan,
   EntityDescriptor,
   PersistenceProvider,
   Repository,
-} from "core/ports"
+} from "kittle-core/ports"
 import {
   runAtomicBatchContractTests,
   runJobStoreConcurrencyContractTests,
@@ -13,10 +13,10 @@ import {
   runScheduleConcurrencyContractTests,
   runReleaseInvariantTests,
 } from "../src/index"
-import { createTenantScopedPersistenceProvider } from "core/ports"
-import type { JobStore, ScheduleStore, StoredJob } from "core/execution"
-import type { FencedScheduleClaim } from "core/execution/scheduleStore"
-import type { OutboxRecord, OutboxSink } from "core/ports"
+import { createTenantScopedPersistenceProvider } from "kittle-core/ports"
+import type { JobStore, ScheduleStore, StoredJob } from "kittle-core/execution"
+import type { FencedScheduleClaim } from "kittle-core/execution/scheduleStore"
+import type { OutboxRecord, OutboxSink } from "kittle-core/ports"
 
 const auditRecord = {
   id: "audit-contract-1",

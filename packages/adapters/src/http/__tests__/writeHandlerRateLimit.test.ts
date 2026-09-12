@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import { createFrameworkWriteHandler } from "../createFrameworkWriteHandler"
 import type { FrameworkAdapterDeps, FrameworkSession } from "../../server"
-import type { PersistenceProvider } from "core/ports"
+import type { PersistenceProvider } from "kittle-core/ports"
 
 const rateLimit = {
   config: { max: 1, timeWindow: "1 minute" },

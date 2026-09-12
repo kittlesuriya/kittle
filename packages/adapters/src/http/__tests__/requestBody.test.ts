@@ -7,7 +7,7 @@ import {
   resolveRequestMetadata,
 } from "../requestBody"
 import type { FrameworkAdapterDeps } from "../../server"
-import type { PersistenceProvider } from "core/ports"
+import type { PersistenceProvider } from "kittle-core/ports"
 import { resolveTrustedClientIp } from "../trustedClientIp"
 
 const persistence = {} as PersistenceProvider

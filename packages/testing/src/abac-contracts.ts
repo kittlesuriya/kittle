@@ -5,8 +5,8 @@ import {
   evaluateAbacRecordAction,
   buildActionScope,
   Predicate,
-} from "core/domain"
-import type { AbacPolicyBundle } from "core/domain"
+} from "kittle-core/domain"
+import type { AbacPolicyBundle } from "kittle-core/domain"
 
 const emptyConditions = {
   version: 2 as const,

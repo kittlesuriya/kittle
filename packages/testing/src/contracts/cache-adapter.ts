@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { CacheAdapter } from "core/ports"
+import type { CacheAdapter } from "kittle-core/ports"
 
 export interface CacheAdapterContractOptions {
   createAdapter: () => CacheAdapter

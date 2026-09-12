@@ -3,7 +3,7 @@ import type {
   AtomicBatchCapableProvider,
   AtomicBatchPlan,
   PersistenceProvider,
-} from "core/ports"
+} from "kittle-core/ports"
 
 export interface AtomicBatchContractOptions<TCommand> {
   createProvider: () => PersistenceProvider

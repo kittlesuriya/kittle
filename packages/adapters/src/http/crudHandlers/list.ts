@@ -5,12 +5,12 @@ import {
   createReadOnlyPersistenceProvider,
   serializeCacheKeyPart,
   type PersistenceProvider,
-} from "core/ports"
+} from "kittle-core/ports"
 import {
   createOperationContext,
   runOperation,
   type OperationDefinition,
-} from "core/operation"
+} from "kittle-core/operation"
 import {
   ForbiddenError,
   ValidationError,
@@ -19,7 +19,7 @@ import {
   resolveFieldQueryDenials,
   resolveFieldReadOverrides,
   type PredicateNode,
-} from "core/domain"
+} from "kittle-core/domain"
 import {
   DEFAULT_MAX_QUERY_JSON_BYTES,
   filtersToPredicate,

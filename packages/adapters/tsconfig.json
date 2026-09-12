@@ -5,8 +5,8 @@
     "noEmit": true,
     "skipLibCheck": true,
     "paths": {
-      "core": ["../core/src"],
-      "core/*": ["../core/src/*"]
+      "kittle-core": ["../core/src"],
+      "kittle-core/*": ["../core/src/*"]
     }
   },
   "include": ["src"]

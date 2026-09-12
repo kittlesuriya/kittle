@@ -3,7 +3,7 @@ import type {
   EntityDescriptor,
   PersistenceProvider,
   ReadOnlyPersistenceProvider,
-} from "core/ports"
+} from "kittle-core/ports"
 import { createDetailHandler } from "../detail"
 import { createListHandler } from "../list"
 import type { CrudShared } from "../types"
@@ -74,7 +74,7 @@ function makePersistence(supportTx = false) {
 
 type HookSide = (context: {
   persistence: ReadOnlyPersistenceProvider
-  operation?: import("core/operation").OperationContext
+  operation?: import("kittle-core/operation").OperationContext
 }) => unknown
 
 function makeShared(overrides: {

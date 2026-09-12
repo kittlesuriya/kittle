@@ -3,8 +3,8 @@ import {
   type RateLimitConfig,
   type RateLimitPolicy,
   type RateLimitStore,
-} from "core/ports"
-import type { EntityRateLimitSetting } from "core/entity"
+} from "kittle-core/ports"
+import type { EntityRateLimitSetting } from "kittle-core/entity"
 import {
   CapabilityError,
   ConfigurationError,
@@ -15,22 +15,22 @@ import {
   projectResponseRecord,
   resolveFieldReadOverrides,
   type PredicateNode,
-} from "core/domain"
+} from "kittle-core/domain"
 import {
   createReadOnlyPersistenceProvider,
   createTenantScopedPersistenceProvider,
   type PersistenceProvider,
-} from "core/ports"
+} from "kittle-core/ports"
 import { CacheBackedRateLimitStore } from "../../cache"
 import type {
   CrudMutationHookContext,
   CrudPostCommitHookContext,
   CrudReadHookContext,
-} from "core/entity"
+} from "kittle-core/entity"
 import type {
   PostCommitOperationContext,
   OperationContext,
-} from "core/operation"
+} from "kittle-core/operation"
 import type { FrameworkSession } from "../../server"
 import type {
   CrudShared,
@@ -582,7 +582,7 @@ export function createShared<
   }
   const enforceReadRateLimit = async (
     route: "list" | "detail",
-    config: import("core/entity").EntityRateLimitSetting | undefined,
+    config: import("kittle-core/entity").EntityRateLimitSetting | undefined,
     request: Request,
     session: FrameworkSession
   ) => {
