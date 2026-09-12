@@ -1,0 +1,91 @@
+{
+  "name": "core",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json && tsx ../../scripts/verification/rewriteBuildExtensions.ts packages/core",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --max-warnings=0",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./domain": {
+      "types": "./dist/domain/index.d.ts",
+      "default": "./dist/domain/index.js"
+    },
+    "./domain/filterFieldMeta": {
+      "types": "./dist/domain/filterFieldMeta.d.ts",
+      "default": "./dist/domain/filterFieldMeta.js"
+    },
+    "./domain/predicate": {
+      "types": "./dist/domain/predicate.d.ts",
+      "default": "./dist/domain/predicate.js"
+    },
+    "./entity": {
+      "types": "./dist/entity/index.d.ts",
+      "default": "./dist/entity/index.js"
+    },
+    "./entity/capabilityCheck": {
+      "types": "./dist/entity/capabilityCheck.d.ts",
+      "default": "./dist/entity/capabilityCheck.js"
+    },
+    "./execution": {
+      "types": "./dist/execution/index.d.ts",
+      "default": "./dist/execution/index.js"
+    },
+    "./execution/dispatcher": {
+      "types": "./dist/execution/dispatcher.d.ts",
+      "default": "./dist/execution/dispatcher.js"
+    },
+    "./execution/executionContext": {
+      "types": "./dist/execution/executionContext.d.ts",
+      "default": "./dist/execution/executionContext.js"
+    },
+    "./execution/jobRegistry": {
+      "types": "./dist/execution/jobRegistry.d.ts",
+      "default": "./dist/execution/jobRegistry.js"
+    },
+    "./execution/retryPolicy": {
+      "types": "./dist/execution/retryPolicy.d.ts",
+      "default": "./dist/execution/retryPolicy.js"
+    },
+    "./execution/jobFingerprint": {
+      "types": "./dist/execution/jobFingerprint.d.ts",
+      "default": "./dist/execution/jobFingerprint.js"
+    },
+    "./execution/scheduleCalculator": {
+      "types": "./dist/execution/scheduleCalculator.d.ts",
+      "default": "./dist/execution/scheduleCalculator.js"
+    },
+    "./execution/scheduleDispatcher": {
+      "types": "./dist/execution/scheduleDispatcher.d.ts",
+      "default": "./dist/execution/scheduleDispatcher.js"
+    },
+    "./execution/scheduleStore": {
+      "types": "./dist/execution/scheduleStore.d.ts",
+      "default": "./dist/execution/scheduleStore.js"
+    },
+    "./execution/types": {
+      "types": "./dist/execution/types.d.ts",
+      "default": "./dist/execution/types.js"
+    },
+    "./operation": {
+      "types": "./dist/operation/index.d.ts",
+      "default": "./dist/operation/index.js"
+    },
+    "./ports": {
+      "types": "./dist/ports/index.d.ts",
+      "default": "./dist/ports/index.js"
+    }
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.10"
+  }
+}

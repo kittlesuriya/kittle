@@ -1,0 +1,79 @@
+# dependencies
+node_modules/
+**/node_modules/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+coverage/
+test-results/
+vitest-report/
+playwright-report/
+
+# next.js
+/.next/
+/out/
+
+# production
+build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# env files
+.env
+.env.*
+!.env.example
+
+# typescript
+*.tsbuildinfo
+.tsbuildinfo
+**/tsconfig.tsbuildinfo
+**/.tsbuildinfo
+next-env.d.ts
+
+# cloudflare dev state
+.wrangler/
+
+# planning docs (not source)
+.planning/
+reference
+
+# tanstack start
+.output/
+dist/
+.tanstack/
+
+# framework build artifacts
+**/dist/
+
+# dev artifacts
+*.log
+tmp-page-*
+vite-*
+vitest.config.js
+vitest.config.js.map
+vitest.config.d.ts
+vitest.config.d.ts.map
+resp.network-response
+*.zip
+
+# Playwright auth state
+playwright/.auth/
+
+# Cloudflare dev environment variables
+.dev.vars
+.dev.vars.*

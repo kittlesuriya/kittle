@@ -1,0 +1,411 @@
+import {
+  Predicate,
+  ConfigurationError,
+  ForbiddenError,
+  assertFieldQueryAccess,
+  assertVerifiedAbacBundle,
+  resolveFieldQueryDenials,
+  type PredicateNode,
+} from "core/domain"
+import {
+  projectResponseRecord,
+  type AbacAuthorizer,
+  type VerifiedAbacPolicyBundle,
+} from "core/domain"
+import type {
+  EntityDescriptor,
+  ListResult,
+  PaginationSpec,
+  Repository,
+  SortSpec,
+} from "core/ports"
+
+export interface AuthorizedRepository<
+  TRow extends Record<string, unknown>,
+  TId = string,
+> {
+  findMany(args?: {
+    filter?: PredicateNode
+    pagination?: PaginationSpec
+    sort?: SortSpec[]
+  }): Promise<ListResult<TRow>>
+
+  findById(id: TId): Promise<TRow | null>
+
+  insert(
+    input: Partial<TRow>
+  ): Promise<
+    | { applied: true; row: TRow }
+    | { applied: true; reason: "CREATED_OUTSIDE_READ_SCOPE" }
+  >
+
+  update(
+    id: TId,
+    patch: Partial<TRow>,
+    options?: { expectedVersion?: number }
+  ): Promise<
+    | { applied: true; row: TRow }
+    | { applied: true; reason: "UPDATED_OUTSIDE_READ_SCOPE" }
+    | { applied: false; reason: "NOT_FOUND" | "CONFLICT" }
+  >
+
+  delete(
+    id: TId,
+    options?: { expectedVersion?: number }
+  ): Promise<{ applied: boolean; reason?: "NOT_FOUND" | "CONFLICT" }>
+}
+
+/** Collects every field referenced by a caller-supplied predicate. */
+function collectPredicateFields(node: PredicateNode | undefined): string[] {
+  if (!node) return []
+  switch (node.kind) {
+    case "condition":
+      return [node.field]
+    case "and":
+    case "or":
+      return node.filters.flatMap(collectPredicateFields)
+    case "not":
+      return collectPredicateFields(node.filter)
+    case "literal":
+      return []
+  }
+}
+
+export function createAuthorizedRepository<
+  TRow extends Record<string, unknown>,
+  TId extends string | number = string,
+>(args: {
+  repository: Repository<TRow, TId>
+  entity: EntityDescriptor<TRow>
+  authorizer: AbacAuthorizer
+  structuralScope: PredicateNode
+  structuralInsertValues?: Partial<TRow>
+  bundle?: VerifiedAbacPolicyBundle
+}): AuthorizedRepository<TRow, TId> {
+  // The verified brand is a runtime requirement, not just a type: a caller
+  // that passes a forged-but-typed-as-verified bundle must be rejected before
+  // it can drive query-denial decisions with unverified policies.
+  if (args.bundle) assertVerifiedAbacBundle(args.bundle)
+  // The authorized surface requires exact secure semantics; refuse to build it
+  // when the backing repository cannot provide them.
+  if (!args.repository.updateOneWhereReturning) {
+    throw new ConfigurationError(
+      `Authorized repository for "${args.entity.name}" requires updateOneWhereReturning support`
+    )
+  }
+  if (!args.repository.deleteWhere) {
+    throw new ConfigurationError(
+      `Authorized repository for "${args.entity.name}" requires deleteWhere support`
+    )
+  }
+  if (!args.entity.versionField) {
+    throw new ConfigurationError(
+      `Authorized repository for "${args.entity.name}" requires a versionField for optimistic concurrency`
+    )
+  }
+  const primaryKey = args.entity.primaryKey ?? "id"
+
+  function buildAccessFilter(
+    action: string,
+    extraFilter?: PredicateNode,
+    existingScope?: PredicateNode
+  ): PredicateNode {
+    const actionScope =
+      existingScope ?? args.authorizer.assertCollectionAction(action).scope
+    const filters: PredicateNode[] = [args.structuralScope]
+    if (actionScope) filters.push(actionScope)
+    if (extraFilter) filters.push(extraFilter)
+    return Predicate.and(...filters)
+  }
+
+  function redact(row: TRow): TRow {
+    const overrides = args.authorizer.fieldReadPlan(row)
+    return projectResponseRecord({
+      entity: args.entity,
+      record: row,
+      overrides,
+    })
+  }
+
+  return {
+    async findMany(opts) {
+      const collectionScope =
+        args.authorizer.assertCollectionAction("read").scope
+      // Field-level query security: caller filter/sort fields must not probe
+      // fields ABAC masks or omits from responses. The authorizer exposes the
+      // read plan per row; query capability is a static property of the module
+      // bundle, so it is resolved from the bundle when provided.
+      const queryDenials = args.bundle
+        ? resolveFieldQueryDenials({
+            policies: args.bundle.policies,
+            moduleKey: args.bundle.moduleKey,
+          })
+        : undefined
+      if (queryDenials) {
+        assertFieldQueryAccess({
+          denied: queryDenials.filter,
+          fields: collectPredicateFields(opts?.filter),
+          mode: "filter",
+        })
+        assertFieldQueryAccess({
+          denied: queryDenials.sort,
+          fields: (opts?.sort ?? []).map((spec) => spec.field),
+          mode: "sort",
+        })
+      }
+      const filter = buildAccessFilter("read", opts?.filter, collectionScope)
+      const result = await args.repository.findMany({
+        filter,
+        ...(opts?.pagination ? { pagination: opts.pagination } : {}),
+        ...(opts?.sort ? { sort: opts.sort } : {}),
+      })
+      return {
+        ...result,
+        rows: result.rows.map(redact),
+      }
+    },
+
+    async findById(id) {
+      const collectionScope =
+        args.authorizer.assertCollectionAction("read").scope
+      const filter = buildAccessFilter(
+        "read",
+        Predicate.eq(primaryKey, id),
+        collectionScope
+      )
+      const result = await args.repository.findMany({
+        filter,
+        pagination: { page: 1, pageSize: 1 },
+      })
+      if (!result.rows[0]) return null
+      return redact(result.rows[0])
+    },
+
+    async insert(input) {
+      const prohibited = [
+        ...new Set(
+          [
+            args.entity.primaryKey,
+            args.entity.tenantField,
+            args.entity.versionField,
+            ...(args.entity.immutableFields ?? []),
+          ].filter(Boolean)
+        ),
+      ] as string[]
+
+      const providedImmutable = prohibited.filter((f) =>
+        Object.hasOwn(input as object, f)
+      )
+      if (providedImmutable.length > 0) {
+        throw new ForbiddenError(
+          `Cannot set immutable fields on ${args.entity.name}: ${providedImmutable.join(", ")}`,
+          { fields: providedImmutable }
+        )
+      }
+
+      const safeInput = { ...input, ...args.structuralInsertValues }
+      args.authorizer.assertWrite({
+        action: "create",
+        record: safeInput,
+        changedFields: Object.keys(safeInput),
+      })
+
+      const row = await args.repository.insert(safeInput)
+
+      // Re-read under read action scope
+      const insertedId = (row as unknown as Record<string, unknown>)[
+        primaryKey
+      ] as string | number
+      const postReadFilter = buildAccessFilter(
+        "read",
+        Predicate.eq(primaryKey, insertedId)
+      )
+      const verified = await args.repository.findMany({
+        filter: postReadFilter,
+        pagination: { page: 1, pageSize: 1 },
+      })
+
+      if (!verified.rows[0]) {
+        return {
+          applied: true as const,
+          reason: "CREATED_OUTSIDE_READ_SCOPE" as const,
+        }
+      }
+
+      return { applied: true as const, row: redact(verified.rows[0]) }
+    },
+
+    async update(id, patch, options?) {
+      const safePatch = { ...patch } as Record<string, unknown>
+      const prohibited = [
+        ...new Set(
+          [
+            args.entity.primaryKey,
+            args.entity.tenantField,
+            args.entity.versionField,
+            ...(args.entity.immutableFields ?? []),
+          ].filter(Boolean)
+        ),
+      ] as string[]
+
+      const providedProhibited = prohibited.filter((f) =>
+        Object.hasOwn(safePatch, f)
+      )
+      if (providedProhibited.length > 0) {
+        throw new ForbiddenError(
+          `Cannot modify immutable or protected fields on ${args.entity.name}: ${providedProhibited.join(", ")}`,
+          { fields: providedProhibited }
+        )
+      }
+
+      let pkFilter: PredicateNode = Predicate.eq(primaryKey, id)
+      if (options?.expectedVersion !== undefined) {
+        const versionField = args.entity.versionField
+        if (!versionField) {
+          throw new ConfigurationError(
+            `Entity "${args.entity.name}" has no versionField declared. ` +
+              "Add versionField to the entity descriptor to use expectedVersion."
+          )
+        }
+        pkFilter = Predicate.and(
+          pkFilter,
+          Predicate.eq(versionField, options.expectedVersion)
+        )
+      }
+      const filter = buildAccessFilter("update", pkFilter)
+
+      // Without an OCC column there is no generic way to fence the
+      // authorization snapshot against a concurrent policy-relevant write.
+      // Refuse the unsafe operation rather than authorize stale state.
+      if (!args.entity.versionField) {
+        throw new ConfigurationError(
+          `Authorized update for "${args.entity.name}" requires versionField optimistic concurrency`
+        )
+      }
+
+      if (
+        options?.expectedVersion !== undefined &&
+        !Number.isInteger(options.expectedVersion)
+      ) {
+        throw new ConfigurationError(
+          `Authorized update for "${args.entity.name}" requires an integer expectedVersion`
+        )
+      }
+
+      const existing = await args.repository.findMany({
+        filter,
+        pagination: { page: 1, pageSize: 1 },
+      })
+      if (!existing.rows[0]) {
+        return {
+          applied: false,
+          reason:
+            options?.expectedVersion !== undefined ? "CONFLICT" : "NOT_FOUND",
+        } as const
+      }
+      const currentVersion = existing.rows[0][args.entity.versionField]
+      if (
+        typeof currentVersion !== "number" ||
+        !Number.isInteger(currentVersion)
+      ) {
+        throw new ConfigurationError(
+          `Authorized update for "${args.entity.name}" requires numeric version field "${args.entity.versionField}"`
+        )
+      }
+
+      const candidate = { ...existing.rows[0], ...safePatch } as Record<
+        string,
+        unknown
+      >
+      args.authorizer.assertWrite({
+        action: "update",
+        record: candidate,
+        changedFields: Object.keys(safePatch),
+      })
+
+      if (!args.repository.updateOneWhereReturning) {
+        throw new ConfigurationError(
+          "Authorized repository requires updateOneWhereReturning support"
+        )
+      }
+      const updated = await args.repository.updateOneWhereReturning(
+        filter,
+        safePatch as Partial<TRow>,
+        { optimisticConcurrency: { expectedVersion: currentVersion } }
+      )
+
+      if (!updated) {
+        return { applied: false, reason: "CONFLICT" as const }
+      }
+
+      const postReadFilter = buildAccessFilter(
+        "read",
+        Predicate.eq(primaryKey, id)
+      )
+      const verified = await args.repository.findMany({
+        filter: postReadFilter,
+        pagination: { page: 1, pageSize: 1 },
+      })
+      if (!verified.rows[0]) {
+        return {
+          applied: true as const,
+          reason: "UPDATED_OUTSIDE_READ_SCOPE" as const,
+        }
+      }
+
+      return { applied: true as const, row: redact(verified.rows[0]) }
+    },
+
+    async delete(id, options?) {
+      const versionField = args.entity.versionField
+      if (!versionField) {
+        throw new ConfigurationError(
+          `Authorized delete for "${args.entity.name}" requires versionField optimistic concurrency`
+        )
+      }
+      if (
+        options?.expectedVersion === undefined ||
+        !Number.isInteger(options.expectedVersion)
+      ) {
+        throw new ConfigurationError(
+          `Authorized delete for "${args.entity.name}" requires an integer expectedVersion`
+        )
+      }
+      const filter = buildAccessFilter(
+        "delete",
+        Predicate.and(
+          Predicate.eq(primaryKey, id),
+          Predicate.eq(versionField, options.expectedVersion)
+        )
+      )
+
+      const existing = await args.repository.findMany({
+        filter,
+        pagination: { page: 1, pageSize: 1 },
+      })
+      if (!existing.rows[0]) {
+        return { applied: false, reason: "NOT_FOUND" as const }
+      }
+
+      args.authorizer.assertWrite({
+        action: "delete",
+        record: existing.rows[0],
+      })
+
+      if (!args.repository.deleteWhere) {
+        throw new ConfigurationError(
+          "Authorized repository requires deleteWhere support"
+        )
+      }
+      const result = await args.repository.deleteWhere(filter, {
+        optimisticConcurrency: { expectedVersion: options.expectedVersion },
+      })
+
+      if (result.deletedCount === 0) {
+        return { applied: false, reason: "CONFLICT" as const }
+      }
+
+      return { applied: true }
+    },
+  }
+}

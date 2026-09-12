@@ -1,0 +1,65 @@
+{
+  "version": 2,
+  "required": [
+    "job",
+    "schedule",
+    "outbox",
+    "idempotency",
+    "predicate",
+    "atomic-rollback"
+  ],
+  "evidence": {
+    "d1": {
+      "job": [
+        "packages/adapters/src/drizzle-d1/drizzleJobStore.ts",
+        "packages/adapters/src/drizzle-d1/__tests__/drizzleJobStore.test.ts"
+      ],
+      "schedule": [
+        "packages/adapters/src/drizzle-d1/drizzleScheduleStore.ts",
+        "packages/adapters/src/drizzle-d1/__tests__/drizzleScheduleStore.test.ts"
+      ],
+      "outbox": [
+        "packages/adapters/src/drizzle-d1/drizzleOutboxSink.ts",
+        "packages/adapters/src/drizzle-d1/__tests__/drizzleOutboxSink.test.ts"
+      ],
+      "idempotency": [
+        "packages/adapters/src/drizzle-d1/drizzleIdempotencyStore.ts",
+        "packages/adapters/src/drizzle-d1/__tests__/drizzleIdempotencyStore.test.ts"
+      ],
+      "predicate": [
+        "packages/adapters/src/drizzle-d1/drizzlePredicateCompiler.ts",
+        "packages/adapters/src/drizzle-d1/__tests__/drizzlePredicateCompiler.test.ts"
+      ],
+      "atomic-rollback": [
+        "packages/adapters/src/drizzle-d1/drizzlePersistenceProvider.ts",
+        "packages/adapters/src/drizzle-d1/__tests__/drizzlePersistenceProvider.test.ts"
+      ]
+    },
+    "pg": {
+      "job": [
+        "packages/adapters/src/drizzle-pg/drizzleJobStore.ts",
+        "packages/adapters/src/drizzle-pg/__tests__/drizzleJobStore.test.ts"
+      ],
+      "schedule": [
+        "packages/adapters/src/drizzle-pg/drizzleScheduleStore.ts",
+        "packages/adapters/src/drizzle-pg/__tests__/drizzleScheduleStore.test.ts"
+      ],
+      "outbox": [
+        "packages/adapters/src/drizzle-pg/drizzleOutboxSink.ts",
+        "packages/adapters/src/drizzle-pg/__tests__/drizzleOutboxSink.test.ts"
+      ],
+      "idempotency": [
+        "packages/adapters/src/drizzle-pg/drizzleIdempotencyStore.ts",
+        "packages/adapters/src/drizzle-pg/__tests__/idempotencyCrashRecovery.test.ts"
+      ],
+      "predicate": [
+        "packages/adapters/src/drizzle-pg/drizzlePredicateCompiler.ts",
+        "packages/adapters/src/drizzle-pg/__tests__/drizzlePredicateCompiler.test.ts"
+      ],
+      "atomic-rollback": [
+        "packages/adapters/src/drizzle-pg/drizzlePersistenceProvider.ts",
+        "packages/adapters/src/drizzle-pg/__tests__/drizzlePersistenceProvider.test.ts"
+      ]
+    }
+  }
+}

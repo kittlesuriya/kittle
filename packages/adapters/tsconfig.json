@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "paths": {
+      "core": ["../core/src"],
+      "core/*": ["../core/src/*"]
+    }
+  },
+  "include": ["src"]
+}

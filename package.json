@@ -1,0 +1,45 @@
+{
+  "name": "kittle",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "typecheck:core": "npm run typecheck --workspace core",
+    "typecheck:adapters": "npm run typecheck --workspace adapters",
+    "typecheck:testing": "npm run typecheck --workspace testing",
+    "typecheck": "npm run typecheck:core && npm run typecheck:adapters && npm run typecheck:testing",
+    "lint:core": "npm run lint --workspace core",
+    "lint:adapters": "npm run lint --workspace adapters",
+    "lint:testing": "npm run lint --workspace testing",
+    "lint": "npm run lint:core && npm run lint:adapters && npm run lint:testing",
+    "test:core": "npm test --workspace core",
+    "test:adapters": "npm test --workspace adapters",
+    "test:testing": "npm test --workspace testing",
+    "test:coverage:core": "npm run test:coverage --workspace core",
+    "test": "npm run test:core && npm run test:adapters && npm run test:testing",
+    "verify:coverage-inventory": "tsx scripts/verifyCoverageInventory.ts",
+    "verify:api-factory": "tsx scripts/verifyApiFactoryParity.ts",
+    "verify:hardening": "tsx scripts/verifyHardening.ts",
+    "verify:release": "tsx scripts/verification/verifyRelease.ts",
+    "verify:release:static": "npm run build && tsx scripts/verification/verifyReleaseStatic.ts",
+    "test:property": "vitest run packages/testing/tests/property.test.ts",
+    "test:race": "vitest run packages/testing/tests/race.test.ts",
+    "test:crash": "vitest run packages/testing/tests/crash-recovery.test.ts",
+    "verify": "npm run verify:hardening && npm run typecheck:core && npm run typecheck:adapters && npm run typecheck:testing && npm run lint:core && npm run lint:adapters && npm run lint:testing && npm run test:core && npm run test:adapters && npm run test:testing",
+    "build": "tsc -b packages/core/tsconfig.build.json packages/adapters/tsconfig.build.json packages/testing/tsconfig.build.json && tsx scripts/verification/rewriteBuildExtensions.ts packages/core packages/adapters packages/testing",
+    "prettier": "prettier --check \"**/*.{ts,tsx,json,md,mjs,css}\"",
+    "prettier:fix": "prettier --write \"**/*.{ts,tsx,json,md,mjs,css}\""
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "eslint": "^10.4.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.60.0",
+    "vitest": "^4.1.7",
+    "tsx": "^4.23.1",
+    "prettier": "^3.8.1"
+  }
+}
