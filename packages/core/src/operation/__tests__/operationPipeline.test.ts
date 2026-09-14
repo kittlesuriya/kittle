@@ -26,6 +26,7 @@ import {
   AuditActorMissingError,
   RuntimeCapabilityError,
   RetryablePersistenceError,
+  TenantScopeViolationError,
 } from "../../domain"
 import { OperationCommittedEffectError } from "../atomicBatchOperationPipeline"
 import type { AtomicAfterCommitHook, AfterCommitHook } from "../hooks"
@@ -2242,7 +2243,7 @@ describe("atomic-batch operations", () => {
         },
         input: {},
       })
-    ).rejects.toThrow(ConfigurationError)
+    ).rejects.toThrow(TenantScopeViolationError)
   })
 
   it("rejects transactional effects from the post-commit atomic after hook", async () => {

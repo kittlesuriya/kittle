@@ -94,12 +94,6 @@ function resolveClauseValue(
   context: AbacContext
 ): unknown {
   if (clause.userAttr) return resolveUserAttr(context, clause.userAttr)
-
-  if (typeof clause.value === "string") {
-    const userAttr = normalizeUserAttribute(clause.value)
-    if (userAttr) return resolveUserAttr(context, userAttr)
-  }
-
   return clause.value
 }
 
@@ -161,13 +155,7 @@ export function policyClauseToPredicate(args: {
       : resolvedValue !== undefined
         ? [resolvedValue]
         : []
-    const normalized = rawValues.map((v) => {
-      if (typeof v === "string") {
-        const userAttr = normalizeUserAttribute(v)
-        if (userAttr) return resolveUserAttr(args.context, userAttr)
-      }
-      return v
-    })
+    const normalized = [...rawValues]
     const fieldDef = Object.hasOwn(args.fieldCatalog, field)
       ? args.fieldCatalog[field]
       : undefined

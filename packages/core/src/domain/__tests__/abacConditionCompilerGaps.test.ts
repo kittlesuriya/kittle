@@ -306,10 +306,16 @@ describe("ABAC compiler uncovered values and operators", () => {
       fieldCatalog: fields,
     })
     expect(inlineAttribute.success).toBe(true)
-    if (inlineAttribute.success)
+    if (inlineAttribute.success) {
+      // Security: value strings that look like user attributes are NOT resolved;
+      // only explicit userAttr is resolved. Literal "user.roleId" matches itself.
       expect(evaluatePredicate({ text: "r1" }, inlineAttribute.predicate)).toBe(
-        true
+        false
       )
+      expect(
+        evaluatePredicate({ text: "user.roleId" }, inlineAttribute.predicate)
+      ).toBe(true)
+    }
 
     const unknownAttribute = policyClauseToPredicate({
       clause: { field: "text", operator: "equals", userAttr: "user.custom" },

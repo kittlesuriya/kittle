@@ -180,6 +180,25 @@ function normalizeTenantRecord<T extends { tenantId?: string | null }>(
   return { ...record, tenantId }
 }
 
+export const TENANT_SCOPED_BRAND: unique symbol = Symbol(
+  "kittle.tenantScoped"
+)
+
+const tenantScopedProviders = new WeakSet<PersistenceProvider>()
+const tenantScopeIds = new WeakMap<PersistenceProvider, string>()
+
+export function isTenantScopedPersistenceProvider(
+  provider: PersistenceProvider
+): boolean {
+  return tenantScopedProviders.has(provider)
+}
+
+export function getTenantScopeId(
+  provider: PersistenceProvider
+): string | undefined {
+  return tenantScopeIds.get(provider)
+}
+
 export function createTenantScopedPersistenceProvider(
   base: PersistenceProvider,
   tenantId: string
@@ -467,6 +486,8 @@ export function createTenantScopedPersistenceProvider(
       )
   }
 
+  tenantScopedProviders.add(scoped)
+  tenantScopeIds.set(scoped, tenantId)
   return scoped
 }
 

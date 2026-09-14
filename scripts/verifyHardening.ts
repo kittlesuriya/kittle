@@ -231,15 +231,22 @@ function scanPublicExportManifest(packagePath: string): void {
       continue
     }
     if (typeof rawTarget !== "object" || rawTarget === null) continue
-    const target = rawTarget as Record<string, string>
-    const srcTarget = target.default ?? target.types
-    if (
-      typeof srcTarget !== "string" ||
-      (!srcTarget.endsWith(".ts") && !srcTarget.endsWith(".tsx"))
-    )
-      continue
-    const file = join(root, packagePath, srcTarget)
-    if (!existsSync(file)) continue
+    // Resolve from source files, not dist targets, so the gate catches new
+    // re-exports even before a fresh build.
+    const srcRelative =
+      subpath === "." ? "src/index.ts" : `src/${subpath.slice(2)}.ts`
+    const candidates = [
+      join(root, packagePath, srcRelative),
+      join(root, packagePath, `src/${subpath.slice(2)}/index.ts`),
+    ]
+    let file: string | undefined
+    for (const candidate of candidates) {
+      if (existsSync(candidate)) {
+        file = candidate
+        break
+      }
+    }
+    if (!file) continue
     for (const name of resolveExports(file)) {
       if (!approved.includes(name)) {
         report(file, 1, `unapproved public export "${name}" from ${subpath}`)

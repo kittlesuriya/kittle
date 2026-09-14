@@ -2,6 +2,11 @@ export const MAX_CANONICAL_JSON_DEPTH = 100
 export const MAX_CANONICAL_JSON_KEYS = 10_000
 export const MAX_CANONICAL_JSON_BYTES = 1024 * 1024
 
+export const MAX_DURABLE_JSON_DEPTH = MAX_CANONICAL_JSON_DEPTH
+export const MAX_DURABLE_JSON_STRING_BYTES = 65_536
+export const MAX_DURABLE_JSON_TOTAL_KEYS = 10_000
+export const MAX_DURABLE_JSON_SERIALIZED_BYTES = 1024 * 1024
+
 export class CanonicalJsonError extends Error {
   override readonly name = "CanonicalJsonError"
 
@@ -97,6 +102,90 @@ export function canonicalizeJson(value: unknown, depth = 0): unknown {
     return record
   }
   return value
+}
+
+export function assertDurableJson(label: string, value: unknown): void {
+  const budget = { totalKeys: 0, totalBytes: 0 }
+  const visited = new WeakSet<object>()
+  const visit = (entry: unknown, depth: number): void => {
+    if (depth > MAX_DURABLE_JSON_DEPTH) {
+      throw new CanonicalJsonError(
+        `${label} exceeds the maximum nesting depth of ${MAX_DURABLE_JSON_DEPTH}`
+      )
+    }
+    if (
+      entry === undefined ||
+      typeof entry === "bigint" ||
+      typeof entry === "function" ||
+      typeof entry === "symbol" ||
+      (typeof entry === "number" && !Number.isFinite(entry))
+    ) {
+      throw new CanonicalJsonError(`${label} contains a non-durable value`)
+    }
+    if (entry === null) return
+    if (typeof entry === "string") {
+      const bytes = new TextEncoder().encode(entry).byteLength
+      if (bytes > MAX_DURABLE_JSON_STRING_BYTES) {
+        throw new CanonicalJsonError(
+          `${label} contains a string longer than ${MAX_DURABLE_JSON_STRING_BYTES} bytes`
+        )
+      }
+      return
+    }
+    if (typeof entry === "number" || typeof entry === "boolean") return
+    if (Array.isArray(entry)) {
+      if (visited.has(entry))
+        throw new CanonicalJsonError(`${label} contains a circular reference`)
+      visited.add(entry)
+      for (const item of entry) visit(item, depth + 1)
+      visited.delete(entry)
+      return
+    }
+    if (entry instanceof Date) {
+      // Allow Date for outbox/audit durable records — canonicalJson will
+      // encode it as { $type:"Date" } and string byte limits still apply.
+      return
+    }
+    const prototype = Object.getPrototypeOf(entry) as object | null
+    if (prototype !== Object.prototype && prototype !== null)
+      throw new CanonicalJsonError(
+        `${label} contains a Map, Set, class instance, or non-plain object`
+      )
+    if (visited.has(entry))
+      throw new CanonicalJsonError(`${label} contains a circular reference`)
+    visited.add(entry)
+    const record = entry as Record<string, unknown>
+    const keys = Object.keys(record)
+    budget.totalKeys += keys.length
+    if (budget.totalKeys > MAX_DURABLE_JSON_TOTAL_KEYS)
+      throw new CanonicalJsonError(
+        `${label} exceeds the maximum of ${MAX_DURABLE_JSON_TOTAL_KEYS} total keys`
+      )
+    for (const key of keys) {
+      const keyBytes = new TextEncoder().encode(key).byteLength
+      if (keyBytes > MAX_DURABLE_JSON_STRING_BYTES)
+        throw new CanonicalJsonError(
+          `${label} contains a key longer than ${MAX_DURABLE_JSON_STRING_BYTES} bytes`
+        )
+      visit(record[key], depth + 1)
+    }
+    visited.delete(entry)
+  }
+  visit(value, 0)
+  const serialized = JSON.stringify(value)
+  if (serialized !== undefined)
+    budget.totalBytes += new TextEncoder().encode(serialized).byteLength
+  if (budget.totalBytes > MAX_DURABLE_JSON_SERIALIZED_BYTES)
+    throw new CanonicalJsonError(
+      `${label} exceeds the maximum of ${MAX_DURABLE_JSON_SERIALIZED_BYTES} serialized bytes`
+    )
+}
+
+export function assertDurableRecord(
+  value: Record<string, unknown>,
+  label: string
+): void {
+  assertDurableJson(label, value)
 }
 
 /**

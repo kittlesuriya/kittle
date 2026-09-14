@@ -187,8 +187,10 @@ export function createReadOnlyPersistenceProvider(
     repository: readOnlyRepository,
   }
   if (supportsInteractiveTransactions(provider)) {
-    const transactional = readOnly as unknown as InteractiveTransactionProvider
-    transactional.runInTransaction = (work, options) =>
+    const readOnlyWithTransaction = readOnly as ReadOnlyPersistenceProvider & {
+      runInTransaction?: InteractiveTransactionProvider["runInTransaction"]
+    }
+    readOnlyWithTransaction.runInTransaction = (work, options) =>
       provider.runInTransaction(
         (scoped) =>
           work(
@@ -390,6 +392,11 @@ export function assertVersionedWriteHasExpectedVersion(
   if (typeof v === "number" && (!Number.isSafeInteger(v) || v < 0)) {
     throw new ConfigurationError(
       `Versioned entity "${entity.name}" requires expectedVersion to be a non-negative safe integer`
+    )
+  }
+  if (typeof v === "number" && v >= Number.MAX_SAFE_INTEGER) {
+    throw new ConfigurationError(
+      `Versioned entity "${entity.name}" expectedVersion must be less than MAX_SAFE_INTEGER to allow safe increment`
     )
   }
 }

@@ -3,6 +3,8 @@ import {
   defaultAuditSanitizer,
   requireCapability,
   normalizeOutboxRecord,
+  isTenantScopedPersistenceProvider,
+  getTenantScopeId,
   type RuntimeCapabilities,
   type PersistenceProvider,
   type AuditSink,
@@ -11,7 +13,7 @@ import {
   type OutboxSinkFactory,
 } from "../ports"
 import type { RequestContext } from "../domain"
-import { ConfigurationError } from "../domain"
+import { ConfigurationError, TenantScopeViolationError } from "../domain"
 import {
   OperationEffectCollector,
   type CommitMarkerEntry,
@@ -130,6 +132,20 @@ export function createOperationRunContext(
     readOnly?: boolean
   }
 ): InternalOperationRunContext {
+  if (
+    environment.request?.tenantId &&
+    isTenantScopedPersistenceProvider(environment.persistence)
+  ) {
+    const scopeTenantId = getTenantScopeId(environment.persistence)
+    if (
+      scopeTenantId !== undefined &&
+      scopeTenantId !== environment.request.tenantId
+    ) {
+      throw new TenantScopeViolationError(
+        `Request tenant "${environment.request.tenantId}" does not match persistence scope "${scopeTenantId}"`
+      )
+    }
+  }
   const correlationId =
     options?.correlationId ??
     environment.request?.correlationId ??
@@ -224,14 +240,29 @@ function createRunContext(
       collector.addBestEffortEffect(name, execute)
     },
     addCommitMarker: (marker) => collector.registerCommitMarker(marker),
-    withPersistence: (persistence, options) =>
-      createRunContext(
+    withPersistence: (persistence, options) => {
+      if (
+        environment.request?.tenantId &&
+        isTenantScopedPersistenceProvider(persistence)
+      ) {
+        const scopeTenantId = getTenantScopeId(persistence)
+        if (
+          scopeTenantId !== undefined &&
+          scopeTenantId !== environment.request.tenantId
+        ) {
+          throw new TenantScopeViolationError(
+            `Request tenant "${environment.request.tenantId}" does not match persistence scope "${scopeTenantId}"`
+          )
+        }
+      }
+      return createRunContext(
         { ...environment, persistence },
         collector,
         operationId,
         correlationId,
         options?.effectPolicy ?? effectPolicy
-      ),
+      )
+    },
     takePreCommitEffects: () => collector.takePreCommitEffects(),
     takeDeferredEffects: () => collector.takeDeferredEffects(),
     dispose: () => collector.dispose(),

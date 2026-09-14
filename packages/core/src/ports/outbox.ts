@@ -1,4 +1,5 @@
 import type { PersistenceProvider } from "./persistence"
+import { assertDurableRecord } from "./canonicalJson"
 
 export interface NewOutboxRecord {
   id?: string
@@ -21,6 +22,7 @@ export function normalizeOutboxRecord(
   record: NewOutboxRecord,
   defaults: { id: string; occurredAt: Date }
 ): OutboxRecord {
+  assertDurableRecord(record.payload, "Outbox payload")
   return {
     ...record,
     id: record.id ?? defaults.id,

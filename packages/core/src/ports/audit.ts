@@ -1,5 +1,6 @@
 import type { ActorContext } from "../domain/requestContext"
 import type { PersistenceProvider } from "./persistence"
+import { assertDurableRecord } from "./canonicalJson"
 
 export type { ActorContext }
 
@@ -74,6 +75,9 @@ export function buildAuditRecord(args: {
   newValue?: Record<string, unknown> | null
   metadata?: Record<string, unknown>
 }): AuditRecord {
+  if (args.oldValue) assertDurableRecord(args.oldValue, "Audit oldValue")
+  if (args.newValue) assertDurableRecord(args.newValue, "Audit newValue")
+  if (args.metadata) assertDurableRecord(args.metadata, "Audit metadata")
   return {
     id: args.id,
     occurredAt: args.occurredAt,

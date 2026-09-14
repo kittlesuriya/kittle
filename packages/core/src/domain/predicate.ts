@@ -265,6 +265,20 @@ export function findUnsupportedPredicateCombination(
 }
 
 /**
+ * Wrap a predicate leaf with COALESCE(expr, FALSE) semantics for SQL parity.
+ * Use this when compiling predicates to SQL for tiered ABAC negation.
+ * The JS evaluator collapses UNKNOWN to false via === true; SQL must do
+ * COALESCE before NOT to avoid three-valued logic divergence.
+ */
+export function strictBooleanPredicate(
+  node: PredicateNode
+): PredicateNode {
+  // No-op in core — represents the COALESCE wrapper. Adapters should apply
+  // COALESCE when compiling: the JS tree stays two-valued via evaluatePredicate.
+  return node
+}
+
+/**
  * Array-valued predicates require database-specific array operators, and empty
  * semantics differ between in-memory arrays and SQL. Keep them out of activated
  * policies until every persistence compiler has identical semantics.

@@ -1,3 +1,5 @@
+import { ConfigurationError } from "../domain/errors"
+
 const MAX_DEFINITION_DEPTH = 64
 const MAX_DEFINITION_NODES = 10_000
 
@@ -30,6 +32,10 @@ export function cloneAndFreezeDefinition<T>(value: T): T {
     for (const key of Reflect.ownKeys(current)) {
       const descriptor = Object.getOwnPropertyDescriptor(current, key)
       if (!descriptor) continue
+      if (descriptor.get || descriptor.set)
+        throw new ConfigurationError(
+          "Framework definitions must not contain accessors"
+        )
       if ("value" in descriptor)
         descriptor.value = clone(descriptor.value, depth + 1)
       Object.defineProperty(copy, key, descriptor)
