@@ -33,7 +33,20 @@ function isPlainObject(value: object): boolean {
  * a durable fingerprint can never collapse to a different identity. Object keys
  * are ordered by UTF-16 code unit, never locale-sensitive.
  */
-export function canonicalizeJson(value: unknown, depth = 0): unknown {
+/**
+ * Internal budget shared across recursive calls to enforce cumulative key
+ * limits. Prevents an attacker from bypassing the per-object key limit by
+ * distributing keys across many shallow objects.
+ */
+interface CanonicalKeyBudget {
+  totalKeys: number
+}
+
+export function canonicalizeJson(
+  value: unknown,
+  depth = 0,
+  budget: CanonicalKeyBudget = { totalKeys: 0 }
+): unknown {
   if (depth > MAX_CANONICAL_JSON_DEPTH) {
     throw new CanonicalJsonError(
       `Canonical JSON nesting exceeds the maximum depth of ${MAX_CANONICAL_JSON_DEPTH}`
@@ -64,7 +77,7 @@ export function canonicalizeJson(value: unknown, depth = 0): unknown {
     return { $type: "Date", value: value.toISOString() }
   }
   if (Array.isArray(value))
-    return value.map((item) => canonicalizeJson(item, depth + 1))
+    return value.map((item) => canonicalizeJson(item, depth + 1, budget))
   if (value && typeof value === "object") {
     if (!isPlainObject(value)) {
       throw new CanonicalJsonError(
@@ -82,6 +95,12 @@ export function canonicalizeJson(value: unknown, depth = 0): unknown {
         `Canonical JSON object exceeds the maximum of ${MAX_CANONICAL_JSON_KEYS} keys`
       )
     }
+    budget.totalKeys += keys.length
+    if (budget.totalKeys > MAX_CANONICAL_JSON_KEYS) {
+      throw new CanonicalJsonError(
+        `Canonical JSON exceeds the maximum cumulative total of ${MAX_CANONICAL_JSON_KEYS} keys`
+      )
+    }
     if (
       Object.hasOwn(value, "__proto__") ||
       Object.hasOwn(value, "constructor") ||
@@ -96,7 +115,8 @@ export function canonicalizeJson(value: unknown, depth = 0): unknown {
     for (const key of keys) {
       record[key] = canonicalizeJson(
         (value as Record<string, unknown>)[key],
-        depth + 1
+        depth + 1,
+        budget
       )
     }
     return record
@@ -155,6 +175,15 @@ export function assertDurableJson(label: string, value: unknown): void {
       throw new CanonicalJsonError(`${label} contains a circular reference`)
     visited.add(entry)
     const record = entry as Record<string, unknown>
+    if (
+      Object.hasOwn(record, "__proto__") ||
+      Object.hasOwn(record, "constructor") ||
+      Object.hasOwn(record, "prototype")
+    ) {
+      throw new CanonicalJsonError(
+        `${label} contains __proto__, constructor, or prototype as own key`
+      )
+    }
     const keys = Object.keys(record)
     budget.totalKeys += keys.length
     if (budget.totalKeys > MAX_DURABLE_JSON_TOTAL_KEYS)

@@ -101,6 +101,16 @@ function includesAll(
  */
 type PredicateTruth = true | false | null
 
+/**
+ * Evaluate a single leaf condition against a record.
+ *
+ * IMPORTANT: Field resolution uses flat `record[field]` lookup — dot-notation
+ * paths like `"a.b.c"` are NOT resolved as nested object traversals. A field
+ * containing `"."` will resolve to `undefined` for nested records, which
+ * collapses to UNKNOWN (false) via the three-valued logic boundary. This is
+ * safe under deny-by-default semantics but means ABAC policy conditions must
+ * reference top-level record keys only.
+ */
 function evaluateCondition(
   record: Record<string, unknown>,
   condition: Extract<PredicateNode, { kind: "condition" }>
