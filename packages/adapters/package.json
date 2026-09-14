@@ -1,6 +1,6 @@
 {
   "name": "kittle-adapters",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Drizzle (D1/Postgres), HTTP, cache, and server adapters implementing the kittle-core ports.",
   "keywords": [
     "typescript",
@@ -61,7 +61,7 @@
     }
   },
   "dependencies": {
-    "kittle-core": "^0.1.0",
+    "kittle-core": "^0.1.1",
     "drizzle-orm": "^0.45.2",
     "uuidv7": "^1.2.1",
     "zod": "^4.3.6"
