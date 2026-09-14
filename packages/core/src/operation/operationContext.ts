@@ -133,7 +133,7 @@ export function createOperationRunContext(
   }
 ): InternalOperationRunContext {
   if (
-    environment.request?.tenantId &&
+    environment.request?.tenantId != null &&
     isTenantScopedPersistenceProvider(environment.persistence)
   ) {
     const scopeTenantId = getTenantScopeId(environment.persistence)
@@ -242,7 +242,7 @@ function createRunContext(
     addCommitMarker: (marker) => collector.registerCommitMarker(marker),
     withPersistence: (persistence, options) => {
       if (
-        environment.request?.tenantId &&
+        environment.request?.tenantId != null &&
         isTenantScopedPersistenceProvider(persistence)
       ) {
         const scopeTenantId = getTenantScopeId(persistence)
