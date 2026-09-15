@@ -6,7 +6,7 @@ import {
   NotFoundError,
   TenantScopeViolationError,
   UnsupportedCapabilityError,
-} from "../../domain/errors"
+} from "../../foundation/errors"
 import { createTenantScopedPersistenceProvider } from "../scopedPersistence"
 import {
   type EntityDescriptor,

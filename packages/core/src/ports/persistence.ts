@@ -2,7 +2,7 @@ import type { PersistenceCapabilities } from "./capabilities"
 import type { PredicateNode } from "../domain/predicate"
 import type { AuditRecord } from "./audit"
 import type { OutboxRecord } from "./outbox"
-import { ConfigurationError } from "../domain"
+import { ConfigurationError } from "../foundation/errors"
 
 export interface SortSpec {
   field: string

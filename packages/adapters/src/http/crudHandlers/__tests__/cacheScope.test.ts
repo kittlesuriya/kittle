@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
+import type { CacheAdapter } from "kittle-core/cache"
 import type {
-  CacheAdapter,
   EntityDescriptor,
   PersistenceProvider,
 } from "kittle-core/ports"

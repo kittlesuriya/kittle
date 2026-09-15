@@ -1,5 +1,5 @@
 import { ConfigurationError } from "kittle-core/domain"
-import type { CacheAdapter } from "kittle-core/ports"
+import type { CacheAdapter } from "kittle-core/cache"
 
 /**
  * Declares which backing engine builds the default cache adapter. Capabilities

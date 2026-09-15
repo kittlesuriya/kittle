@@ -1,5 +1,5 @@
 import { type PredicateNode } from "./predicate"
-import { resolveTieredDecision } from "./abacTierDecision"
+import { resolveTieredDecision } from "../foundation/abacTierDecision"
 import { evaluatePredicate } from "./evaluatePredicate"
 import { buildActionScope } from "./abacReadScope"
 import {

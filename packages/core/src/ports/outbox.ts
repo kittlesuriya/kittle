@@ -1,5 +1,5 @@
 import type { PersistenceProvider } from "./persistence"
-import { assertDurableRecord } from "./canonicalJson"
+import { assertDurableRecord } from "../foundation/canonicalJson"
 
 export interface NewOutboxRecord {
   id?: string

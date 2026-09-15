@@ -23,7 +23,7 @@ import {
   ForbiddenError,
   OutboxSinkMissingError,
   RetryablePersistenceError,
-} from "../domain"
+} from "../foundation/errors"
 import type {
   StandardOperationDefinition,
   StandardAtomicityMode,

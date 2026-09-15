@@ -21,7 +21,7 @@ import type {
 import { InvalidJobPayloadError, MalformedJobPayloadError } from "./types"
 import { assertJobScopeMatches } from "./types"
 import { createExecutionContext, createNoopLogger } from "./executionContext"
-import { ValidationError } from "../domain"
+import { ValidationError } from "../foundation/errors"
 
 export interface DispatchResult {
   claimed: number

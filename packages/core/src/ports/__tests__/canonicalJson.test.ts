@@ -3,7 +3,7 @@ import {
   canonicalizeJson,
   canonicalJsonString,
   CanonicalJsonError,
-} from "../canonicalJson"
+} from "../../foundation/canonicalJson"
 
 describe("canonical JSON", () => {
   it("encodes dates deterministically as a typed marker", () => {

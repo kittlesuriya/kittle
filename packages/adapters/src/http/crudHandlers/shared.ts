@@ -3,7 +3,7 @@ import {
   type RateLimitConfig,
   type RateLimitPolicy,
   type RateLimitStore,
-} from "kittle-core/ports"
+} from "kittle-core/rate-limit"
 import type { EntityRateLimitSetting } from "kittle-core/entity"
 import {
   CapabilityError,

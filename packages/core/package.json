@@ -1,6 +1,6 @@
 {
   "name": "kittle-core",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Domain, entity, execution, operation, and persistence-port primitives for building tenant-aware TypeScript applications.",
   "keywords": [
     "typescript",
@@ -33,6 +33,30 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./foundation": {
+      "types": "./dist/foundation/index.d.ts",
+      "default": "./dist/foundation/index.js"
+    },
+    "./foundation/errors": {
+      "types": "./dist/foundation/errors.d.ts",
+      "default": "./dist/foundation/errors.js"
+    },
+    "./foundation/canonicalJson": {
+      "types": "./dist/foundation/canonicalJson.d.ts",
+      "default": "./dist/foundation/canonicalJson.js"
+    },
+    "./cache": {
+      "types": "./dist/cache/index.d.ts",
+      "default": "./dist/cache/index.js"
+    },
+    "./cache/cacheService": {
+      "types": "./dist/cache/cacheService.d.ts",
+      "default": "./dist/cache/cacheService.js"
+    },
+    "./rate-limit": {
+      "types": "./dist/rate-limit/index.d.ts",
+      "default": "./dist/rate-limit/index.js"
     },
     "./domain": {
       "types": "./dist/domain/index.d.ts",

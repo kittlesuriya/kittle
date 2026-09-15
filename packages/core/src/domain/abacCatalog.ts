@@ -1,6 +1,6 @@
 import type { PolicyOperator } from "./abacPolicySchema"
 import type { AbacFieldType } from "./coercePolicyValue"
-import { ConfigurationError } from "./errors"
+import { ConfigurationError } from "../foundation/errors"
 
 export interface AbacFieldDefinition {
   key: string

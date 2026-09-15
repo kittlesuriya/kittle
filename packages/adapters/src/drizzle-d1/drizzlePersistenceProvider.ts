@@ -15,7 +15,7 @@ import type {
   TenantScopedAtomicBatchCommandEncoder,
   TenantScopedWriteCommand,
 } from "kittle-core/ports"
-import { canonicalJsonString } from "kittle-core/ports"
+import { canonicalJsonString } from "kittle-core/foundation/canonicalJson"
 import type { DrizzleD1Adapter } from "./d1Session"
 import type { DrizzleSessionLike } from "./drizzleRepository"
 import { createDrizzleD1Adapter } from "./d1Session"

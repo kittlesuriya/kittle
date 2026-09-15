@@ -1,1 +1,2 @@
-export * from "./definitionIntegrity"
+export * from "../foundation/definitionIntegrity"
+export * from "../foundation/canonicalJson"

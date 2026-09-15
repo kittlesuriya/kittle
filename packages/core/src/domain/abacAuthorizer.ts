@@ -1,4 +1,4 @@
-import { ForbiddenError } from "./errors"
+import { ForbiddenError } from "../foundation/errors"
 import {
   evaluateAbacRecordAction,
   evaluateAbacActionForCollection,

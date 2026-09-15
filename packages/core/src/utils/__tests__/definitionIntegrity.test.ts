@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { cloneAndFreezeDefinition } from "../definitionIntegrity"
+import { cloneAndFreezeDefinition } from "../../foundation/definitionIntegrity"
 
 describe("cloneAndFreezeDefinition", () => {
   it("clones and freezes cyclic plain definitions without freezing the source", () => {

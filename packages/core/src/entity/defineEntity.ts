@@ -2,18 +2,17 @@ import type {
   AuditFieldClassifications,
   EntityDescriptor,
   ReadOnlyPersistenceProvider,
-  RateLimitConfig,
-  RateLimitPolicy,
   ValidationSchema,
 } from "../ports"
+import type { RateLimitConfig, RateLimitPolicy } from "../rate-limit"
 import type { CapabilityCheckConfig } from "./capabilityCheck"
 import { resolveCapabilityKey } from "./capabilityCheck"
 import type { TenantScopingChoice } from "./tenantScoping"
-import type { FilterFieldMeta } from "../domain"
+import type { FilterFieldMeta } from "../foundation/filterFieldMeta"
 import type { OperationContext, PostCommitOperationContext } from "../operation"
 import { validateEntity } from "./validateEntity"
-import { ConfigurationError } from "../domain"
-import { cloneAndFreezeDefinition } from "../utils"
+import { ConfigurationError } from "../foundation/errors"
+import { cloneAndFreezeDefinition } from "../foundation/definitionIntegrity"
 
 export type CrudRouteKey = "list" | "detail" | "create" | "update" | "delete"
 

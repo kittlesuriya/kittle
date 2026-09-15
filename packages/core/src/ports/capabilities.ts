@@ -1,4 +1,4 @@
-import { RuntimeCapabilityError } from "../domain/errors"
+import { RuntimeCapabilityError } from "../foundation/errors"
 
 export interface PersistenceCapabilities {
   interactiveTransactions: boolean

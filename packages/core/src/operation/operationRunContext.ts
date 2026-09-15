@@ -5,8 +5,8 @@ import type {
   RuntimeCapability,
 } from "../ports"
 import type { CommitMarkerEntry } from "./operationEffectCollector"
-import type { RequestContext } from "../domain"
-import type { OperationServices } from "./operationServices"
+import type { RequestContext } from "../foundation/requestContext"
+import type { OperationServices } from "../foundation/operationServices"
 import type { PostCommitOperationContext } from "./operationContext"
 import type { OperationEffectCollector } from "./operationEffectCollector"
 

@@ -5,7 +5,7 @@ import {
   NotFoundError,
   TenantScopeViolationError,
   ImmutableFieldViolationError,
-} from "../domain/errors"
+} from "../foundation/errors"
 import type { EntityDescriptor } from "./persistence"
 import type {
   AtomicBatchPlan,

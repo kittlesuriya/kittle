@@ -1,4 +1,4 @@
-import type { CacheAdapter } from "kittle-core/ports"
+import type { CacheAdapter } from "kittle-core/cache"
 import type { TagGenerationStore } from "./dbTagGenerationStore"
 
 export interface SharedGenerationCacheAdapterArgs {

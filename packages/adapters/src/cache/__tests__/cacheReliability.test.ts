@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { CacheAdapterError } from "kittle-core/ports"
+import { CacheAdapterError } from "kittle-core/cache"
 import { CacheBackedRateLimitStore } from "../cacheBackedRateLimitStore"
 import { InMemoryCacheAdapter } from "../inMemoryCacheAdapter"
 import { KvCacheAdapter } from "../kvCacheAdapter"

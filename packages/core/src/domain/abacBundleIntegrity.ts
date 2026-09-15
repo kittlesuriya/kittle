@@ -1,6 +1,7 @@
 import type { AbacPolicyBundle, VerifiedAbacPolicyBundle } from "./abacTypes"
-import { canonicalizeJson } from "../ports/canonicalJson"
-import { cloneAndFreezeDefinition } from "../utils"
+import { canonicalizeJson } from "../foundation/canonicalJson"
+import { cloneAndFreezeDefinition } from "../foundation/definitionIntegrity"
+import { ConfigurationError } from "../foundation/errors"
 
 const VERIFIED_ABAC_BUNDLE = Symbol("verified-abac-bundle")
 
@@ -30,7 +31,7 @@ export async function bindAbacSecurityDigest(
   bundle: Omit<AbacPolicyBundle, "securityDigest">
 ): Promise<VerifiedAbacPolicyBundle> {
   if (bundle.defaultEffect !== "deny")
-    throw new Error("ABAC bundles must be deny-by-default")
+    throw new ConfigurationError("ABAC bundles must be deny-by-default")
   const { securityDigest: _ignored, ...withoutDigest } =
     bundle as AbacPolicyBundle
   const securityDigest = await deriveAbacSecurityDigest(withoutDigest)
@@ -57,14 +58,14 @@ export async function assertAbacSecurityDigest(
   bundle: AbacPolicyBundle
 ): Promise<void> {
   if (bundle.defaultEffect !== "deny")
-    throw new Error("ABAC bundles must be deny-by-default")
+    throw new ConfigurationError("ABAC bundles must be deny-by-default")
   if (!bundle.securityDigest)
-    throw new Error("ABAC bundle security digest is missing")
+    throw new ConfigurationError("ABAC bundle security digest is missing")
   assertVerifiedAbacBundle(bundle)
   const { securityDigest: _ignored, ...withoutDigest } = bundle
   const expected = await deriveAbacSecurityDigest(withoutDigest)
   if (expected !== bundle.securityDigest)
-    throw new Error("ABAC bundle security digest mismatch")
+    throw new ConfigurationError("ABAC bundle security digest mismatch")
 }
 
 export function assertVerifiedAbacBundle(
@@ -78,6 +79,6 @@ export function assertVerifiedAbacBundle(
     (bundle as BrandedVerifiedBundle)[VERIFIED_ABAC_BUNDLE] !== true ||
     typeof bundle.securityDigest !== "string"
   ) {
-    throw new Error("ABAC bundle is not a verified production bundle")
+    throw new ConfigurationError("ABAC bundle is not a verified production bundle")
   }
 }

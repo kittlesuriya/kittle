@@ -4,7 +4,8 @@ import type {
 } from "kittle-core/domain"
 import type { HttpRequestMetadata } from "../http/trustedClientIp"
 import type { TrustedClientIpResolver } from "../http/requestBody"
-import type { IdempotencyPort, RateLimitStore } from "kittle-core/ports"
+import type { IdempotencyPort } from "kittle-core/ports"
+import type { RateLimitStore } from "kittle-core/rate-limit"
 
 export type AbacBundle = VerifiedAbacPolicyBundle
 

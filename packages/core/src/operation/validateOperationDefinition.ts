@@ -1,11 +1,11 @@
-import { ConfigurationError, ValidationError } from "../domain"
+import { ConfigurationError, ValidationError } from "../foundation/errors"
 import type {
   AtomicBatchOperationDefinition,
   OperationDefinition,
   StandardOperationDefinition,
 } from "./operationDefinition"
 import type { RuntimeCapability } from "../ports"
-import { cloneAndFreezeDefinition } from "../utils"
+import { cloneAndFreezeDefinition } from "../foundation/definitionIntegrity"
 
 const AUDIT_GUARANTEES = new Set(["atomic", "durable", "best-effort"])
 const RUNTIME_CAPABILITIES = new Set<RuntimeCapability>([

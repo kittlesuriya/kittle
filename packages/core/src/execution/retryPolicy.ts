@@ -1,5 +1,5 @@
 import type { RetryPolicy } from "./types"
-import { ValidationError } from "../domain"
+import { ValidationError } from "../foundation/errors"
 
 function assertFiniteRetryValue(
   name: string,

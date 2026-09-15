@@ -1,5 +1,5 @@
 import { evaluatePredicate } from "./evaluatePredicate"
-import { ForbiddenError } from "./errors"
+import { ForbiddenError } from "../foundation/errors"
 import type { NormalizedAbacPolicy } from "./abacTypes"
 import type { FieldDescriptor, FieldFormat } from "../ports/persistence"
 

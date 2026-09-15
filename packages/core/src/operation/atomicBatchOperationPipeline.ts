@@ -28,7 +28,7 @@ import {
   AuditActorMissingError,
   ConfigurationError,
   ForbiddenError,
-} from "../domain"
+} from "../foundation/errors"
 
 export interface CommittedEffectErrorContext {
   operationId?: string
@@ -411,7 +411,7 @@ function validateBatchResults(
   results: unknown
 ): unknown[] {
   if (!Array.isArray(results) || results.length !== items.length) {
-    throw new Error(
+    throw new ConfigurationError(
       `Expected ${items.length} results for ${items.length} atomic batch items.`
     )
   }
@@ -419,7 +419,7 @@ function validateBatchResults(
   for (const [index, item] of items.entries()) {
     const result: unknown = results[index]
     if (!isAtomicBatchItemResult(result) || result.kind !== item.kind) {
-      throw new Error(
+      throw new ConfigurationError(
         `Atomic batch result at index ${index} does not match the submitted ${item.kind} item.`
       )
     }

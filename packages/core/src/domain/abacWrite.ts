@@ -1,6 +1,6 @@
 import { evaluatePredicate } from "./evaluatePredicate"
-import { ForbiddenError } from "./errors"
-import { resolveTieredDecision } from "./abacTierDecision"
+import { ForbiddenError } from "../foundation/errors"
+import { resolveTieredDecision } from "../foundation/abacTierDecision"
 import { assertPolicyWritableFields } from "./fieldAccess"
 import { toEvidence } from "./abacDecision"
 import type { NormalizedAbacPolicy, AbacPolicyBundle } from "./abacTypes"

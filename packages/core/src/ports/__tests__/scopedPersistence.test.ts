@@ -3,7 +3,7 @@ import { Predicate } from "../../domain"
 import {
   ImmutableFieldViolationError,
   TenantScopeViolationError,
-} from "../../domain/errors"
+} from "../../foundation/errors"
 import {
   createTenantScopedInteractiveTransactionProvider,
   createTenantScopedPersistenceProvider,

@@ -5,7 +5,7 @@ import {
   checkRateLimit,
   type AtomicRateLimitStore,
   type RateLimitStore,
-} from "../rateLimit"
+} from "../../rate-limit"
 
 function store(
   count: number,

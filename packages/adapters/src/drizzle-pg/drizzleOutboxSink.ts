@@ -4,7 +4,7 @@ import type {
   OutboxSinkFactory,
   PersistenceProvider,
 } from "kittle-core/ports"
-import { canonicalJsonString } from "kittle-core/ports"
+import { canonicalJsonString } from "kittle-core/foundation/canonicalJson"
 import type { DrizzleSessionLike } from "./drizzleRepository"
 import type { AnyPgTable } from "drizzle-orm/pg-core"
 import { getTableColumns, sql, type AnyColumn } from "drizzle-orm"

@@ -1,6 +1,6 @@
 import type { JobDefinition } from "./types"
-import { ConfigurationError, ValidationError } from "../domain"
-import { cloneAndFreezeDefinition } from "../utils"
+import { ConfigurationError, ValidationError } from "../foundation/errors"
+import { cloneAndFreezeDefinition } from "../foundation/definitionIntegrity"
 
 export interface JobRegistryEntry {
   definition: JobDefinition

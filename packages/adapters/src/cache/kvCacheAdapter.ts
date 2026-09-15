@@ -1,4 +1,4 @@
-import { CacheAdapterError, type CacheAdapter } from "kittle-core/ports"
+import { CacheAdapterError, type CacheAdapter } from "kittle-core/cache"
 
 declare class KVNamespace {
   get(key: string): Promise<string | null>

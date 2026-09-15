@@ -1,5 +1,2 @@
+export * from "./foundation"
 export * from "./domain"
-export * from "./entity/index"
-export * from "./execution/index"
-export * from "./operation/index"
-export * from "./ports/index"

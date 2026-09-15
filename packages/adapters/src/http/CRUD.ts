@@ -4,12 +4,12 @@ import {
   validateEntity,
   type BrandedEntityDefinition,
 } from "kittle-core/entity"
+import type { CacheAdapter } from "kittle-core/cache"
+import type { RateLimitStore } from "kittle-core/rate-limit"
 import type {
   AuditSink,
-  CacheAdapter,
   OutboxSink,
   PersistenceProvider,
-  RateLimitStore,
   RuntimeCapabilities,
 } from "kittle-core/ports"
 import type { FrameworkAdapterDeps, FrameworkSession } from "../server"
@@ -23,7 +23,7 @@ export interface CrudRuntime {
   scope: CrudScopeConfig
   createPersistence: (session: FrameworkSession) => PersistenceProvider
   getCacheAdapter: () => Promise<CacheAdapter>
-  getRateLimitStore?: () => Promise<import("kittle-core/ports").RateLimitStore>
+  getRateLimitStore?: () => Promise<import("kittle-core/rate-limit").RateLimitStore>
   auditSinkFactory?: (
     session: FrameworkSession,
     persistence?: PersistenceProvider

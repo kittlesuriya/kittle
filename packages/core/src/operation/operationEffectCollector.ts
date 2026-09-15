@@ -11,7 +11,7 @@ import {
   ConfigurationError,
   EffectCollectorDisposedError,
   EffectCollectorDrainedError,
-} from "../domain"
+} from "../foundation/errors"
 
 export interface TransactionalEffectEntry {
   name: string

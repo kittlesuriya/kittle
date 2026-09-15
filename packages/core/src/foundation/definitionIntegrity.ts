@@ -1,4 +1,4 @@
-import { ConfigurationError } from "../domain/errors"
+import { ConfigurationError } from "./errors"
 
 const MAX_DEFINITION_DEPTH = 64
 const MAX_DEFINITION_NODES = 10_000

@@ -6,7 +6,7 @@ import type {
 import type { AbacPolicyProvider } from "../ports/abacPolicyProvider"
 import type { AbacFieldDefinition, AbacModuleCatalog } from "./abacCatalog"
 import { normalizeAbacPolicy } from "./abacPolicyNormalizer"
-import { InvalidPolicyConfigurationError } from "./errors"
+import { InvalidPolicyConfigurationError } from "../foundation/errors"
 import { bindAbacSecurityDigest } from "./abacBundleIntegrity"
 
 export interface CreateAbacBundleInput {

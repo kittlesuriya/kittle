@@ -1,7 +1,7 @@
 import { z } from "zod"
+import type { CacheAdapter } from "kittle-core/cache"
 import type {
   AuditSink,
-  CacheAdapter,
   OutboxSink,
   PersistenceProvider,
   RuntimeCapabilities,
@@ -104,7 +104,7 @@ export interface CrudOptions<
   policy: CapabilityCheckConfig
   cache: { enabled?: boolean; tag: string; keyPrefix: string }
   getCacheAdapter: () => Promise<CacheAdapter>
-  getRateLimitStore?: () => Promise<import("kittle-core/ports").RateLimitStore>
+  getRateLimitStore?: () => Promise<import("kittle-core/rate-limit").RateLimitStore>
   createPersistence: (session: FrameworkSession) => PersistenceProvider
   auditSinkFactory?: (
     session: FrameworkSession,

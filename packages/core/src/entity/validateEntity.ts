@@ -1,10 +1,10 @@
-import { ConfigurationError, ValidationError } from "../domain"
+import { ConfigurationError, ValidationError } from "../foundation/errors"
 import type {
   CrudRouteKey,
   EntityDefinitionInput,
   EntityRouteConfig,
 } from "./defineEntity"
-import type { RateLimitConfig, RateLimitPolicy } from "../ports"
+import type { RateLimitConfig, RateLimitPolicy } from "../rate-limit"
 import { isRuntimeCapability } from "../ports/capabilities"
 import {
   assertCapabilityConfigValid,

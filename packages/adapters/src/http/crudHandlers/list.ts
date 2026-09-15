@@ -1,11 +1,13 @@
 import {
-  CacheService,
   buildAuditRecord,
-  buildKey,
   createReadOnlyPersistenceProvider,
-  serializeCacheKeyPart,
   type PersistenceProvider,
 } from "kittle-core/ports"
+import {
+  CacheService,
+  buildKey,
+  serializeCacheKeyPart,
+} from "kittle-core/cache"
 import {
   createOperationContext,
   runOperation,

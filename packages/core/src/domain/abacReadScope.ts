@@ -1,5 +1,5 @@
 import { Predicate, type PredicateNode } from "./predicate"
-import { buildTieredPolicyOutcome } from "./policyTierResolver"
+import { buildTieredPolicyOutcome } from "../foundation/policyTierResolver"
 import type { AbacPolicyBundle, AbacReadScope } from "./abacTypes"
 import { assertVerifiedAbacBundle } from "./abacBundleIntegrity"
 

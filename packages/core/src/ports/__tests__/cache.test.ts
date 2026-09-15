@@ -4,7 +4,7 @@ import {
   CacheService,
   serializeCacheKeyPart,
   type CacheAdapter,
-} from "../cache"
+} from "../../cache"
 
 function createAdapter(
   capabilities?: CacheAdapter["capabilities"]

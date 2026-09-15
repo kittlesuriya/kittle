@@ -1,4 +1,4 @@
-import { ConfigurationError } from "../domain"
+import { ConfigurationError } from "../foundation/errors"
 
 export type CapabilityCheckConfig =
   | {

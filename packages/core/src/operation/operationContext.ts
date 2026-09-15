@@ -12,8 +12,8 @@ import {
   type AbacWriteEnforcer,
   type OutboxSinkFactory,
 } from "../ports"
-import type { RequestContext } from "../domain"
-import { ConfigurationError, TenantScopeViolationError } from "../domain"
+import type { RequestContext } from "../foundation/requestContext"
+import { ConfigurationError, TenantScopeViolationError } from "../foundation/errors"
 import {
   OperationEffectCollector,
   type CommitMarkerEntry,
@@ -26,7 +26,7 @@ import {
   createOperationServices,
   type OperationLogger,
   type OperationServices,
-} from "./operationServices"
+} from "../foundation/operationServices"
 import type {
   InternalOperationRunContext,
   OperationEnvironment,

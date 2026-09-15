@@ -13,7 +13,7 @@ import {
   shouldFireSchedule,
   calculateNextRun,
 } from "./scheduleCalculator"
-import { ValidationError } from "../domain"
+import { ValidationError } from "../foundation/errors"
 
 export interface MaterializeResult {
   schedulesProcessed: number

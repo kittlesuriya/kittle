@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import * as errors from "../errors"
+import * as errors from "../../foundation/errors"
 
 describe("framework error defaults and metadata", () => {
   it("constructs every exported error with defaults", () => {

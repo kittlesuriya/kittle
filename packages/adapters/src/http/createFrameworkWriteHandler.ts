@@ -2,13 +2,15 @@ import type { ValidationSchema } from "kittle-core/ports"
 import { createOperationContext } from "kittle-core/operation"
 import {
   enforceRateLimit,
+  type RateLimitConfig,
+  type RateLimitStore,
+} from "kittle-core/rate-limit"
+import {
   isAtomicBatchIdempotencyPort,
   isDurableIdempotencyPort,
   isTransactionalIdempotencyPort,
   type IdempotencyCommitItem,
   type IdempotencyResourceIdentity,
-  type RateLimitConfig,
-  type RateLimitStore,
   type AbacWriteEnforcer,
 } from "kittle-core/ports"
 import {
@@ -34,7 +36,7 @@ import type { PersistenceProvider } from "kittle-core/ports"
 import { createTenantScopedPersistenceProvider } from "kittle-core/ports"
 import type { RuntimeCapabilities } from "kittle-core/ports"
 import { CacheBackedRateLimitStore } from "../cache"
-import { CacheService } from "kittle-core/ports"
+import { CacheService } from "kittle-core/cache"
 import {
   createFrameworkErrorHandler,
   frameworkJson,
@@ -44,7 +46,7 @@ import {
   parseUniqueQueryParameters,
   resolveRequestMetadata,
 } from "./requestBody"
-import type { CacheAdapter } from "kittle-core/ports"
+import type { CacheAdapter } from "kittle-core/cache"
 import type { AuditSink, OutboxSink } from "kittle-core/ports"
 import {
   boundRateLimitKeyMaterial,
@@ -138,7 +140,7 @@ export function createFrameworkWriteHandler<
     rateLimit?: {
       config: RateLimitConfig
       consistency?: "atomic" | "best-effort"
-      failureMode?: import("kittle-core/ports").RateLimitFailureMode
+      failureMode?: import("kittle-core/rate-limit").RateLimitFailureMode
       key?: (request: Request, session: FrameworkSession) => string
     }
     getRateLimitStore?: () => Promise<RateLimitStore>

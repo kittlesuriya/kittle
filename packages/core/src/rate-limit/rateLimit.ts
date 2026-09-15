@@ -2,7 +2,7 @@ import {
   RuntimeCapabilityError,
   RateLimitError,
   ValidationError,
-} from "../domain/errors"
+} from "../foundation/errors"
 
 export interface RateLimitStore {
   increment(

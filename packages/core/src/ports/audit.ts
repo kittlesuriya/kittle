@@ -1,6 +1,6 @@
-import type { ActorContext } from "../domain/requestContext"
+import type { ActorContext } from "../foundation/requestContext"
 import type { PersistenceProvider } from "./persistence"
-import { assertDurableRecord } from "./canonicalJson"
+import { assertDurableRecord } from "../foundation/canonicalJson"
 
 export type { ActorContext }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import { consoleLogger, createExecutionContext } from "../executionContext"
-import { TenantScopeViolationError } from "../../domain"
+import { ValidationError } from "../../domain"
 import {
   assertDurableJob,
   assertDurableIdentifier,
@@ -233,13 +233,13 @@ describe("durable job payload validation", () => {
     expect(() => assertDurableJob(valid)).not.toThrow()
     expect(() =>
       assertDurableJob({ ...valid, payload: { value: new Map([["k", "v"]]) } })
-    ).toThrow(TenantScopeViolationError)
+    ).toThrow(ValidationError)
     expect(() =>
       assertDurableJob({ ...valid, payload: { value: new Set(["x"]) } })
-    ).toThrow(TenantScopeViolationError)
+    ).toThrow(ValidationError)
     expect(() =>
       assertDurableJob({ ...valid, payload: { value: new Date() } })
-    ).toThrow(TenantScopeViolationError)
+    ).toThrow(ValidationError)
     expect(() =>
       assertDurableJob({
         ...valid,
@@ -251,7 +251,7 @@ describe("durable job payload validation", () => {
           },
         },
       })
-    ).toThrow(TenantScopeViolationError)
+    ).toThrow(ValidationError)
   })
 
   it("rejects a circular payload", () => {

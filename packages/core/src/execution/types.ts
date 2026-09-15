@@ -1,4 +1,7 @@
-import { TenantScopeViolationError } from "../domain/errors"
+import {
+  TenantScopeViolationError,
+  ValidationError,
+} from "../foundation/errors"
 
 export type JobStatus =
   | "pending"
@@ -197,10 +200,10 @@ export function assertDurableIdentifier(
   maxBytes: number
 ): void {
   if (typeof value !== "string")
-    throw new TenantScopeViolationError(`${label} must be a string`)
+    throw new ValidationError(`${label} must be a string`)
   const bytes = new TextEncoder().encode(value).byteLength
   if (bytes > maxBytes)
-    throw new TenantScopeViolationError(
+    throw new ValidationError(
       `${label} exceeds the maximum of ${maxBytes} bytes`
     )
 }
@@ -211,37 +214,37 @@ export function assertDurableJob(
   runAt: Date = job.runAt ?? new Date()
 ): void {
   if (!job.scope || !["tenant", "platform", "system"].includes(job.scope))
-    throw new TenantScopeViolationError(
+    throw new ValidationError(
       "Job scope is required and must be valid"
     )
   assertDurableIdentifier(job.scope, "Job scope", MAX_DURABLE_SCOPE_BYTES)
   if (typeof job.jobType !== "string" || job.jobType.trim().length === 0)
-    throw new TenantScopeViolationError("Job type must be non-empty")
+    throw new ValidationError("Job type must be non-empty")
   assertDurableIdentifier(
     job.jobType,
     "Job jobType",
     MAX_DURABLE_JOB_TYPE_BYTES
   )
   if (!Number.isSafeInteger(job.jobVersion) || job.jobVersion < 1)
-    throw new TenantScopeViolationError(
+    throw new ValidationError(
       "Job version must be a positive integer"
     )
   if (!(runAt instanceof Date) || !Number.isFinite(runAt.getTime()))
-    throw new TenantScopeViolationError("Job runAt must be a valid date")
+    throw new ValidationError("Job runAt must be a valid date")
   if (
     job.maxAttempts !== undefined &&
     (!Number.isSafeInteger(job.maxAttempts) || job.maxAttempts < 1)
   )
-    throw new TenantScopeViolationError(
+    throw new ValidationError(
       "Job maxAttempts must be a positive integer"
     )
   if (job.priority !== undefined && !Number.isSafeInteger(job.priority))
-    throw new TenantScopeViolationError("Job priority must be a safe integer")
+    throw new ValidationError("Job priority must be a safe integer")
   if (
     job.idempotencyKey !== undefined &&
     (typeof job.idempotencyKey !== "string" || job.idempotencyKey.length === 0)
   )
-    throw new TenantScopeViolationError("Job idempotencyKey must be non-empty")
+    throw new ValidationError("Job idempotencyKey must be non-empty")
   if (job.idempotencyKey !== undefined)
     assertDurableIdentifier(
       job.idempotencyKey,
@@ -252,7 +255,7 @@ export function assertDurableJob(
     job.correlationId !== undefined &&
     (typeof job.correlationId !== "string" || job.correlationId.length === 0)
   )
-    throw new TenantScopeViolationError("Job correlationId must be non-empty")
+    throw new ValidationError("Job correlationId must be non-empty")
   if (job.correlationId !== undefined)
     assertDurableIdentifier(
       job.correlationId,
@@ -261,7 +264,7 @@ export function assertDurableJob(
     )
   if (job.partitionKey !== undefined) {
     if (typeof job.partitionKey !== "string" || job.partitionKey.length === 0)
-      throw new TenantScopeViolationError(
+      throw new ValidationError(
         "Job partitionKey must be a non-empty string"
       )
     assertDurableIdentifier(
@@ -287,11 +290,11 @@ function assertJsonObject(
   budget: JsonObjectBudget
 ): asserts value is Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new TenantScopeViolationError(`${label} must be a JSON object`)
+    throw new ValidationError(`${label} must be a JSON object`)
   const visited = new WeakSet<object>()
   const visit = (entry: unknown, depth: number): void => {
     if (depth > MAX_JOB_JSON_DEPTH)
-      throw new TenantScopeViolationError(
+      throw new ValidationError(
         `${label} exceeds the maximum nesting depth of ${MAX_JOB_JSON_DEPTH}`
       )
     if (
@@ -301,14 +304,14 @@ function assertJsonObject(
       typeof entry === "symbol" ||
       (typeof entry === "number" && !Number.isFinite(entry))
     )
-      throw new TenantScopeViolationError(
+      throw new ValidationError(
         `${label} contains a non-durable value`
       )
     if (entry === null) return
     if (typeof entry === "string") {
       const bytes = new TextEncoder().encode(entry).byteLength
       if (bytes > MAX_JOB_JSON_STRING_BYTES)
-        throw new TenantScopeViolationError(
+        throw new ValidationError(
           `${label} contains a string longer than ${MAX_JOB_JSON_STRING_BYTES} bytes`
         )
       return
@@ -316,7 +319,7 @@ function assertJsonObject(
     if (typeof entry === "number" || typeof entry === "boolean") return
     if (Array.isArray(entry)) {
       if (visited.has(entry))
-        throw new TenantScopeViolationError(
+        throw new ValidationError(
           `${label} contains a circular reference`
         )
       visited.add(entry)
@@ -325,16 +328,16 @@ function assertJsonObject(
       return
     }
     if (entry instanceof Date)
-      throw new TenantScopeViolationError(
+      throw new ValidationError(
         `${label} contains a Date; only plain JSON values are allowed`
       )
     const prototype = Object.getPrototypeOf(entry) as object | null
     if (prototype !== Object.prototype && prototype !== null)
-      throw new TenantScopeViolationError(
+      throw new ValidationError(
         `${label} contains a Map, Set, class instance, or non-plain object`
       )
     if (visited.has(entry))
-      throw new TenantScopeViolationError(
+      throw new ValidationError(
         `${label} contains a circular reference`
       )
     visited.add(entry)
@@ -342,13 +345,13 @@ function assertJsonObject(
     const keys = Object.keys(record)
     budget.totalKeys += keys.length
     if (budget.totalKeys > MAX_JOB_JSON_TOTAL_KEYS)
-      throw new TenantScopeViolationError(
+      throw new ValidationError(
         `${label} exceeds the maximum of ${MAX_JOB_JSON_TOTAL_KEYS} total keys`
       )
     for (const key of keys) {
       const keyBytes = new TextEncoder().encode(key).byteLength
       if (keyBytes > MAX_JOB_JSON_STRING_BYTES)
-        throw new TenantScopeViolationError(
+        throw new ValidationError(
           `${label} contains a key longer than ${MAX_JOB_JSON_STRING_BYTES} bytes`
         )
       visit(record[key], depth + 1)
@@ -360,7 +363,7 @@ function assertJsonObject(
   if (serialized !== undefined)
     budget.totalBytes += new TextEncoder().encode(serialized).byteLength
   if (budget.totalBytes > MAX_JOB_JSON_SERIALIZED_BYTES)
-    throw new TenantScopeViolationError(
+    throw new ValidationError(
       `${label} exceeds the maximum of ${MAX_JOB_JSON_SERIALIZED_BYTES} serialized bytes for payload and metadata`
     )
 }

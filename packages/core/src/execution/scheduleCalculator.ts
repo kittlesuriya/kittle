@@ -5,7 +5,7 @@ import type {
   PriorScheduleExecutionStatus,
   ScheduleDefinition,
 } from "./types"
-import { ValidationError } from "../domain"
+import { ConfigurationError, ValidationError } from "../foundation/errors"
 
 const MAX_ITERATIONS = 5256000
 
@@ -19,7 +19,7 @@ function parseField(
 
   for (const part of field.split(",")) {
     const match = part.match(/^(\*|\d+(?:-\d+)?)(?:\/(\d+))?$/)
-    if (!match) throw new Error(`Invalid cron field value: "${part}"`)
+    if (!match) throw new ConfigurationError(`Invalid cron field value: "${part}"`)
 
     const range =
       match[1] === "*"
@@ -34,9 +34,9 @@ function parseField(
     const step = match[2] === undefined ? 1 : Number(match[2])
 
     if (step <= 0 || !Number.isInteger(step))
-      throw new Error(`Cron step must be greater than zero: "${part}"`)
+      throw new ConfigurationError(`Cron step must be greater than zero: "${part}"`)
     if (start < min || end > max || start > end)
-      throw new Error(`Cron range is outside ${min}-${max}: "${part}"`)
+      throw new ConfigurationError(`Cron range is outside ${min}-${max}: "${part}"`)
 
     for (let value = start; value <= end; value += step)
       values.add(normalize?.(value) ?? value)
@@ -58,7 +58,7 @@ export interface ParsedCron {
 export function parseCronExpression(expression: string): ParsedCron {
   const fields = expression.trim().split(/\s+/)
   if (fields.length !== 5)
-    throw new Error(
+    throw new ConfigurationError(
       `Cron expression must have exactly 5 fields, got ${fields.length}: "${expression}"`
     )
 
@@ -276,11 +276,11 @@ export function createIntlCronTimezoneAdapter(): CronTimezoneAdapter {
 
     if (candidates.length === 0) {
       if (disambiguation === "reject")
-        throw new Error(`Local time does not exist in ${timezone}`)
+        throw new ConfigurationError(`Local time does not exist in ${timezone}`)
       return new Date(Number.NaN)
     }
     if (candidates.length > 1 && disambiguation === "reject")
-      throw new Error(`Local time is ambiguous in ${timezone}`)
+      throw new ConfigurationError(`Local time is ambiguous in ${timezone}`)
     return disambiguation === "later"
       ? candidates[candidates.length - 1]!
       : candidates[0]!
