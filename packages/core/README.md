@@ -24,7 +24,13 @@ npm install kittle-core
 
 | Import | Purpose |
 |---|---|
-| `kittle-core` | barrel: domain + entity + execution + operation + ports |
+| `kittle-core` | barrel: domain + entity + execution + operation |
+| `kittle-core/foundation` | errors, requestContext, canonicalJson, validation, ABAC foundations |
+| `kittle-core/foundation/errors` | `ConfigurationError`, `ValidationError`, `ConflictError`, `ForbiddenError`, etc. |
+| `kittle-core/foundation/canonicalJson` | `canonicalJsonString`, `canonicalizeJson`, `CanonicalJsonError` |
+| `kittle-core/cache` | `CacheAdapter`, `CacheService`, `CacheAdapterError`, `buildKey` |
+| `kittle-core/cache/cacheService` | `CacheService` class |
+| `kittle-core/rate-limit` | `RateLimitStore`, `enforceRateLimit`, `checkRateLimit` |
 | `kittle-core/domain` | `Predicate`, `defineAbacModule`, `createAbacBundle`, `createAbacAuthorizer`, errors |
 | `kittle-core/domain/predicate` | `Predicate` factory + `findUnsupportedPredicateCombination` |
 | `kittle-core/domain/filterFieldMeta` | `FilterFieldMeta` for `filterFieldMeta` on entities |
@@ -41,7 +47,7 @@ npm install kittle-core
 | `kittle-core/execution/scheduleStore` | `ScheduleStore` types |
 | `kittle-core/execution/types` | `NewJob`/`StoredJob`/`JobDefinition` etc. |
 | `kittle-core/operation` | `createOperation`/`runOperation`/`runOperationDetailed` |
-| `kittle-core/ports` | `PersistenceProvider`/`Repository`/`CacheAdapter` etc. |
+| `kittle-core/ports` | `PersistenceProvider`/`Repository`/`AuditSink`/`OutboxSink` etc. |
 
 `packages/core/package.json:32` is the source of truth.
 
@@ -375,8 +381,8 @@ evaluatePredicate({ status:"open", priority:3, title:"urgent fix" }, filter); //
 |---|---|---|
 | `PersistenceProvider` + `Repository` | adapters: `createDrizzlePersistenceProvider` (PG interactive, D1 atomic-batch) | Register every entity via `DrizzleEntityRegistry`; add `tenantField` equality for `createTenantScopedPersistenceProvider` |
 | `PredicateCompiler<SQL>` | adapters: `DrizzlePredicateCompiler` | Wraps leaves with `COALESCE(expr,FALSE)` so `NOT UNKNOWN` stays 2-valued |
-| `CacheAdapter` | adapters: `InMemory`/`Kv`/`SharedGeneration` | `capabilities.coherenceScope`/`tagGenerationConsistency` drives `CacheService` correctness |
-| `RateLimitStore`/`AtomicRateLimitStore` | adapters: `CacheBackedRateLimitStore` | `consistency:"atomic"` delegates to `incrementRateLimitAtomically` |
+| `CacheAdapter` | **use `kittle-core/cache`** | Adapters provide `InMemory`/`Kv`/`SharedGeneration` implementations |
+| `RateLimitStore`/`AtomicRateLimitStore` | **use `kittle-core/rate-limit`** | Adapters provide `CacheBackedRateLimitStore` implementation |
 | `IdempotencyPort` | adapters: `DrizzlePgIdempotencyStore`/`DrizzleD1IdempotencyStore` | Fingerprint `v2:hex(SHA-256(canonicalJson))`, lease fencing |
 | `AuditSink`/`OutboxSink` factories | adapters | Factories receive the bound `persistence` so audit/outbox participates in the same commit |
 | `AbacPolicyProvider` | **you** | `resolve({mode, moduleKey, context, at?}) => AbacPolicy[]` from your DB |
@@ -420,14 +426,35 @@ try {
 
 ## Entrypoints recap
 
-See table at top. `packages/core/src/index.ts:1` re-exports domain/entity/execution/operation/ports; `utils/definitionIntegrity` is internal (frozen cloning).
+See table at top. The architecture is modular:
+
+```
+foundation/       (errors, canonicalJson, validation, ABAC foundations)
+    ↓
+domain/           (ABAC, predicates, authorization)
+    ↓
+entity/           (defineEntity, validation)
+    ↓
+operation/        (createOperation, runOperation)
+    ↓
+execution/        (jobs, schedules, dispatching)
+```
+
+Independent capabilities:
+
+```
+cache/            → foundation only
+rate-limit/       → foundation only
+```
+
+`packages/core/src/index.ts:1` re-exports domain/entity/execution/operation; `utils/definitionIntegrity` is internal (frozen cloning).
 
 ## Development
 
 ```sh
 npm run typecheck:core        # tsc -p packages/core/tsconfig.json --noEmit
 npm run lint:core             # eslint src --max-warnings=0
-npm test --workspace kittle-core   # vitest run — 410+ tests across domain/entity/operation/execution/ports
+npm test --workspace kittle-core   # vitest run — 641 tests across domain/entity/operation/execution/ports
 npm run build --workspace kittle-core  # tsc -b tsconfig.build.json && rewriteBuildExtensions
 ```
 

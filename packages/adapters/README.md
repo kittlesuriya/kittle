@@ -2,7 +2,7 @@
 
 Drizzle (D1/Postgres), HTTP, cache, and server adapters implementing the `kittle-core` ports.
 
-> Implements every `kittle-core/ports` contract so you can run `kittle-core` operations without writing SQL, HTTP, or cache plumbing.
+> Implements persistence, idempotency, audit, and outbox contracts. Cache and rate-limit adapters depend on `kittle-core/cache` and `kittle-core/rate-limit` respectively.
 
 ## Install
 
@@ -250,6 +250,8 @@ type FrameworkSession =
 
 ### 4. Cache
 
+Cache adapters implement the `kittle-core/cache` `CacheAdapter` interface.
+
 | Adapter | Consistency | Coherence | Use |
 |---|---|---|---|
 | `InMemoryCacheAdapter` | `linearizable` | `process` | single-instance / tests — `incrementRateLimitAtomically` via Map |
@@ -283,6 +285,7 @@ Rate limiting over cache:
 
 ```ts
 import { CacheBackedRateLimitStore, AtomicCacheBackedRateLimitStore } from "kittle-adapters/cache";
+import type { RateLimitStore } from "kittle-core/rate-limit";
 const bestEffort = new CacheBackedRateLimitStore(cache); // consistency:"best-effort" — read-modify-write
 const atomic    = new AtomicCacheBackedRateLimitStore(cache); // consistency:"atomic" — delegates to cache.incrementRateLimitAtomically
 // Key namespaced scope:tenant:module:action:ip/custom + boundRateLimitKeyMaterial fingerprint for long keys
