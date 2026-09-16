@@ -1,0 +1,287 @@
+import { and, asc, eq, gt, lte, lt, or, sql } from "drizzle-orm"
+import type { AnyMySqlTable } from "drizzle-orm/mysql-core"
+import { ConfigurationError, ValidationError } from "kittle-core/domain"
+import type {
+  FencedScheduleClaim,
+  ScheduleStore,
+  FencedAdvanceScheduleArgs,
+  FencedReleaseScheduleArgs,
+  RenewScheduleLeaseArgs,
+} from "kittle-core/execution/scheduleStore"
+import type {
+  ClaimDueSchedulesArgs,
+  ScheduleClaim,
+  ScheduleScope,
+  OverlapPolicy,
+  MisfirePolicy,
+} from "kittle-core/execution/types"
+import { assertDurableIdentifier } from "kittle-core/execution/types"
+import type { DrizzleColumnMap } from "./drizzlePredicateCompiler"
+import type { DrizzleSessionLike } from "./drizzleRepository"
+import { getAffectedRows } from "./mysqlUtils"
+import { uuidv7 } from "uuidv7"
+
+export interface DrizzleScheduleStoreConfig {
+  schedulesTable: AnyMySqlTable
+  columnMap: { schedules: DrizzleColumnMap }
+  resolveTenantTimezones?: (
+    db: DrizzleSessionLike,
+    tenantIds: string[],
+    platformTimezone: string
+  ) => Promise<Map<string, string>>
+}
+
+const PLATFORM_TZ_FALLBACK = "UTC"
+
+function readScheduleScope(row: Record<string, unknown>): ScheduleScope {
+  const scope = row.scope
+  if (scope !== "tenant" && scope !== "platform" && scope !== "system") {
+    throw new ValidationError(
+      `Schedule ${String(row.id)} has a missing or invalid scope`
+    )
+  }
+  return scope
+}
+
+function toScheduleClaim(row: Record<string, unknown>): ScheduleClaim {
+  return {
+    scheduleId: row.id as string,
+    scope: readScheduleScope(row),
+    jobType: row.jobType as string,
+    jobVersion: row.jobVersion as number,
+    tenantId: (row.tenantId as string) ?? null,
+    payload: row.payload as string,
+    cronExpression: row.cronExpression as string,
+    timezone: row.timezone as string,
+    overlapPolicy: {
+      type: (row.overlapPolicy as string) ?? "allow",
+    } as OverlapPolicy,
+    misfirePolicy: {
+      type: (row.misfirePolicy as string) ?? "fire_now",
+    } as MisfirePolicy,
+    nextRunAt: new Date(row.nextRunAt as string),
+    lastRunAt: row.lastRunAt ? new Date(row.lastRunAt as string) : null,
+    lastStatus: (row.lastStatus as string) ?? null,
+  }
+}
+
+export class DrizzleScheduleStore implements ScheduleStore {
+  private static readonly REQUIRED_SCHEDULE_COLUMNS = [
+    "id",
+    "jobType",
+    "jobVersion",
+    "tenantId",
+    "scope",
+    "payload",
+    "cronExpression",
+    "timezone",
+    "enabled",
+    "overlapPolicy",
+    "misfirePolicy",
+    "nextRunAt",
+    "lastRunAt",
+    "lastStatus",
+    "lastError",
+    "leaseOwner",
+    "leaseExpiresAt",
+    "claimToken",
+  ] as const
+
+  constructor(
+    private readonly db: DrizzleSessionLike,
+    private readonly config: DrizzleScheduleStoreConfig,
+    private readonly platformTimezone = PLATFORM_TZ_FALLBACK
+  ) {
+    const schedules = config.columnMap.schedules
+    for (const column of DrizzleScheduleStore.REQUIRED_SCHEDULE_COLUMNS) {
+      if (!schedules[column]) {
+        throw new ConfigurationError(
+          `Schedule store is missing the required '${column}' column in its column map`
+        )
+      }
+    }
+  }
+
+  async claimDueSchedules(
+    args: ClaimDueSchedulesArgs
+  ): Promise<FencedScheduleClaim[]> {
+    assertDurableIdentifier(args.workerId, "workerId", 100)
+    const schedules = this.config.columnMap.schedules
+    const now = args.now ?? new Date()
+    const leaseExpiresAt = sql`NOW() + INTERVAL ${args.leaseDurationMs} MILLISECOND`
+    const eligible = await this.db
+      .select({
+        id: schedules.id!,
+        scope: schedules.scope!,
+        jobType: schedules.jobType!,
+        jobVersion: schedules.jobVersion!,
+        tenantId: schedules.tenantId!,
+        payload: schedules.payload!,
+        cronExpression: schedules.cronExpression!,
+        timezone: schedules.timezone!,
+        overlapPolicy: schedules.overlapPolicy!,
+        misfirePolicy: schedules.misfirePolicy!,
+        nextRunAt: schedules.nextRunAt!,
+        lastRunAt: schedules.lastRunAt!,
+        lastStatus: schedules.lastStatus!,
+      })
+      .from(this.config.schedulesTable)
+      .where(and(eq(schedules.enabled!, true), lte(schedules.nextRunAt!, now)))
+      .orderBy(sql`${asc(schedules.nextRunAt!)}`)
+      .limit(args.limit)
+      .offset(0)
+    const priorStatuses = new Map(
+      (eligible as Record<string, unknown>[]).map((row) => [
+        row.id as string,
+        row.lastStatus as string | null,
+      ])
+    )
+    const claimedIds: Array<{ id: string; token: string }> = []
+    for (const row of eligible as Record<string, unknown>[]) {
+      const claimToken = uuidv7()
+      const result = await this.db
+        .update(this.config.schedulesTable)
+        .set({
+          lastStatus: "running",
+          leaseOwner: args.workerId,
+          claimToken,
+          leaseExpiresAt,
+        })
+        .where(
+          and(
+            eq(schedules.id!, row.id as string),
+            eq(schedules.enabled!, true),
+            lte(schedules.nextRunAt!, now),
+            or(
+              sql`(${schedules.lastStatus!} IS NULL OR ${schedules.lastStatus!} != 'running')`,
+              and(
+                eq(schedules.lastStatus!, "running"),
+                lt(schedules.leaseExpiresAt!, sql`NOW()`)
+              )
+            )
+          )
+        )
+      if (getAffectedRows(result) > 0)
+        claimedIds.push({ id: row.id as string, token: claimToken })
+    }
+    if (claimedIds.length === 0) return []
+    const claimedRows = await this.db
+      .select()
+      .from(this.config.schedulesTable)
+      .where(
+        and(
+          or(
+            ...claimedIds.map(({ id, token }) =>
+              and(eq(schedules.id!, id), eq(schedules.claimToken!, token))
+            )
+          ),
+          eq(schedules.leaseOwner!, args.workerId),
+          eq(schedules.lastStatus!, "running"),
+          gt(schedules.leaseExpiresAt!, sql`NOW()`)
+        )
+      )
+      .limit(claimedIds.length)
+    const claimed = (claimedRows as Record<string, unknown>[]).map((row) => ({
+      ...toScheduleClaim({
+        ...row,
+        lastStatus: priorStatuses.get(row.id as string) ?? null,
+      }),
+      claimToken: row.claimToken as string,
+    }))
+    const tenantIds = claimed
+      .filter((claim) => claim.tenantId !== null)
+      .map((claim) => claim.tenantId as string)
+    if (tenantIds.length > 0 && this.config.resolveTenantTimezones) {
+      const tzMap = await this.config.resolveTenantTimezones(
+        this.db,
+        tenantIds,
+        this.platformTimezone
+      )
+      for (const claim of claimed) {
+        if (claim.tenantId && tzMap.has(claim.tenantId))
+          claim.timezone = tzMap.get(claim.tenantId)!
+      }
+    }
+    for (const claim of claimed) {
+      if (!claim.timezone) claim.timezone = this.platformTimezone
+    }
+    return claimed
+  }
+
+  async advanceSchedule(args: FencedAdvanceScheduleArgs): Promise<boolean> {
+    const schedules = this.config.columnMap.schedules
+    if (!args.claimToken) return false
+    const result = await this.db
+      .update(this.config.schedulesTable)
+      .set({
+        nextRunAt: args.nextRunAt,
+        lastRunAt: args.lastRunAt,
+        lastStatus: args.lastStatus,
+        lastError: args.lastError ?? null,
+        leaseOwner: null,
+        claimToken: null,
+        leaseExpiresAt: null,
+      })
+      .where(
+        and(
+          eq(schedules.id!, args.scheduleId),
+          eq(schedules.leaseOwner!, args.workerId),
+          eq(schedules.claimToken!, args.claimToken),
+          eq(schedules.lastStatus!, "running"),
+          gt(schedules.leaseExpiresAt!, sql`NOW()`)
+        )
+      )
+    return getAffectedRows(result) > 0
+  }
+
+  async releaseSchedule(args: FencedReleaseScheduleArgs): Promise<boolean> {
+    const schedules = this.config.columnMap.schedules
+    if (!args.claimToken) return false
+    const result = await this.db
+      .update(this.config.schedulesTable)
+      .set({
+        lastStatus: "idle",
+        leaseOwner: null,
+        claimToken: null,
+        leaseExpiresAt: null,
+      })
+      .where(
+        and(
+          eq(schedules.id!, args.scheduleId),
+          eq(schedules.leaseOwner!, args.workerId),
+          eq(schedules.claimToken!, args.claimToken),
+          eq(schedules.lastStatus!, "running"),
+          gt(schedules.leaseExpiresAt!, sql`NOW()`)
+        )
+      )
+    return getAffectedRows(result) > 0
+  }
+
+  async renewScheduleLease(args: RenewScheduleLeaseArgs): Promise<boolean> {
+    assertDurableIdentifier(args.workerId, "workerId", 100)
+    const schedules = this.config.columnMap.schedules
+    if (!Number.isFinite(args.extendByMs) || args.extendByMs <= 0) return false
+    const leaseExpiresAt = sql`NOW() + INTERVAL ${args.extendByMs} MILLISECOND`
+    const result = await this.db
+      .update(this.config.schedulesTable)
+      .set({ leaseExpiresAt })
+      .where(
+        and(
+          eq(schedules.id!, args.scheduleId),
+          eq(schedules.leaseOwner!, args.workerId),
+          eq(schedules.claimToken!, args.claimToken),
+          eq(schedules.lastStatus!, "running"),
+          gt(schedules.leaseExpiresAt!, sql`NOW()`)
+        )
+      )
+    return getAffectedRows(result) > 0
+  }
+}
+
+export function createDrizzleScheduleStore(
+  db: DrizzleSessionLike,
+  config: DrizzleScheduleStoreConfig,
+  platformTimezone?: string
+): DrizzleScheduleStore {
+  return new DrizzleScheduleStore(db, config, platformTimezone)
+}

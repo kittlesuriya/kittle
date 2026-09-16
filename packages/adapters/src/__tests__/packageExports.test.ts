@@ -14,4 +14,18 @@ describe("adapters package exports", () => {
       default: "./dist/http/index.js",
     })
   })
+
+  it("exports the drizzle-mysql adapter", () => {
+    expect(manifest.exports["./drizzle-mysql"]).toEqual({
+      types: "./dist/drizzle-mysql/index.d.ts",
+      default: "./dist/drizzle-mysql/index.js",
+    })
+  })
+
+  it("exports the fastify adapter", () => {
+    expect(manifest.exports["./fastify"]).toEqual({
+      types: "./dist/fastify/index.d.ts",
+      default: "./dist/fastify/index.js",
+    })
+  })
 })
