@@ -40,6 +40,7 @@ export class CacheService {
   private readonly correctnessCritical: boolean
 
   constructor(config: CacheConfig & { adapter: CacheAdapter }) {
+    assertCacheAdapter(config?.adapter)
     this.adapter = config.adapter
     this.defaultTtlMs = config.defaultTtlMs ?? 120_000
     this.telemetry = config.telemetry
@@ -108,7 +109,18 @@ export class CacheService {
 
   async get<T>(key: string): Promise<T | undefined> {
     try {
-      return await this.adapter.get<T>(key)
+      const value = await this.adapter.get<T>(key)
+      if (value === null) {
+        // The port contract reserves undefined for a miss. A null hit would
+        // otherwise be returned to callers as a T.
+        this.reportError(
+          "get",
+          key,
+          new Error("Cache adapter returned null for a miss; expected undefined")
+        )
+        return undefined
+      }
+      return value
     } catch (error) {
       this.reportError("get", key, error)
       if (this.correctnessCritical) throw error
@@ -128,7 +140,11 @@ export class CacheService {
 
   async delete(key: string): Promise<boolean> {
     try {
-      return await this.adapter.delete(key)
+      const deleted = await this.adapter.delete(key)
+      if (typeof deleted !== "boolean") {
+        throw new CacheAdapterError("delete")
+      }
+      return deleted
     } catch (error) {
       this.reportError("delete", key, error)
       return false
@@ -137,7 +153,11 @@ export class CacheService {
 
   async has(key: string): Promise<boolean> {
     try {
-      return await this.adapter.has(key)
+      const present = await this.adapter.has(key)
+      if (typeof present !== "boolean") {
+        throw new CacheAdapterError("has")
+      }
+      return present
     } catch (error) {
       this.reportError("has", key, error)
       return false
@@ -201,6 +221,12 @@ export class CacheService {
       tags.map(async (tag) => {
         try {
           const generation = await this.adapter.getTagGeneration!(tag)
+          if (
+            generation !== undefined &&
+            (typeof generation !== "string" || generation.length === 0)
+          ) {
+            throw new CacheAdapterError("getTagGeneration")
+          }
           if (generation !== undefined)
             this.localTagGenerations.set(tag, generation)
           return generation ?? this.localTagGenerations.get(tag) ?? "0"
@@ -216,10 +242,11 @@ export class CacheService {
   private async advanceTagGeneration(tag: string): Promise<void> {
     try {
       if (this.adapter.advanceTagGeneration) {
-        this.localTagGenerations.set(
-          tag,
-          await this.adapter.advanceTagGeneration(tag)
-        )
+        const next = await this.adapter.advanceTagGeneration(tag)
+        if (typeof next !== "string" || next.length === 0) {
+          throw new CacheAdapterError("advanceTagGeneration")
+        }
+        this.localTagGenerations.set(tag, next)
       } else {
         if (this.correctnessCritical)
           throw new CacheAdapterError("advanceTagGeneration")
@@ -261,6 +288,44 @@ export class CacheService {
       })
     } catch {
       // Telemetry must never change cache semantics.
+    }
+  }
+}
+
+/**
+ * Fail-closed contract check for the cache adapter boundary. A caller that
+ * passes a missing or partial adapter must fail at construction — never as
+ * an obscure `adapter.get is not a function` crash on first use.
+ */
+function assertCacheAdapter(adapter: unknown): asserts adapter is CacheAdapter {
+  if (!adapter || typeof adapter !== "object" || Array.isArray(adapter)) {
+    throw new CacheAdapterError("adapter must be an object")
+  }
+  const candidate = adapter as Partial<Record<string, unknown>>
+  for (const method of [
+    "get",
+    "set",
+    "delete",
+    "has",
+    "clear",
+    "addToTag",
+    "getTagKeys",
+    "deleteTag",
+  ] as const) {
+    if (typeof candidate[method] !== "function") {
+      throw new CacheAdapterError(`adapter.${method} must be a function`)
+    }
+  }
+  for (const method of [
+    "getTagGeneration",
+    "advanceTagGeneration",
+    "incrementRateLimitAtomically",
+  ] as const) {
+    if (
+      candidate[method] !== undefined &&
+      typeof candidate[method] !== "function"
+    ) {
+      throw new CacheAdapterError(`adapter.${method} must be a function`)
     }
   }
 }

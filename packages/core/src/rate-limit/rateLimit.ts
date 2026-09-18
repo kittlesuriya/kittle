@@ -5,13 +5,25 @@ import {
 } from "../foundation/errors"
 
 export interface RateLimitStore {
+  /**
+   * Increment the bucket for `key` and return the POST-increment count.
+   *
+   * Contract: the first hit of a window MUST return `count: 1` (1-based).
+   * `checkRateLimit` computes `allowed: count <= limit` on this value, so a
+   * 0-based store would silently allow `limit + 1` hits before denying.
+   */
   increment(
     key: string,
     windowMs: number
   ): Promise<{ count: number; resetAt: number }>
 }
 
-/** A store whose bucket increment is a single atomic backend operation. */
+/**
+ * A store whose bucket increment is a single atomic backend operation.
+ *
+ * Contract: `incrementAtomically` follows the same 1-based post-increment
+ * count as `increment` — first hit of a window returns `count: 1`.
+ */
 export interface AtomicRateLimitStore extends RateLimitStore {
   incrementAtomically(
     key: string,
@@ -23,6 +35,10 @@ export interface RateLimitConfig {
   max: number
   timeWindow: string | number
   consistency?: RateLimitConsistency
+  /**
+   * `fail-open` ONLY takes effect under `consistency: "best-effort"`;
+   * atomic consistency always fails closed on store failure.
+   */
   failureMode?: RateLimitFailureMode
 }
 
@@ -32,7 +48,14 @@ export type RateLimitFailureMode = "fail-closed" | "fail-open"
 export interface RateLimitPolicy {
   /** Atomic increments are the security-safe default. */
   consistency?: RateLimitConsistency
-  /** Rate-limit infrastructure failures deny the request by default. */
+  /**
+   * Rate-limit infrastructure failures deny the request by default.
+   *
+   * Contract: `fail-open` ONLY takes effect under `consistency: "best-effort"`.
+   * Atomic consistency always fails closed — a `fail-open` + `atomic` request
+   * still throws on store failure (see checkRateLimit's
+   * `failureMode === "fail-open" && consistency === "best-effort"` gate).
+   */
   failureMode?: RateLimitFailureMode
 }
 

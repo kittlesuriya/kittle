@@ -236,3 +236,56 @@ export function isIdempotencyFinalizationPort<TResult>(
     typeof p.completeClaimedInvalidation === "function"
   )
 }
+
+const IDEMPOTENCY_OUTCOMES = [
+  "acquired",
+  "replay",
+  "in-progress",
+  "business-committed",
+  "conflict",
+] as const
+
+import { ConfigurationError } from "../foundation/errors"
+
+/**
+ * Fail-closed validation for `IdempotencyPort.acquire()` results. A replay
+ * without a result, an acquisition without a token, or an unknown outcome
+ * must surface here instead of replaying `undefined` as a committed result
+ * or authorizing a mutation that was never fenced.
+ */
+export function assertIdempotencyAcquireResult<TResult>(
+  result: unknown
+): asserts result is IdempotencyAcquireResult<TResult> {
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    throw new ConfigurationError(
+      "Idempotency acquire must resolve to an outcome object."
+    )
+  }
+  const candidate = result as {
+    outcome?: unknown
+    token?: unknown
+  }
+  if (
+    typeof candidate.outcome !== "string" ||
+    !(IDEMPOTENCY_OUTCOMES as readonly string[]).includes(candidate.outcome)
+  ) {
+    throw new ConfigurationError(
+      `Idempotency acquire returned an unknown outcome: ${String(candidate.outcome)}.`
+    )
+  }
+  if (
+    (candidate.outcome === "acquired" ||
+      candidate.outcome === "business-committed") &&
+    (typeof candidate.token !== "string" || candidate.token.length === 0)
+  ) {
+    throw new ConfigurationError(
+      `Idempotency acquire with outcome "${candidate.outcome}" must carry a non-empty token.`
+    )
+  }
+  if (
+    candidate.outcome === "replay" &&
+    !Object.prototype.hasOwnProperty.call(result, "result")
+  ) {
+    throw new ConfigurationError("Idempotency replay must carry a result.")
+  }
+}

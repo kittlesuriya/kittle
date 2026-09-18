@@ -1,4 +1,5 @@
 import { runAfterHooks, runBeforeHooks } from "./hooks"
+import { assertAuthorizationDecision } from "./authorization"
 import { runAfterCommitHooks } from "./hooks"
 import {
   createPostCommitOperationContext,
@@ -11,6 +12,9 @@ import type {
   AtomicBatchPreparationContext,
 } from "./operationDefinition"
 import {
+  assertAuditRecordValue,
+  assertAuditResourceId,
+  buildAuditRecord,
   classifyAuditValue,
   defaultAuditSanitizer,
   requireCapability,
@@ -124,7 +128,13 @@ export async function runAtomicBatchOperation<TInput, TResult, TCommand>(args: {
       operation,
       input,
     })
-    if (decision && !decision.allowed) {
+    if (decision === undefined) {
+      throw new ConfigurationError(
+        `Atomic-batch mutation ${args.definition.key} requires authorization.`
+      )
+    }
+    assertAuthorizationDecision(decision, args.definition.key)
+    if (!decision.allowed) {
       throw new ForbiddenError(
         decision.reason ??
           `Operation is not allowed: ${args.definition.key}. Operation ${args.definition.key} is not allowed.`
@@ -181,29 +191,38 @@ export async function runAtomicBatchOperation<TInput, TResult, TCommand>(args: {
           (operation.auditSanitizer ?? defaultAuditSanitizer)(
             classifyAuditValue(value, audit.fieldClassification)
           )
-        const record = {
+        const resourceId = audit.resolveResourceId({
+          input,
+          result: prepared.result,
+        })
+        assertAuditResourceId(resourceId, args.definition.key)
+        const rawOldValue = audit.extractOldValue
+          ? sanitize(audit.extractOldValue({ input }) ?? {})
+          : null
+        assertAuditRecordValue(
+          rawOldValue,
+          `Audit oldValue for operation ${args.definition.key}`
+        )
+        const rawNewValue = audit.extractNewValue
+          ? sanitize(
+              audit.extractNewValue({ input, result: prepared.result }) ?? {}
+            )
+          : null
+        assertAuditRecordValue(
+          rawNewValue,
+          `Audit newValue for operation ${args.definition.key}`
+        )
+        const record = buildAuditRecord({
           id: operation.services.idGenerator(),
           occurredAt: operation.services.clock(),
           actor,
           action: audit.action,
           resourceType: audit.resourceType,
-          resourceId: audit.resolveResourceId({
-            input,
-            result: prepared.result,
-          }),
+          resourceId,
           tenantId: operation.request?.tenantId ?? null,
-          oldValue: audit.extractOldValue
-            ? (sanitize(audit.extractOldValue({ input }) ?? {}) as Record<
-                string,
-                unknown
-              >)
-            : null,
-          newValue: audit.extractNewValue
-            ? (sanitize(
-                audit.extractNewValue({ input, result: prepared.result }) ?? {}
-              ) as Record<string, unknown>)
-            : null,
-        }
+          oldValue: rawOldValue,
+          newValue: rawNewValue,
+        })
         items.push({ kind: "audit", record })
       }
     }
@@ -227,7 +246,13 @@ export async function runAtomicBatchOperation<TInput, TResult, TCommand>(args: {
     for (const marker of operation.commitMarkers) {
       await marker.fence?.(operation.persistence)
       const batchItem = await marker.batchItem?.(prepared.result)
-      if (batchItem) items.push(batchItem as AtomicBatchItem<TCommand>)
+      if (batchItem === undefined) continue
+      if (!isAtomicBatchItem(batchItem)) {
+        throw new ConfigurationError(
+          `Operation ${args.definition.key} commit marker produced a malformed atomic batch item.`
+        )
+      }
+      items.push(batchItem as AtomicBatchItem<TCommand>)
     }
     const plan: AtomicBatchPlan<TCommand> = { items }
     const itemResults = tenantScoped
@@ -428,6 +453,27 @@ function validateBatchResults(
   return commandResults
 }
 
+function isAtomicBatchItem(value: unknown): value is AtomicBatchItem {
+  if (typeof value !== "object" || value === null) return false
+  const candidate = value as {
+    kind?: unknown
+    command?: unknown
+    record?: unknown
+    commit?: unknown
+  }
+  switch (candidate.kind) {
+    case "command":
+      return Object.prototype.hasOwnProperty.call(value, "command")
+    case "audit":
+    case "outbox":
+      return Object.prototype.hasOwnProperty.call(value, "record")
+    case "idempotency":
+      return Object.prototype.hasOwnProperty.call(value, "commit")
+    default:
+      return false
+  }
+}
+
 function isAtomicBatchItemResult(
   value: unknown
 ): value is AtomicBatchItemResult {
@@ -484,15 +530,20 @@ function reportEffectFailure(
   effectName: string,
   error: unknown
 ): void {
-  operation.effectFailureReporter?.({
-    operationId: operation.operationId,
-    ...(operation.correlationId !== undefined
-      ? { correlationId: operation.correlationId }
-      : {}),
-    phase,
-    effectName,
-    error,
-  })
+  try {
+    operation.effectFailureReporter?.({
+      operationId: operation.operationId,
+      ...(operation.correlationId !== undefined
+        ? { correlationId: operation.correlationId }
+        : {}),
+      phase,
+      effectName,
+      error,
+    })
+  } catch {
+    // A throwing reporter must never mask the real post-commit failure;
+    // metadata bookkeeping below still runs.
+  }
   const metadata = operation.request?.metadata
   if (!metadata) return
   const failures =

@@ -271,7 +271,7 @@ export class DrizzleMySqlIdempotencyStore<TResult>
           finalizerClaimExpiresAt: sql`NOW() + INTERVAL ${leaseMs} MILLISECOND`,
         })
         .where(
-          sql`status = 'business-committed' AND pending_invalidations IS NOT NULL AND (finalizer_claim_expires_at IS NULL OR finalizer_claim_expires_at < NOW())`
+          sql`scope = ${row.scope} AND key = ${row.key} AND token = ${row.token} AND status = 'business-committed' AND pending_invalidations IS NOT NULL AND (finalizer_claim_expires_at IS NULL OR finalizer_claim_expires_at < NOW())`
         )
       if (getAffectedRows(updated) === 1) {
         claimed.push({

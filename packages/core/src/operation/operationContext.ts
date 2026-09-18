@@ -5,6 +5,8 @@ import {
   normalizeOutboxRecord,
   isTenantScopedPersistenceProvider,
   getTenantScopeId,
+  assertPersistenceProviderShape,
+  assertRuntimeCapabilities,
   type RuntimeCapabilities,
   type PersistenceProvider,
   type AuditSink,
@@ -13,6 +15,7 @@ import {
   type OutboxSinkFactory,
 } from "../ports"
 import type { RequestContext } from "../foundation/requestContext"
+import { assertRequestContext } from "../foundation/requestContext"
 import { ConfigurationError, TenantScopeViolationError } from "../foundation/errors"
 import {
   OperationEffectCollector,
@@ -24,6 +27,7 @@ import {
 } from "./operationEffectCollector"
 import {
   createOperationServices,
+  assertOperationServices,
   type OperationLogger,
   type OperationServices,
 } from "../foundation/operationServices"
@@ -89,6 +93,10 @@ export interface CreateOperationContextArgs {
 export function createOperationContext(
   args: CreateOperationContextArgs
 ): OperationEnvironment {
+  assertPersistenceProviderShape(args.persistence)
+  assertRuntimeCapabilities(args.runtimeCapabilities)
+  if (args.request !== undefined) assertRequestContext(args.request)
+  if (args.services !== undefined) assertOperationServices(args.services)
   const services =
     args.services ??
     createOperationServices({
@@ -132,20 +140,10 @@ export function createOperationRunContext(
     readOnly?: boolean
   }
 ): InternalOperationRunContext {
-  if (
-    environment.request?.tenantId != null &&
-    isTenantScopedPersistenceProvider(environment.persistence)
-  ) {
-    const scopeTenantId = getTenantScopeId(environment.persistence)
-    if (
-      scopeTenantId !== undefined &&
-      scopeTenantId !== environment.request.tenantId
-    ) {
-      throw new TenantScopeViolationError(
-        `Request tenant "${environment.request.tenantId}" does not match persistence scope "${scopeTenantId}"`
-      )
-    }
-  }
+  assertPersistenceScopeMatchesRequest(
+    environment.persistence,
+    environment.request?.tenantId
+  )
   const correlationId =
     options?.correlationId ??
     environment.request?.correlationId ??
@@ -182,8 +180,33 @@ export function createOperationRunContext(
   )
 }
 
-function createRunContext(
-  environment: OperationEnvironment,
+/**
+ * Fail-closed tenant/persistence wiring check. A tenant-scoped provider must
+ * only serve the request tenant it was scoped for — including the case where
+ * the request carries no tenant at all (platform/system operations must use
+ * an explicit platform-scoped provider, never an unrelated tenant's scope).
+ */
+function assertPersistenceScopeMatchesRequest(
+  persistence: PersistenceProvider,
+  requestTenantId: string | null | undefined
+): void {
+  if (!isTenantScopedPersistenceProvider(persistence)) return
+  const scopeTenantId = getTenantScopeId(persistence)
+  if (scopeTenantId === undefined) return
+  if (requestTenantId == null) {
+    throw new TenantScopeViolationError(
+      `Operations without a request tenant cannot use persistence scoped to tenant "${scopeTenantId}". ` +
+        "Use an explicit platform-scoped provider."
+    )
+  }
+  if (scopeTenantId !== requestTenantId) {
+    throw new TenantScopeViolationError(
+      `Request tenant "${requestTenantId}" does not match persistence scope "${scopeTenantId}"`
+    )
+  }
+}
+
+function createRunContext(  environment: OperationEnvironment,
   collector: OperationEffectCollector,
   operationId: string,
   correlationId: string | undefined,
@@ -241,20 +264,11 @@ function createRunContext(
     },
     addCommitMarker: (marker) => collector.registerCommitMarker(marker),
     withPersistence: (persistence, options) => {
-      if (
-        environment.request?.tenantId != null &&
-        isTenantScopedPersistenceProvider(persistence)
-      ) {
-        const scopeTenantId = getTenantScopeId(persistence)
-        if (
-          scopeTenantId !== undefined &&
-          scopeTenantId !== environment.request.tenantId
-        ) {
-          throw new TenantScopeViolationError(
-            `Request tenant "${environment.request.tenantId}" does not match persistence scope "${scopeTenantId}"`
-          )
-        }
-      }
+      assertPersistenceProviderShape(persistence)
+      assertPersistenceScopeMatchesRequest(
+        persistence,
+        environment.request?.tenantId
+      )
       return createRunContext(
         { ...environment, persistence },
         collector,

@@ -184,6 +184,7 @@ describe("field access masks and precedence", () => {
         action: "update",
         record: {},
       })
-    ).not.toThrow()
+      // Batch H: fail-closed on zero relevant policies (was a silent return).
+    ).toThrow(/permission to update one or more fields/)
   })
 })

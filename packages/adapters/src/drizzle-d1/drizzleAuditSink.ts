@@ -11,6 +11,7 @@ import {
   mapAuditRecord,
   type AuditRecordMapper,
 } from "./drizzlePersistenceProvider"
+import { assertAuditRecordIdentity } from "../drizzle-shared/sinkGuards"
 
 /**
  * Writes audit records to a D1 SQLite table via an atomic batch.
@@ -38,6 +39,7 @@ export class DrizzleAuditSink implements AuditSink {
   ) {}
 
   async write(record: AuditRecord): Promise<void> {
+    assertAuditRecordIdentity(record, "D1 audit")
     await this.db.insert(this.table).values({
       ...this.mapRecord(record),
       id: record.id,

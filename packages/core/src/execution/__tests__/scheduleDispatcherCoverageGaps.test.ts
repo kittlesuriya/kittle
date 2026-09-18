@@ -89,7 +89,18 @@ describe("schedule dispatcher validation branches", () => {
   it("skips existing jobs, decodes payloads, and releases a failed lease best-effort", async () => {
     const s = stores([claim()])
     s.jobStore.getByIdempotencyKey = vi.fn(
-      async () => ({ id: "existing" }) as StoredJob
+      async () =>
+        ({
+          id: "existing",
+          jobType: "job",
+          jobVersion: 1,
+          tenantId: "tenant-a",
+          scope: "tenant",
+          payload: "{}",
+          status: "pending",
+          attemptsCompleted: 1,
+          currentAttempt: 1,
+        }) as StoredJob
     )
     await expect(
       materializeDueSchedules({ ...s, workerId: "w" })
@@ -326,7 +337,19 @@ describe("schedule dispatcher validation branches", () => {
     ])
     existing.jobStore.getByIdempotencyKey = vi.fn(
       async ({ key }: { key: string }) =>
-        key.endsWith("10:00:00.000Z") ? ({ id: "existing" } as StoredJob) : null
+        key.endsWith("10:00:00.000Z")
+          ? ({
+              id: "existing",
+              jobType: "job",
+              jobVersion: 1,
+              tenantId: "tenant-a",
+              scope: "tenant",
+              payload: "{}",
+              status: "succeeded",
+              attemptsCompleted: 1,
+              currentAttempt: 1,
+            } as StoredJob)
+          : null
     )
     const existingResult = await materializeDueSchedules({
       ...existing,

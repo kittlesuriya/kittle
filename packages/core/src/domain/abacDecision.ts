@@ -51,6 +51,14 @@ export function toEvidence(
   return evidence
 }
 
+/**
+ * Direct record-action evaluator. Production callers must pass a factory
+ * bundle (factory bundles only: `createAbacBundle` /
+ * `bindAbacSecurityDigest`); bundle verification is enforced at the
+ * `createAbacAuthorizer` / `buildActionScope` / `enforceAbacWrite`
+ * boundaries, not here, so unit tests can exercise pure decision logic
+ * with hand-built bundles.
+ */
 export function evaluateAbacRecordAction(args: {
   bundle: AbacPolicyBundle
   action: string
@@ -86,6 +94,14 @@ export function evaluateAbacRecordAction(args: {
   return decision
 }
 
+/**
+ * Direct global-capability evaluator. Production callers must pass a factory
+ * bundle (factory bundles only: `createAbacBundle` /
+ * `bindAbacSecurityDigest`); bundle verification is enforced at the
+ * `createAbacAuthorizer` / `buildActionScope` / `enforceAbacWrite`
+ * boundaries, not here, so unit tests can exercise pure decision logic
+ * with hand-built bundles.
+ */
 export function evaluateGlobalAbacCapability(args: {
   bundle: AbacPolicyBundle
   capability: string
@@ -123,6 +139,14 @@ export function evaluateGlobalAbacCapability(args: {
   return decision
 }
 
+/**
+ * Direct record-capability evaluator. Production callers must pass a factory
+ * bundle (factory bundles only: `createAbacBundle` /
+ * `bindAbacSecurityDigest`); bundle verification is enforced at the
+ * `createAbacAuthorizer` / `buildActionScope` / `enforceAbacWrite`
+ * boundaries, not here, so unit tests can exercise pure decision logic
+ * with hand-built bundles.
+ */
 export function evaluateAbacRecordCapability(args: {
   bundle: AbacPolicyBundle
   capability: string
@@ -171,6 +195,14 @@ export interface AbacCollectionDecision {
   }>
 }
 
+/**
+ * Direct collection-action evaluator. Production callers must pass a factory
+ * bundle (factory bundles only: `createAbacBundle` /
+ * `bindAbacSecurityDigest`); bundle verification is enforced at the
+ * `createAbacAuthorizer` / `buildActionScope` / `enforceAbacWrite`
+ * boundaries, not here, so unit tests can exercise pure decision logic
+ * with hand-built bundles.
+ */
 export function evaluateAbacActionForCollection(args: {
   bundle: AbacPolicyBundle
   action: string

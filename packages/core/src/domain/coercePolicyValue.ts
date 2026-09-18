@@ -19,21 +19,41 @@ export class PolicyValidationError extends Error {
   }
 }
 
+/**
+ * Strict decimal numeric literal: optional sign, digits with an optional
+ * fraction, or a leading-dot fraction, plus an optional decimal exponent.
+ * Deliberately rejects hex ("0x11"), octal ("0o17"), "Infinity", "NaN",
+ * and blank strings — all of which `Number()` would otherwise accept or
+ * coerce into surprising values.
+ */
+const STRICT_NUMERIC_LITERAL = /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?$/
+
+function invalidNumber(value: unknown): PolicyValidationError {
+  return new PolicyValidationError(`Invalid number value: ${String(value)}`, {
+    value,
+  })
+}
+
 export function coercePolicyValue(args: {
   type: AbacFieldType
   value: unknown
 }): PredicatePrimitive {
   switch (args.type) {
     case "number": {
-      if (typeof args.value === "number") return args.value
-      const num = Number(args.value)
-      if (!Number.isFinite(num)) {
-        throw new PolicyValidationError(
-          `Invalid number value: ${String(args.value)}`,
-          { value: args.value }
-        )
+      if (typeof args.value === "number") {
+        if (!Number.isFinite(args.value)) throw invalidNumber(args.value)
+        return args.value
       }
-      return num
+      if (typeof args.value === "string") {
+        const trimmed = args.value.trim()
+        if (trimmed === "" || !STRICT_NUMERIC_LITERAL.test(trimmed)) {
+          throw invalidNumber(args.value)
+        }
+        const num = Number(trimmed)
+        if (!Number.isFinite(num)) throw invalidNumber(args.value)
+        return num
+      }
+      throw invalidNumber(args.value)
     }
 
     case "boolean": {

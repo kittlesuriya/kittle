@@ -217,9 +217,10 @@ describe("tenant scoping with interactive transactions", () => {
     expect(repo.findById).toHaveBeenCalledWith("row-1")
   })
 
-  it("verifies tenant isolation prevents cross-tenant data access", async () => {
+  it("fails closed when the adapter returns cross-tenant data", async () => {
     const repo = createMockRepository()
-    // Simulate a row that belongs to a different tenant
+    // Simulate a buggy adapter that ignores the tenant filter and returns a
+    // row that belongs to a different tenant.
     const otherTenantRow: TestRow = {
       id: "row-1",
       tenantId: "tenant-other",
@@ -239,9 +240,10 @@ describe("tenant scoping with interactive transactions", () => {
       })
     )
 
-    expect(response.status).toBe(200)
-
-    // The tenant scoping wrapper adds tenant filter to prevent cross-tenant access
+    // The tenant-scoped wrapper still sends the tenant filter (defense in
+    // depth), but it no longer trusts the adapter's answer: a row outside
+    // the scope tenant fails the request instead of leaking to the caller.
+    expect(response.status).toBe(500)
     expect(repo.findOneWhere).toHaveBeenCalledWith(
       tenantScopedFilter("tenant-a")
     )

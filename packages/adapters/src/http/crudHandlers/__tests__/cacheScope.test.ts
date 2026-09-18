@@ -134,6 +134,11 @@ function makeShared(
       update: false,
       delete: false,
     },
+    writeRuntimeCapabilities: {
+      deferredExecution: true,
+      objectStorage: false,
+      cache: true,
+    },
     enforceReadAccess: async () => bundle,
     buildReadScope: () => ({
       filter: undefined,

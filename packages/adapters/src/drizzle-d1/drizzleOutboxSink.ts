@@ -15,6 +15,7 @@ import {
   getDrizzleSession,
   PLATFORM_IDEMPOTENCY_SCOPE,
 } from "./drizzlePersistenceProvider"
+import { assertOutboxRecordIdentity } from "../drizzle-shared/sinkGuards"
 import { getAffectedRows } from "./d1Utils"
 
 type OutboxColumns = AnySQLiteTable & {
@@ -43,6 +44,7 @@ export class DrizzleOutboxSink implements OutboxSink {
   ) {}
 
   async append(record: OutboxRecord): Promise<void> {
+    assertOutboxRecordIdentity(record, "D1 outbox")
     const columns = this.table as OutboxColumns
     const fingerprint = await fingerprintOutboxRecord(record)
     const mapped = this.mapRecord(record)

@@ -19,7 +19,7 @@ import type {
   StoredJob,
 } from "./types"
 import { InvalidJobPayloadError, MalformedJobPayloadError } from "./types"
-import { assertJobScopeMatches } from "./types"
+import { assertJobResult, assertJobScopeMatches, assertJobTransitionResult, assertStoredJobShape } from "./types"
 import { createExecutionContext, createNoopLogger } from "./executionContext"
 import { ValidationError } from "../foundation/errors"
 
@@ -161,6 +161,7 @@ async function markFailedState(
 ): Promise<{ applied: boolean; error?: string }> {
   try {
     const status = await store.markFailed(args)
+    assertJobTransitionResult(status, "markFailed")
     return status.applied
       ? status
       : {
@@ -199,6 +200,9 @@ export async function dispatchDueJobs(
     requester: config.requester,
     now: clock.now(),
   })
+  if (!Array.isArray(jobs)) {
+    throw new ValidationError("Job store claimDue must resolve an array.")
+  }
   result.claimed = jobs.length
   log.info("Dispatch claimed jobs", {
     workerId: config.workerId,
@@ -306,6 +310,34 @@ async function executeJob(
   }
   const claimToken = job.claimToken
 
+  try {
+    assertStoredJobShape(job)
+  } catch (error) {
+    const message = `Stored job is malformed: ${errorMessage(error)}`
+    const raw = job as unknown as {
+      id?: unknown
+      attemptsCompleted?: unknown
+    }
+    const status = await markFailedState(
+      {
+        jobId: typeof raw.id === "string" ? raw.id : "unknown",
+        workerId,
+        claimToken,
+        error: message,
+        status: "dead_letter",
+        attempt:
+          Number.isSafeInteger(raw.attemptsCompleted) &&
+          (raw.attemptsCompleted as number) >= 0
+            ? (raw.attemptsCompleted as number) + 1
+            : 1,
+      },
+      store
+    )
+    return status.applied
+      ? { kind: "dead_letter", error: message }
+      : { kind: "lease_lost", error: status.error ?? message }
+  }
+
   // P1-08 fencing: a batch claim can wait behind an earlier job. Re-fence it
   // immediately before execution instead of trusting the lease it received in
   // the batch. This validates the opaque claimToken atomically.
@@ -316,7 +348,7 @@ async function executeJob(
       claimToken,
       extendByMs: leaseDurationMs,
     })
-    if (!renewed) {
+    if (renewed !== true) {
       log.warn?.("Job lease re-fence rejected", {
         jobId: job.id,
         workerId,
@@ -477,7 +509,7 @@ async function executeJob(
           claimToken,
           extendByMs: leaseDurationMs,
         })
-        if (!renewed) throw new Error("Job lease was lost")
+        if (renewed !== true) throw new Error("Job lease was lost")
       },
     }),
     payload,
@@ -519,7 +551,7 @@ async function executeJob(
           claimToken,
           extendByMs: leaseDurationMs,
         })
-        if (!renewed) throw new Error("Job lease was lost")
+        if (renewed !== true) throw new Error("Job lease was lost")
       } catch (renewError) {
         leaseLost = true
         log.warn?.("Job heartbeat lease renewal failed", {
@@ -556,6 +588,25 @@ async function executeJob(
       timeoutPromise,
       leaseLostPromise,
     ])
+    try {
+      assertJobResult(executionResult)
+    } catch (error) {
+      const message = `Job returned a malformed result: ${errorMessage(error)}`
+      const status = await markFailedState(
+        {
+          jobId: job.id,
+          workerId,
+          claimToken,
+          error: message,
+          status: "dead_letter",
+          attempt: job.currentAttempt,
+        },
+        store
+      )
+      return status.applied
+        ? { kind: "dead_letter", error: message }
+        : { kind: "lease_lost", error: status.error ?? message }
+    }
     if (leaseLost) {
       if (executionPromise !== undefined)
         await waitForExecutionSettlement(
@@ -591,6 +642,7 @@ async function executeJob(
     let status: Awaited<ReturnType<JobStore["markSucceeded"]>>
     try {
       status = await store.markSucceeded(completeArgs)
+      assertJobTransitionResult(status, "markSucceeded")
     } catch (statusError) {
       log.error("Job markSucceeded threw", {
         jobId: job.id,
@@ -665,8 +717,30 @@ async function executeJob(
 }
 
 function validateDispatcherConfig(config: DispatcherConfig): void {
-  if (config.workerId.trim().length === 0)
+  if (typeof config.workerId !== "string" || config.workerId.trim().length === 0)
     throw new ValidationError("workerId must be non-empty")
+  if (
+    !config.store ||
+    typeof config.store.claimDue !== "function" ||
+    typeof config.store.renewLease !== "function" ||
+    typeof config.store.markSucceeded !== "function" ||
+    typeof config.store.markRetrying !== "function" ||
+    typeof config.store.markFailed !== "function"
+  ) {
+    throw new ValidationError(
+      "Job store must expose claimDue, renewLease, markSucceeded, markRetrying, and markFailed."
+    )
+  }
+  if (!config.registry || typeof config.registry.get !== "function") {
+    throw new ValidationError("Job registry must expose get().")
+  }
+  if (
+    !config.requester ||
+    typeof config.requester !== "object" ||
+    typeof (config.requester as { scope?: unknown }).scope !== "string"
+  ) {
+    throw new ValidationError("Job requester must carry a scope.")
+  }
   if (!Number.isInteger(config.claimLimit) || config.claimLimit < 1)
     throw new ValidationError("claimLimit must be a positive integer")
   const MAX_CLAIM_LIMIT = 100
@@ -677,6 +751,11 @@ function validateDispatcherConfig(config: DispatcherConfig): void {
   if (!Number.isFinite(config.leaseDurationMs) || config.leaseDurationMs <= 0)
     throw new ValidationError("leaseDurationMs must be positive")
   if (config.timeoutPolicy) {
+    if (config.timeoutPolicy.mode !== "cooperative") {
+      throw new ValidationError(
+        'timeoutPolicy mode must be "cooperative"'
+      )
+    }
     if (
       !Number.isFinite(config.timeoutPolicy.cancellationGraceMs) ||
       config.timeoutPolicy.cancellationGraceMs < 0
@@ -765,6 +844,7 @@ async function handleJobError(args: {
       let status: Awaited<ReturnType<JobStore["markRetrying"]>>
       try {
         status = await store.markRetrying(retryArgs)
+        assertJobTransitionResult(status, "markRetrying")
       } catch (statusError) {
         log.error("Job markRetrying threw", {
           jobId: job.id,
@@ -823,6 +903,7 @@ async function handleJobError(args: {
       status: "dead_letter",
       attempt,
     })
+    assertJobTransitionResult(status, "markFailed")
   } catch (statusError) {
     log.error("Job markFailed threw", {
       jobId: job.id,

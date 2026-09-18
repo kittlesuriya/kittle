@@ -1,6 +1,7 @@
 import type { ActorContext } from "../foundation/requestContext"
 import type { PersistenceProvider } from "./persistence"
 import { assertDurableRecord } from "../foundation/canonicalJson"
+import { ConfigurationError } from "../foundation/errors"
 
 export type { ActorContext }
 
@@ -94,6 +95,76 @@ export function buildAuditRecord(args: {
 
 export interface AuditSink {
   write(record: AuditRecord): Promise<void>
+}
+
+/**
+ * Fail-closed validation for an audit resource id produced by operation
+ * config (`resolveResourceId`) or caller code. An empty or non-string id
+ * would persist an unqueryable audit record.
+ */
+export function assertAuditResourceId(
+  value: unknown,
+  operationKey: string
+): asserts value is string {
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new ConfigurationError(
+      `Audit configuration for operation ${operationKey} must resolve a non-empty resource id.`
+    )
+  }
+}
+
+/**
+ * Fail-closed validation for an audit value after extraction and
+ * sanitization. The audit record stores plain JSON objects; arrays,
+ * primitives, or class instances from a custom extractor/sanitizer are an
+ * adapter/caller contract violation, not silent data.
+ */
+export function assertAuditRecordValue(
+  value: unknown,
+  label: string
+): asserts value is Record<string, unknown> | null {
+  if (value === null) return
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new ConfigurationError(
+      `${label} must be a JSON object or null after sanitization.`
+    )
+  }
+}
+
+/** Fail-closed validation for an audit sink produced by a sink factory. */
+export function assertAuditSink(
+  sink: unknown,
+  label: string
+): asserts sink is AuditSink {
+  if (
+    !sink ||
+    typeof sink !== "object" ||
+    Array.isArray(sink) ||
+    typeof (sink as Partial<AuditSink>).write !== "function"
+  ) {
+    throw new ConfigurationError(`${label} must expose write().`)
+  }
+}
+
+/**
+ * Resolves an audit sink from a factory, failing fast when the factory or
+ * its product does not honor the port contract.
+ */
+export function resolveAuditSink(
+  factory: unknown,
+  persistence: PersistenceProvider,
+  label: string
+): AuditSink {
+  if (
+    !factory ||
+    typeof factory !== "object" ||
+    typeof (factory as Partial<AuditSinkFactory>).create !== "function"
+  ) {
+    throw new ConfigurationError(`${label} must expose create().`)
+  }
+  const sink = (factory as AuditSinkFactory).create(persistence)
+  assertAuditSink(sink, label)
+  return sink
 }
 
 export interface AuditSinkFactory {

@@ -65,6 +65,11 @@ function validateJobDefinition(definition: JobDefinition): void {
     throw new ValidationError("Job type must be non-empty.")
   if (!Number.isInteger(definition.version) || definition.version < 1)
     throw new ValidationError("Job version must be a positive integer.")
+  if (
+    typeof definition.scope !== "string" ||
+    !["tenant", "platform", "system"].includes(definition.scope)
+  )
+    throw new ValidationError("Job scope must be tenant, platform, or system.")
   if (!Number.isInteger(definition.maxAttempts) || definition.maxAttempts < 1)
     throw new ValidationError("maxAttempts must be a positive integer.")
   if (!Number.isFinite(definition.retryDelayMs) || definition.retryDelayMs < 0)

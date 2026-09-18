@@ -23,7 +23,10 @@ import type {
   QueryOptions,
   ListResult,
 } from "./persistence"
-import { assertVersionedWriteHasExpectedVersion } from "./persistence"
+import {
+  assertVersionedWriteHasExpectedVersion,
+  assertQueryOptions,
+} from "./persistence"
 import type { AuditRecord } from "./audit"
 import type { OutboxRecord } from "./outbox"
 
@@ -180,6 +183,99 @@ function normalizeTenantRecord<T extends { tenantId?: string | null }>(
   return { ...record, tenantId }
 }
 
+/**
+ * Fail-closed validation for rows returned by the underlying adapter through
+ * a tenant-scoped repository. The scoped wrapper adds the tenant filter to
+ * the query, but a buggy adapter may ignore it — every returned row must
+ * prove it belongs to the scope tenant before reaching the caller.
+ */
+function assertTenantRowEcho<T>(
+  row: unknown,
+  entityName: string,
+  tenantField: keyof T & string,
+  tenantId: string
+): asserts row is T {
+  if (!row || typeof row !== "object" || Array.isArray(row)) {
+    throw new ConfigurationError(
+      `Repository adapter for "${entityName}" returned a malformed row; an object scoped to tenant "${tenantId}" is required.`
+    )
+  }
+  if ((row as Record<string, unknown>)[tenantField] !== tenantId) {
+    throw new TenantScopeViolationError(
+      `Repository adapter for "${entityName}" returned a row outside tenant "${tenantId}".`
+    )
+  }
+}
+
+function assertTenantRowsEcho<T>(
+  rows: unknown,
+  entityName: string,
+  tenantField: keyof T & string,
+  tenantId: string
+): asserts rows is T[] {
+  if (!Array.isArray(rows)) {
+    throw new ConfigurationError(
+      `Repository adapter for "${entityName}" returned a malformed row list; an array scoped to tenant "${tenantId}" is required.`
+    )
+  }
+  for (const row of rows) {
+    assertTenantRowEcho(row, entityName, tenantField, tenantId)
+  }
+}
+
+function assertListResultShape<T>(
+  result: unknown,
+  entityName: string
+): asserts result is ListResult<T> {
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    throw new ConfigurationError(
+      `Repository adapter for "${entityName}" returned a malformed list result; { rows, rowCount, page, pageSize } is required.`
+    )
+  }
+  const candidate = result as Partial<ListResult<T>>
+  if (!Array.isArray(candidate.rows)) {
+    throw new ConfigurationError(
+      `Repository adapter for "${entityName}" returned a malformed list result; "rows" must be an array.`
+    )
+  }
+  if (
+    !Number.isSafeInteger(candidate.rowCount) ||
+    (candidate.rowCount as number) < 0
+  ) {
+    throw new ConfigurationError(
+      `Repository adapter for "${entityName}" returned a malformed list result; "rowCount" must be a non-negative safe integer.`
+    )
+  }
+  if (
+    !Number.isSafeInteger(candidate.page) ||
+    (candidate.page as number) < 1 ||
+    !Number.isSafeInteger(candidate.pageSize) ||
+    (candidate.pageSize as number) < 1
+  ) {
+    throw new ConfigurationError(
+      `Repository adapter for "${entityName}" returned a malformed list result; "page" and "pageSize" must be positive safe integers.`
+    )
+  }
+}
+
+function assertAffectedCount(
+  result: unknown,
+  entityName: string,
+  field: "updatedCount" | "deletedCount"
+): asserts result is Record<typeof field, number> {
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    throw new ConfigurationError(
+      `Repository adapter for "${entityName}" returned a malformed mutation result; { ${field}: number } is required.`
+    )
+  }
+  const count = (result as Record<string, unknown>)[field]
+  if (!Number.isSafeInteger(count) || (count as number) < 0) {
+    throw new ConfigurationError(
+      `Repository adapter for "${entityName}" returned a malformed mutation result; "${field}" must be a non-negative safe integer.`
+    )
+  }
+}
+
 export const TENANT_SCOPED_BRAND: unique symbol = Symbol(
   "kittle.tenantScoped"
 )
@@ -232,37 +328,59 @@ export function createTenantScopedPersistenceProvider(
             tenantId
           )
           if (repo.findOneWhere) {
-            return repo.findOneWhere(filter)
+            const row = await repo.findOneWhere(filter)
+            if (row === null) return null
+            // Check-before-fanout: validate the tenant echo before any fan-out/caching/logging.
+            assertTenantRowEcho(row, entity.name, tenantField, tenantId)
+            return row
           }
           const result = await repo.findMany({
             filter,
             pagination: { page: 1, pageSize: 1 },
           })
+          assertListResultShape<T>(result, entity.name)
+          // Check-before-fanout: validate the tenant echo before any fan-out/caching/logging.
+          assertTenantRowsEcho(result.rows, entity.name, tenantField, tenantId)
           return result.rows[0] ?? null
         },
         async findOneWhere(filter: PredicateNode): Promise<T | null> {
           const scopedFilter = withTenantScope(filter, tenantField, tenantId)
           if (repo.findOneWhere) {
-            return repo.findOneWhere(scopedFilter)
+            const row = await repo.findOneWhere(scopedFilter)
+            if (row === null) return null
+            // Check-before-fanout: validate the tenant echo before any fan-out/caching/logging.
+            assertTenantRowEcho(row, entity.name, tenantField, tenantId)
+            return row
           }
           const result = await repo.findMany({
             filter: scopedFilter,
             pagination: { page: 1, pageSize: 1 },
           })
+          assertListResultShape<T>(result, entity.name)
+          // Check-before-fanout: validate the tenant echo before any fan-out/caching/logging.
+          assertTenantRowsEcho(result.rows, entity.name, tenantField, tenantId)
           return result.rows[0] ?? null
         },
         async findMany(options?: QueryOptions): Promise<ListResult<T>> {
-          return repo.findMany({
+          assertQueryOptions(options)
+          const result = await repo.findMany({
             ...options,
             filter: withTenantScope(options?.filter, tenantField, tenantId),
           })
+          assertListResultShape<T>(result, entity.name)
+          // Check-before-fanout: validate the tenant echo before any fan-out/caching/logging.
+          assertTenantRowsEcho(result.rows, entity.name, tenantField, tenantId)
+          return result
         },
         async insert(data: Partial<T>): Promise<T> {
           assertScopedTenantInsert(data, tenantField, tenantId, entity.name)
-          return repo.insert({
+          const row = await repo.insert({
             ...data,
             [tenantField]: tenantId,
           })
+          // Check-before-fanout: validate the tenant echo before any fan-out/caching/logging.
+          assertTenantRowEcho(row, entity.name, tenantField, tenantId)
+          return row
         },
         async update(
           id: TId,
@@ -290,12 +408,14 @@ export function createTenantScopedPersistenceProvider(
             data,
             options
           )
-          if (!updated) {
+          if (updated === null) {
             throw new NotFoundError(
               `Scoped update failed: ${entity.name} not found`,
               { entity: entity.name, id }
             )
           }
+          // Check-before-fanout: validate the tenant echo before any fan-out/caching/logging.
+          assertTenantRowEcho(updated, entity.name, tenantField, tenantId)
           return updated
         },
         async updateOneWhere(
@@ -312,7 +432,9 @@ export function createTenantScopedPersistenceProvider(
 
           const scopedFilter = withTenantScope(filter, tenantField, tenantId)
           if (repo.updateOneWhere) {
-            return repo.updateOneWhere(scopedFilter, data, options)
+            const result = await repo.updateOneWhere(scopedFilter, data, options)
+            assertAffectedCount(result, entity.name, "updatedCount")
+            return result
           }
           throw new UnsupportedCapabilityError(
             `updateOneWhere is not supported by the ${entity.name} repository adapter.`
@@ -332,7 +454,15 @@ export function createTenantScopedPersistenceProvider(
             )
 
             const scopedFilter = withTenantScope(filter, tenantField, tenantId)
-            return repo.updateOneWhereReturning!(scopedFilter, data, options)
+            const row = await repo.updateOneWhereReturning!(
+              scopedFilter,
+              data,
+              options
+            )
+            if (row === null) return null
+            // Check-before-fanout: validate the tenant echo before any fan-out/caching/logging.
+            assertTenantRowEcho(row, entity.name, tenantField, tenantId)
+            return row
           },
         }),
         async updateManyWhere(
@@ -349,7 +479,17 @@ export function createTenantScopedPersistenceProvider(
 
           const scopedFilter = withTenantScope(filter, tenantField, tenantId)
           if (repo.updateManyWhere) {
-            return repo.updateManyWhere(scopedFilter, data, options)
+            const count = await repo.updateManyWhere(
+              scopedFilter,
+              data,
+              options
+            )
+            if (!Number.isSafeInteger(count) || count < 0) {
+              throw new ConfigurationError(
+                `Repository adapter for "${entity.name}" returned a malformed mutation result; updateManyWhere count must be a non-negative safe integer.`
+              )
+            }
+            return count
           }
           throw new UnsupportedCapabilityError(
             `updateManyWhere is not supported by the ${entity.name} repository adapter. ` +
@@ -374,6 +514,7 @@ export function createTenantScopedPersistenceProvider(
             ),
             options
           )
+          assertAffectedCount(result, entity.name, "deletedCount")
           if (result.deletedCount === 0 && !options?.idempotent) {
             throw new NotFoundError(
               `Scoped delete failed: ${entity.name} not found`,
@@ -393,7 +534,9 @@ export function createTenantScopedPersistenceProvider(
           )
           const scopedFilter = withTenantScope(filter, tenantField, tenantId)
           if (repo.deleteWhere) {
-            return repo.deleteWhere(scopedFilter, options)
+            const result = await repo.deleteWhere(scopedFilter, options)
+            assertAffectedCount(result, entity.name, "deletedCount")
+            return result
           }
           throw new UnsupportedCapabilityError(
             `deleteWhere is not supported by the ${entity.name} repository adapter.`
@@ -408,7 +551,10 @@ export function createTenantScopedPersistenceProvider(
                 [tenantField]: tenantId,
               }
             })
-            return repo.bulkInsert!(normalized)
+            const rows = await repo.bulkInsert!(normalized)
+            // Check-before-fanout: validate the tenant echo before any fan-out/caching/logging.
+            assertTenantRowsEcho(rows, entity.name, tenantField, tenantId)
+            return rows
           },
         }),
       }

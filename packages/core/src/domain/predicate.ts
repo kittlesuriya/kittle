@@ -3,6 +3,8 @@
  * compilation, and in-memory record evaluation.
  */
 
+import { ConfigurationError } from "../foundation/errors"
+
 export type PredicatePrimitive = string | number | boolean | null | Date
 
 export interface PredicateRangeValue {
@@ -132,6 +134,123 @@ export const Predicate = {
 
 export interface PredicateCompiler<TCompiled> {
   compile(filter: PredicateNode): TCompiled
+}
+
+const PREDICATE_KINDS: ReadonlySet<string> = new Set([
+  "condition",
+  "and",
+  "or",
+  "not",
+  "literal",
+])
+
+const PREDICATE_OPS: ReadonlySet<string> = new Set([
+  "eq",
+  "neq",
+  "contains",
+  "startsWith",
+  "endsWith",
+  "isEmpty",
+  "isNotEmpty",
+  "gt",
+  "lt",
+  "gte",
+  "lte",
+  "isTrue",
+  "isFalse",
+  "isNull",
+  "isNotNull",
+  "in",
+  "includesAny",
+  "includesAll",
+  "between",
+])
+
+const NO_VALUE_PREDICATE_OPS: ReadonlySet<string> = new Set([
+  "isEmpty",
+  "isNotEmpty",
+  "isTrue",
+  "isFalse",
+  "isNull",
+  "isNotNull",
+])
+
+/** Fail-closed cap on predicate nesting so pathological input cannot blow the stack. */
+const MAX_PREDICATE_DEPTH = 100
+
+/**
+ * Fail-closed shape check for a caller/adapter-supplied predicate AST.
+ * Rejects malformed filters at the boundary instead of letting them surface
+ * as downstream TypeErrors inside compilers and evaluators.
+ */
+export function assertPredicateNode(
+  node: unknown,
+  depth = 0
+): asserts node is PredicateNode {
+  if (depth > MAX_PREDICATE_DEPTH) {
+    throw new ConfigurationError(
+      "Predicate filter exceeds maximum nesting depth."
+    )
+  }
+  if (!node || typeof node !== "object" || Array.isArray(node)) {
+    throw new ConfigurationError("Predicate filter must be an object.")
+  }
+  const candidate = node as Record<string, unknown>
+  if (typeof candidate.kind !== "string" || !PREDICATE_KINDS.has(candidate.kind)) {
+    throw new ConfigurationError(
+      "Predicate filter has an unknown kind; expected one of condition, and, or, not, literal."
+    )
+  }
+  switch (candidate.kind) {
+    case "condition": {
+      if (
+        typeof candidate.field !== "string" ||
+        candidate.field.length === 0
+      ) {
+        throw new ConfigurationError(
+          "Predicate condition requires a non-empty field."
+        )
+      }
+      if (typeof candidate.op !== "string" || !PREDICATE_OPS.has(candidate.op)) {
+        throw new ConfigurationError(
+          `Predicate condition has an unknown operator: ${String(candidate.op)}.`
+        )
+      }
+      if (
+        !NO_VALUE_PREDICATE_OPS.has(candidate.op) &&
+        candidate.value === undefined
+      ) {
+        throw new ConfigurationError(
+          `Predicate operator "${candidate.op}" requires a value.`
+        )
+      }
+      return
+    }
+    case "and":
+    case "or": {
+      if (!Array.isArray(candidate.filters)) {
+        throw new ConfigurationError(
+          `Predicate "${candidate.kind}" requires a filters array.`
+        )
+      }
+      for (const child of candidate.filters) {
+        assertPredicateNode(child, depth + 1)
+      }
+      return
+    }
+    case "not": {
+      assertPredicateNode(candidate.filter, depth + 1)
+      return
+    }
+    case "literal": {
+      if (typeof candidate.value !== "boolean") {
+        throw new ConfigurationError(
+          "Predicate literal requires a boolean value."
+        )
+      }
+      return
+    }
+  }
 }
 
 import type { AbacFieldDefinition } from "./abacCatalog"

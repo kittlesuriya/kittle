@@ -25,11 +25,15 @@ const matrix = JSON.parse(
     join(root, "scripts/verification/adapter-conformance.json"),
     "utf8"
   )
-) as { adapters: Record<string, { implementation: string; checks: string[] }> }
+) as {
+  adapters?: Record<string, { implementation: string; checks: string[] }>
+  "kittle-adapters"?: Record<string, { implementation: string; checks: string[] }>
+}
+const adaptersMatrix = matrix.adapters ?? matrix["kittle-adapters"] ?? {}
 const inventory = JSON.parse(
   readFileSync(join(root, "scripts/verification/adapter-coverage.json"), "utf8")
 ) as { required: string[]; evidence: Record<string, Record<string, string[]>> }
-for (const [name, adapter] of Object.entries(matrix.adapters)) {
+for (const [name, adapter] of Object.entries(adaptersMatrix)) {
   check(
     `${name}.implementation`,
     existsSync(join(root, adapter.implementation)),
@@ -56,10 +60,14 @@ for (const [name, adapter] of Object.entries(matrix.adapters)) {
   }
 }
 
-const packageManifests = ["kittle-core", "kittle-adapters", "testing"]
-for (const pkg of packageManifests) {
+const packageManifests = [
+  { name: "kittle-core", dir: "core" },
+  { name: "kittle-adapters", dir: "adapters" },
+  { name: "testing", dir: "testing" },
+]
+for (const { name: pkg, dir } of packageManifests) {
   const manifest = JSON.parse(
-    readFileSync(join(root, `packages/${pkg}/package.json`), "utf8")
+    readFileSync(join(root, `packages/${dir}/package.json`), "utf8")
   ) as {
     exports?: Record<string, { types?: string; default?: string } | string>
   }
@@ -72,7 +80,7 @@ for (const pkg of packageManifests) {
         existsSync(
           join(
             root,
-            `packages/${pkg}`,
+            `packages/${dir}`,
             String(declaration).replace(/^\.\//, "")
           )
         ),
@@ -82,7 +90,7 @@ for (const pkg of packageManifests) {
       `exports.${pkg}.${subpath}.runtime`,
       Boolean(runtime) &&
         existsSync(
-          join(root, `packages/${pkg}`, String(runtime).replace(/^\.\//, ""))
+          join(root, `packages/${dir}`, String(runtime).replace(/^\.\//, ""))
         ),
       "built runtime is missing; run build"
     )
@@ -159,7 +167,8 @@ function checkBuiltTreeParity(pkg: string): void {
     "built JavaScript and declarations differ"
   )
 }
-for (const pkg of packageManifests) checkBuiltTreeParity(`packages/${pkg}`)
+for (const { dir } of packageManifests)
+  checkBuiltTreeParity(`packages/${dir}`)
 
 function npmCommand(): string {
   return process.platform === "win32" ? "npm.cmd" : "npm"
@@ -177,14 +186,14 @@ function packConsumerSmoke(): void {
   const workspace = mkdtempSync(join(tmpdir(), "release-consumer-"))
   try {
     const tarballs: string[] = []
-    for (const pkg of packageManifests) {
+    for (const { name: pkgName, dir } of packageManifests) {
       const before = new Set(readdirSync(workspace))
       const result = runNpm(
-        ["pack", `./packages/${pkg}`, "--pack-destination", workspace],
+        ["pack", `./packages/${dir}`, "--pack-destination", workspace],
         root
       )
       check(
-        `pack.${pkg}`,
+        `pack.${pkgName}`,
         result.status === 0,
         `${result.stderr || result.stdout || "npm pack failed"}`
       )
@@ -224,9 +233,9 @@ function packConsumerSmoke(): void {
       `${install.stderr || install.stdout || "consumer npm install failed"}`
     )
     if (install.status === 0) {
-      const exports = packageManifests.flatMap((pkg) => {
+      const exports = packageManifests.flatMap(({ dir }) => {
         const manifest = JSON.parse(
-          readFileSync(join(root, `packages/${pkg}/package.json`), "utf8")
+          readFileSync(join(root, `packages/${dir}/package.json`), "utf8")
         ) as { name: string; exports?: Record<string, unknown> }
         return Object.keys(manifest.exports ?? {}).map(
           (subpath) =>

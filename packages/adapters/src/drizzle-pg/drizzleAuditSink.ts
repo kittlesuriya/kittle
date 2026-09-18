@@ -7,6 +7,7 @@ import type {
 import type { DrizzleSessionLike } from "./drizzleRepository"
 import type { AnyPgTable } from "drizzle-orm/pg-core"
 import { getDrizzleSession } from "./drizzlePersistenceProvider"
+import { assertAuditRecordIdentity } from "../drizzle-shared/sinkGuards"
 
 export class DrizzleAuditSink implements AuditSink {
   constructor(
@@ -15,6 +16,7 @@ export class DrizzleAuditSink implements AuditSink {
   ) {}
 
   async write(record: AuditRecord): Promise<void> {
+    assertAuditRecordIdentity(record, "PostgreSQL audit")
     await this.db.insert(this.table).values({
       id: record.id,
       createdAt: record.occurredAt,

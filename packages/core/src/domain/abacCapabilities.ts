@@ -9,6 +9,11 @@ import type { AbacPolicyBundle } from "./abacTypes"
  * Check a capability as a GLOBAL grant.
  * Only policies with unrestricted conditions can grant global capabilities.
  * A conditioned capability policy cannot grant a global capability.
+ *
+ * Production callers must pass a factory bundle (factory bundles only:
+ * `createAbacBundle` / `bindAbacSecurityDigest`); bundle verification is
+ * enforced at the `createAbacAuthorizer` boundary, not here, so unit tests
+ * can exercise pure decision logic with hand-built bundles.
  */
 export function hasGlobalAbacCapability(args: {
   bundle: AbacPolicyBundle
@@ -32,6 +37,11 @@ export function hasGlobalAbacCapability(args: {
 /**
  * Check a capability for a specific RECORD.
  * Conditioned capability policies are evaluated against the record.
+ *
+ * Production callers must pass a factory bundle (factory bundles only:
+ * `createAbacBundle` / `bindAbacSecurityDigest`); bundle verification is
+ * enforced at the `createAbacAuthorizer` boundary, not here, so unit tests
+ * can exercise pure decision logic with hand-built bundles.
  */
 export function hasRecordAbacCapability(args: {
   bundle: AbacPolicyBundle
@@ -45,6 +55,14 @@ export function hasRecordAbacCapability(args: {
   }).allowed
 }
 
+/**
+ * Resolve the set of globally granted capabilities.
+ *
+ * Production callers must pass a factory bundle (factory bundles only:
+ * `createAbacBundle` / `bindAbacSecurityDigest`); bundle verification is
+ * enforced at the `createAbacAuthorizer` boundary, not here, so unit tests
+ * can exercise pure decision logic with hand-built bundles.
+ */
 export function resolveGrantedGlobalCapabilities(args: {
   bundle: AbacPolicyBundle
 }): Set<string> {

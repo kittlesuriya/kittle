@@ -1,4 +1,5 @@
 import { ConfigurationError, ValidationError } from "../foundation/errors"
+import { assertPredicateNode } from "../domain/predicate"
 import type {
   CrudRouteKey,
   EntityDefinitionInput,
@@ -162,6 +163,24 @@ export function validateEntity<
     throw new ConfigurationError(
       `Entity "${entityName}" must acknowledge tenantScoping mode "none".`
     )
+  }
+
+  // scopeFilter is consumed by the HTTP CRUD adapters (buildStructuralScope):
+  // a malformed filter must fail here, not as a downstream TypeError at
+  // request time. Validated whenever present, regardless of mode.
+  const tenantScoping = input.tenantScoping as {
+    mode: string
+    scopeFilter?: unknown
+  }
+  if (tenantScoping.scopeFilter !== undefined) {
+    try {
+      assertPredicateNode(tenantScoping.scopeFilter)
+    } catch (error) {
+      throw new ConfigurationError(
+        `Entity "${entityName}" has an invalid tenantScoping scopeFilter.`,
+        { cause: error instanceof Error ? error.message : String(error) }
+      )
+    }
   }
 
   const policy = input.policy

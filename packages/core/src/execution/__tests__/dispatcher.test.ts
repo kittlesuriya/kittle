@@ -460,7 +460,7 @@ describe("dispatchDueJobs timeout handling", () => {
       expect.objectContaining({
         status: "dead_letter",
         error:
-          "Invalid retry policy: maxAttempts must be a finite integer >= 1",
+          "Stored job is malformed: Stored job maxAttempts must be a positive integer when provided.",
       })
     )
     expect(markSucceeded).toHaveBeenCalledOnce()
@@ -469,7 +469,7 @@ describe("dispatchDueJobs timeout handling", () => {
         jobId: firstJob.id,
         action: "dead_letter",
         error:
-          "Invalid retry policy: maxAttempts must be a finite integer >= 1",
+          "Stored job is malformed: Stored job maxAttempts must be a positive integer when provided.",
       }),
     ])
   })

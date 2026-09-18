@@ -10,6 +10,7 @@ import type { AnyMySqlTable } from "drizzle-orm/mysql-core"
 import { getTableColumns, sql, type AnyColumn } from "drizzle-orm"
 import { ConfigurationError, ConflictError } from "kittle-core/domain"
 import { getDrizzleSession } from "./drizzlePersistenceProvider"
+import { assertOutboxRecordIdentity } from "../drizzle-shared/sinkGuards"
 
 const OUTBOX_FINGERPRINT_VERSION = "v2"
 
@@ -44,6 +45,61 @@ export async function computeOutboxFingerprint(
   return `${OUTBOX_FINGERPRINT_VERSION}:${hex}`
 }
 
+function scopeValueOf(
+  columns: Record<string, AnyColumn>,
+  mapped: Record<string, unknown>,
+  record: OutboxRecord
+): unknown {
+  return columns.tenantId
+    ? (record.tenantId ?? null)
+    : (mapped.idempotencyScope ?? record.tenantId ?? "__platform__")
+}
+
+/**
+ * Verifies the stored row's fingerprint after a duplicate-key collision. A
+ * matching fingerprint is an idempotent replay; a different one is a key-reuse
+ * conflict. Fails closed when the stored row cannot prove its identity.
+ */
+function verifyExistingFingerprint(
+  existingRow: Record<string, unknown>,
+  fingerprint: string
+): void {
+  const existingFingerprint =
+    existingRow.eventFingerprint ?? existingRow.event_fingerprint
+
+  if (existingFingerprint === fingerprint) return
+
+  if (
+    typeof existingFingerprint !== "string" ||
+    existingFingerprint.length === 0
+  ) {
+    throw new Error(
+      "Stored outbox fingerprint is missing; migrate fingerprints before replaying events."
+    )
+  }
+
+  throw new ConflictError(
+    "Outbox idempotency key was reused for a different event"
+  )
+}
+function findMysqlProperty(
+  error: unknown,
+  property: "code" | "constraint"
+): string | undefined {
+  let current: unknown = error
+  for (let depth = 0; depth < 5 && current; depth++) {
+    if (typeof current === "object" && property in current) {
+      const value = (current as Record<string, unknown>)[property]
+      if (typeof value === "string") return value
+    }
+    current =
+      typeof current === "object" && "cause" in current
+        ? (current as { cause?: unknown }).cause
+        : undefined
+  }
+  return undefined
+}
+
 export class DrizzleOutboxSink implements OutboxSink {
   constructor(
     private readonly db: DrizzleSessionLike,
@@ -54,6 +110,7 @@ export class DrizzleOutboxSink implements OutboxSink {
   ) {}
 
   async append(record: OutboxRecord): Promise<void> {
+    assertOutboxRecordIdentity(record, "MySQL outbox")
     const mapped = this.mapRecord(record)
     const fingerprint = await computeOutboxFingerprint(record)
     const columns = getTableColumns(this.table) as Record<string, AnyColumn>
@@ -64,41 +121,32 @@ export class DrizzleOutboxSink implements OutboxSink {
       )
     }
 
-    // MySQL: use INSERT IGNORE for idempotent inserts
-    const insertResult = await this.db.insert(this.table).values({
-      id: record.id,
-      ...mapped,
-      eventFingerprint: fingerprint,
-    })
-
-    // If the insert was ignored (duplicate key), verify the existing row's fingerprint
-    const scopeValue = columns.tenantId
-      ? (record.tenantId ?? null)
-      : (mapped.idempotencyScope ?? record.tenantId ?? "__platform__")
-    const [existing] = await this.db
-      .select()
-      .from(this.table)
-      .where(
-        sql`${scopeColumn} = ${scopeValue} AND ${columns.idempotencyKey} = ${record.idempotencyKey}`
-      )
-      .limit(1)
-    const existingRow = existing as Record<string, unknown> | undefined
-    const existingFingerprint =
-      existingRow?.eventFingerprint ?? existingRow?.event_fingerprint
-
-    if (existingFingerprint === fingerprint) return
-
-    if (
-      typeof existingFingerprint !== "string" ||
-      existingFingerprint.length === 0
-    ) {
-      // First insert succeeded, no conflict
+    try {
+      await this.db.insert(this.table).values({
+        id: record.id,
+        ...mapped,
+        eventFingerprint: fingerprint,
+      })
+      return
+    } catch (error) {
+      // A plain insert throws ER_DUP_ENTRY on any unique collision. Only a
+      // collision on the outbox (scope, idempotencyKey) identity is an
+      // idempotency replay; anything else must propagate unchanged.
+      if (findMysqlProperty(error, "code") !== "ER_DUP_ENTRY") throw error
+      const [existing] = await this.db
+        .select()
+        .from(this.table)
+        .where(
+          sql`${scopeColumn} <=> ${scopeValueOf(columns, mapped, record)} AND ${columns.idempotencyKey} = ${record.idempotencyKey}`
+        )
+        .limit(1)
+      const existingRow = existing as Record<string, unknown> | undefined
+      // No row under our identity: the collision was unrelated (e.g. primary
+      // key). Propagate the original error rather than inventing a verdict.
+      if (!existingRow) throw error
+      verifyExistingFingerprint(existingRow, fingerprint)
       return
     }
-
-    throw new ConflictError(
-      "Outbox idempotency key was reused for a different event"
-    )
   }
 }
 

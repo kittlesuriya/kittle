@@ -187,7 +187,22 @@ export function assertPolicyWritableFields(args: {
     )
     .filter((p) => evaluatePredicate(args.record, p.compiledConditions))
 
-  if (relevant.length === 0) return
+  if (relevant.length === 0) {
+    // Fail-closed: no policy relevant to this record means no grant. This
+    // makes the field check independently deny even when called without the
+    // record-level evaluation. Through enforceAbacWrite the record-level
+    // NO_RELEVANT_POLICY / NO_POLICY_MATCHED_RECORD reason codes stay
+    // dominant (see enforceAbacWrite's guard), so this throw only surfaces
+    // standalone or when the record-level evaluation would allow.
+    const fields = args.changedFields ?? Object.keys(args.record)
+    throw new ForbiddenError(
+      "You do not have permission to update one or more fields.",
+      {
+        fields,
+        reasonCode: "ABAC_FIELD_WRITE_DENIED",
+      }
+    )
+  }
 
   // Only the highest matching priority tier is evaluated
   const priorities = Array.from(new Set(relevant.map((p) => p.priority))).sort(

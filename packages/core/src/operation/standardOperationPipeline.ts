@@ -1,4 +1,5 @@
 import { runAfterHooks, runBeforeHooks } from "./hooks"
+import { assertAuthorizationDecision } from "./authorization"
 import {
   createOperationRunContext,
   createPostCommitOperationContext,
@@ -7,8 +8,14 @@ import {
 import type { InternalOperationRunContext } from "./operationRunContext"
 import { runAfterCommitHooks } from "./hooks"
 import {
+  assertAuditRecordValue,
+  assertAuditResourceId,
+  assertAuditSink,
+  buildAuditRecord,
   classifyAuditValue,
   defaultAuditSanitizer,
+  resolveAuditSink,
+  resolveOutboxSink,
   type AuditRecord,
 } from "../ports"
 import {
@@ -317,11 +324,27 @@ async function authorize<TInput, TResult>(
   definition: StandardOperationDefinition<TInput, TResult>,
   input: TInput
 ) {
-  const decision = await definition.authorization?.authorize({
+  if (definition.authorization === undefined) {
+    // Non-breaking nudge: reads without authorization are allowed (public
+    // reads exist) but should be explicit. Warn with the operation key so an
+    // accidentally-open read is visible in logs; behavior is unchanged.
+    operation.services.logger.warn(
+      `Operation ${definition.key} has no authorization check; read operations should declare authorization or be explicitly documented as public.`,
+      { operationKey: definition.key }
+    )
+    return
+  }
+  if (typeof definition.authorization.authorize !== "function") {
+    throw new ConfigurationError(
+      `Operation ${definition.key} declares authorization without an authorize function.`
+    )
+  }
+  const decision = await definition.authorization.authorize({
     operation,
     input,
   })
-  if (decision && !decision.allowed) {
+  assertAuthorizationDecision(decision, definition.key)
+  if (!decision.allowed) {
     throw new ForbiddenError(
       decision.reason ??
         `Operation is not allowed: ${definition.key}. Operation ${definition.key} is not allowed.`
@@ -412,29 +435,39 @@ function buildAudit<TInput, TResult>(args: {
     (args.operation.auditSanitizer ?? defaultAuditSanitizer)(
       classifyAuditValue(value, config.fieldClassification)
     )
-  const record: AuditRecord = {
+  const resourceId = config.resolveResourceId({
+    input: args.input,
+    result: args.result,
+  })
+  assertAuditResourceId(resourceId, args.definition.key)
+  const rawOldValue = config.extractOldValue
+    ? sanitize(config.extractOldValue({ input: args.input }) ?? {})
+    : null
+  assertAuditRecordValue(
+    rawOldValue,
+    `Audit oldValue for operation ${args.definition.key}`
+  )
+  const rawNewValue = config.extractNewValue
+    ? sanitize(
+        config.extractNewValue({ input: args.input, result: args.result }) ??
+          {}
+      )
+    : null
+  assertAuditRecordValue(
+    rawNewValue,
+    `Audit newValue for operation ${args.definition.key}`
+  )
+  const record = buildAuditRecord({
     id: args.operation.services.idGenerator(),
     occurredAt: args.operation.services.clock(),
     actor,
     action: config.action,
     resourceType: config.resourceType,
-    resourceId: config.resolveResourceId({
-      input: args.input,
-      result: args.result,
-    }),
+    resourceId,
     tenantId: args.operation.request?.tenantId ?? null,
-    oldValue: config.extractOldValue
-      ? (sanitize(
-          config.extractOldValue({ input: args.input }) ?? {}
-        ) as Record<string, unknown>)
-      : null,
-    newValue: config.extractNewValue
-      ? (sanitize(
-          config.extractNewValue({ input: args.input, result: args.result }) ??
-            {}
-        ) as Record<string, unknown>)
-      : null,
-  }
+    oldValue: rawOldValue,
+    newValue: rawNewValue,
+  })
   if (args.auditMode === "transactional") return record
   if (args.auditMode === "outbox") {
     args.operation.addOutboxRecord({
@@ -449,6 +482,10 @@ function buildAudit<TInput, TResult>(args: {
       occurredAt: record.occurredAt,
     })
   } else if (args.operation.auditSink) {
+    assertAuditSink(
+      args.operation.auditSink,
+      `Audit sink for operation ${args.definition.key}`
+    )
     args.operation.addBestEffortEffect("audit-write", () =>
       args.operation.auditSink!.write(record)
     )
@@ -463,7 +500,12 @@ async function writeAudit(
   const factory = operation.auditSinkFactory
   if (!factory)
     throw new AuditSinkMissingError("Transactional audit sink factory missing.")
-  await factory.create(operation.persistence).write(record)
+  const sink = resolveAuditSink(
+    factory,
+    operation.persistence,
+    "Transactional audit sink"
+  )
+  await sink.write(record)
 }
 
 async function persistOutbox(operation: InternalOperationRunContext) {
@@ -471,7 +513,11 @@ async function persistOutbox(operation: InternalOperationRunContext) {
   if (!records.length) return
   const factory = operation.outboxSinkFactory
   if (!factory) throw new OutboxSinkMissingError("Outbox sink factory missing.")
-  const sink = factory.create(operation.persistence)
+  const sink = resolveOutboxSink(
+    factory,
+    operation.persistence,
+    "Outbox sink"
+  )
   for (const record of records) {
     await sink.append({
       ...record,
@@ -577,7 +623,7 @@ async function runTransactionWithRetry<TInput, TResult>(args: {
         })
       : args.operation
     try {
-      return await args.provider.runInTransaction(
+      const completed = await args.provider.runInTransaction(
         async (scoped) => {
           const operation = attemptContext.withPersistence(
             args.definition.kind === "read"
@@ -613,6 +659,8 @@ async function runTransactionWithRetry<TInput, TResult>(args: {
           ? { ...args.transactionOptions, accessMode: "read only" }
           : args.transactionOptions
       )
+      assertTransactionCompleted(completed, args.definition.key)
+      return completed
     } catch (error) {
       // Also consider flag attached by run() before dispose
       if (
@@ -665,21 +713,62 @@ function asArray<T>(value: T | T[] | undefined): T[] {
   return Array.isArray(value) ? value : [value]
 }
 
+/**
+ * Fail-closed validation for the value an interactive-transaction provider
+ * resolves. A provider that swallows the callback or resolves garbage must
+ * surface a contract error — never an obscure downstream crash, and never a
+ * retry (the commit outcome is unknown).
+ */
+function assertTransactionCompleted(
+  completed: unknown,
+  operationKey: string
+): void {
+  if (!completed || typeof completed !== "object" || Array.isArray(completed)) {
+    throw new ConfigurationError(
+      `Interactive transaction for operation ${operationKey} returned a malformed result; the provider must resolve the callback value.`
+    )
+  }
+  const candidate = completed as {
+    operation?: unknown
+    result?: unknown
+  }
+  if (
+    !candidate.operation ||
+    typeof candidate.operation !== "object" ||
+    typeof (
+      candidate.operation as {
+        takePreCommitEffects?: unknown
+      }
+    ).takePreCommitEffects !== "function" ||
+    !candidate.result ||
+    typeof candidate.result !== "object"
+  ) {
+    throw new ConfigurationError(
+      `Interactive transaction for operation ${operationKey} returned a malformed result; the provider must resolve the callback value.`
+    )
+  }
+}
+
 function reportEffectFailure(
   operation: InternalOperationRunContext,
   phase: string,
   effectName: string,
   error: unknown
 ) {
-  operation.effectFailureReporter?.({
-    operationId: operation.operationId,
-    ...(operation.correlationId !== undefined
-      ? { correlationId: operation.correlationId }
-      : {}),
-    phase,
-    effectName,
-    error,
-  })
+  try {
+    operation.effectFailureReporter?.({
+      operationId: operation.operationId,
+      ...(operation.correlationId !== undefined
+        ? { correlationId: operation.correlationId }
+        : {}),
+      phase,
+      effectName,
+      error,
+    })
+  } catch {
+    // A throwing reporter must never mask the real post-commit failure;
+    // metadata bookkeeping below still runs.
+  }
   const metadata = operation.request?.metadata
   if (!metadata) return
   const failures =

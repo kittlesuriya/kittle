@@ -77,9 +77,109 @@ export interface StoredJob {
   completedAt: Date | null
 }
 
+const JOB_SCOPES: readonly string[] = ["tenant", "platform", "system"]
+
+/**
+ * Fail-closed shape check for a store-returned job. A job store that resolves
+ * malformed rows (wrong types, missing identity, non-string payload) must
+ * surface a contract error so the dispatcher dead-letters the claim instead
+ * of executing garbage or corrupting retry arithmetic.
+ */
+export function assertStoredJobShape(job: unknown): asserts job is StoredJob {
+  if (!job || typeof job !== "object" || Array.isArray(job)) {
+    throw new ValidationError("Stored job must be an object.")
+  }
+  const candidate = job as Partial<StoredJob>
+  if (typeof candidate.id !== "string" || candidate.id.trim() === "") {
+    throw new ValidationError("Stored job id must be a non-empty string.")
+  }
+  if (
+    typeof candidate.jobType !== "string" ||
+    candidate.jobType.trim() === ""
+  ) {
+    throw new ValidationError("Stored job jobType must be a non-empty string.")
+  }
+  if (!Number.isSafeInteger(candidate.jobVersion) || candidate.jobVersion! < 1) {
+    throw new ValidationError("Stored job jobVersion must be a positive integer.")
+  }
+  if (
+    typeof candidate.scope !== "string" ||
+    !JOB_SCOPES.includes(candidate.scope)
+  ) {
+    throw new ValidationError("Stored job scope must be a valid job scope.")
+  }
+  if (
+    candidate.tenantId !== null &&
+    candidate.tenantId !== undefined &&
+    typeof candidate.tenantId !== "string"
+  ) {
+    throw new ValidationError("Stored job tenantId must be a string or null.")
+  }
+  if (typeof candidate.payload !== "string") {
+    throw new ValidationError("Stored job payload must be a string.")
+  }
+  if (
+    !Number.isSafeInteger(candidate.attemptsCompleted) ||
+    candidate.attemptsCompleted! < 0 ||
+    !Number.isSafeInteger(candidate.currentAttempt) ||
+    candidate.currentAttempt! < 0
+  ) {
+    throw new ValidationError(
+      "Stored job attempt counters must be non-negative safe integers."
+    )
+  }
+  if (
+    candidate.maxAttempts !== undefined &&
+    (!Number.isSafeInteger(candidate.maxAttempts) || candidate.maxAttempts < 1)
+  ) {
+    throw new ValidationError(
+      "Stored job maxAttempts must be a positive integer when provided."
+    )
+  }
+  if (
+    candidate.claimToken !== null &&
+    candidate.claimToken !== undefined &&
+    typeof candidate.claimToken !== "string"
+  ) {
+    throw new ValidationError("Stored job claimToken must be a string or null.")
+  }
+  if (
+    candidate.correlationId !== null &&
+    candidate.correlationId !== undefined &&
+    typeof candidate.correlationId !== "string"
+  ) {
+    throw new ValidationError(
+      "Stored job correlationId must be a string or null."
+    )
+  }
+  if (
+    candidate.metadata !== null &&
+    candidate.metadata !== undefined &&
+    (typeof candidate.metadata !== "object" || Array.isArray(candidate.metadata))
+  ) {
+    throw new ValidationError("Stored job metadata must be an object or null.")
+  }
+}
+
 export type JobResult =
   | { success: true; data?: Record<string, unknown>; error?: never }
   | { success: false; data?: Record<string, unknown>; error?: JobError }
+
+/**
+ * Fail-closed shape check for a job `execute` resolution. An execute
+ * implementation that resolves garbage (null, an array, or an object without
+ * a boolean `success`) is a deterministic job bug — the dispatcher must
+ * dead-letter it instead of reading `.success` off malformed data or
+ * treating it as retryable.
+ */
+export function assertJobResult(result: unknown): asserts result is JobResult {
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    throw new ValidationError("Job result must be a non-array object.")
+  }
+  if (typeof (result as Partial<JobResult>).success !== "boolean") {
+    throw new ValidationError("Job result success must be a boolean.")
+  }
+}
 
 export type JobFailureKind = "retryable" | "permanent" | "cancelled"
 export type JobError = Error & { readonly kind?: JobFailureKind }
@@ -375,6 +475,54 @@ export interface JobTransitionResult {
   transitionToken?: string
   /** Set when required execution history could not be persisted. */
   historyError?: string
+}
+
+const JOB_TRANSITION_REASONS: readonly string[] = [
+  "LEASE_LOST",
+  "INVALID_STATE",
+  "HISTORY_FAILED",
+]
+
+/**
+ * Fail-closed shape check for a store-returned job transition. Callers treat
+ * a malformed transition as lease loss (never double-execute); the explicit
+ * check keeps a truthy-garbage `applied` from faking success.
+ */
+export function assertJobTransitionResult(
+  result: unknown,
+  operation: string
+): asserts result is JobTransitionResult {
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    throw new ValidationError(
+      `Job store ${operation} must resolve a transition result object.`
+    )
+  }
+  const candidate = result as Partial<JobTransitionResult>
+  if (typeof candidate.applied !== "boolean") {
+    throw new ValidationError(
+      `Job store ${operation} must resolve a boolean applied flag.`
+    )
+  }
+  if (
+    candidate.reason !== undefined &&
+    (typeof candidate.reason !== "string" ||
+      !JOB_TRANSITION_REASONS.includes(candidate.reason))
+  ) {
+    throw new ValidationError(
+      `Job store ${operation} returned an unknown transition reason.`
+    )
+  }
+  for (const key of ["transitionToken", "historyError"] as const) {
+    const value = candidate[key]
+    if (
+      value !== undefined &&
+      (typeof value !== "string" || value.length === 0)
+    ) {
+      throw new ValidationError(
+        `Job store ${operation} returned a malformed ${key}.`
+      )
+    }
+  }
 }
 
 export type ScheduleScope = "tenant" | "platform" | "system"

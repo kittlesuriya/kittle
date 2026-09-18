@@ -6,8 +6,9 @@ import type {
   JobStatus,
   PriorScheduleExecutionStatus,
 } from "./types"
-import { scheduleCorrelationId } from "./types"
+import { assertStoredJobShape, scheduleCorrelationId } from "./types"
 import type { FencedScheduleClaim, ScheduleStore } from "./scheduleStore"
+import { assertScheduleClaimShape } from "./scheduleStore"
 import {
   computeScheduleOccurrences,
   shouldFireSchedule,
@@ -62,6 +63,9 @@ export async function materializeDueSchedules(args: {
     now,
     leaseDurationMs,
   })
+  if (!Array.isArray(claims)) {
+    throw new ValidationError("Schedule store must resolve an array of claims.")
+  }
   log.info("Schedules claimed", {
     workerId: args.workerId,
     claimed: claims.length,
@@ -71,6 +75,7 @@ export async function materializeDueSchedules(args: {
   for (const claim of claims) {
     let renewal: LeaseRenewal | undefined
     try {
+      assertScheduleClaimShape(claim)
       renewal = startLeaseRenewal({
         scheduleStore: args.scheduleStore,
         claim,
@@ -241,6 +246,7 @@ export async function materializeDueSchedules(args: {
         }
 
         if (existingJob) {
+          assertStoredJobShape(existingJob)
           lastJobStatus = jobStatusToPriorExecutionStatus(existingJob.status)
           continue
         }
@@ -376,6 +382,7 @@ async function getPriorExecutionStatus(args: {
     requester: args.requester,
   })
   if (!prior) return null
+  assertStoredJobShape(prior)
   return jobStatusToPriorExecutionStatus(prior.status)
 }
 
@@ -395,6 +402,10 @@ function jobStatusToPriorExecutionStatus(
       return "failed"
     case "cancelled":
       return "cancelled"
+    default:
+      throw new ValidationError(
+        `Schedule prior execution has an unknown job status: ${String(status)}.`
+      )
   }
 }
 

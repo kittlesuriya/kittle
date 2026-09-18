@@ -61,9 +61,127 @@ export function assertCatalogFieldsProto(
  * cannot be spoofed by inherited properties such as `__proto__`,
  * `constructor`, or `toString`.
  */
+
+// Hardcoded locally (type-only import above) so this module keeps no runtime
+// dependency on abacPolicySchema, which itself imports this module's types.
+const KNOWN_POLICY_OPERATORS: ReadonlySet<string> = new Set([
+  "equals",
+  "notEquals",
+  "contains",
+  "startsWith",
+  "endsWith",
+  "isEmpty",
+  "isNotEmpty",
+  "greaterThan",
+  "lessThan",
+  "greaterOrEqual",
+  "lessOrEqual",
+  "isTrue",
+  "isFalse",
+  "isNull",
+  "isNotNull",
+  "includesAny",
+  "includesAll",
+  "before",
+  "after",
+  "between",
+  "in",
+])
+
+const KNOWN_ABAC_FIELD_TYPES: ReadonlySet<string> = new Set([
+  "string",
+  "number",
+  "boolean",
+  "date",
+  "datetime",
+  "identifier",
+  "string-array",
+])
+
+function assertNonEmptyString(value: unknown, message: string): void {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new ConfigurationError(message)
+  }
+}
+
+function assertStringArray(value: unknown, message: string): void {
+  if (
+    !Array.isArray(value) ||
+    !value.every((entry) => typeof entry === "string" && entry.length > 0)
+  ) {
+    throw new ConfigurationError(message)
+  }
+}
+
+function assertCatalogFieldEntry(
+  key: string,
+  entry: unknown
+): asserts entry is AbacFieldDefinition {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+    throw new ConfigurationError(
+      `Abac catalog field "${key}" must be an object.`
+    )
+  }
+  const candidate = entry as Partial<AbacFieldDefinition>
+  if (
+    typeof candidate.key !== "string" ||
+    candidate.key.length === 0 ||
+    candidate.key !== key
+  ) {
+    throw new ConfigurationError(
+      `Abac catalog field "${key}" must declare a non-empty key matching its map key.`
+    )
+  }
+  if (
+    typeof candidate.type !== "string" ||
+    !KNOWN_ABAC_FIELD_TYPES.has(candidate.type)
+  ) {
+    throw new ConfigurationError(
+      `Abac catalog field "${key}" has an unknown type: ${String(candidate.type)}.`
+    )
+  }
+  if (
+    !Array.isArray(candidate.operators) ||
+    candidate.operators.length === 0 ||
+    !candidate.operators.every(
+      (operator) =>
+        typeof operator === "string" && KNOWN_POLICY_OPERATORS.has(operator)
+    )
+  ) {
+    throw new ConfigurationError(
+      `Abac catalog field "${key}" must declare a non-empty array of known policy operators.`
+    )
+  }
+}
+
 export function defineAbacModule(
   catalog: AbacModuleCatalog
 ): AbacModuleCatalog {
+  if (!catalog || typeof catalog !== "object" || Array.isArray(catalog)) {
+    throw new ConfigurationError("Abac module catalog must be an object.")
+  }
+  assertNonEmptyString(
+    catalog.moduleKey,
+    "Abac module catalog requires a non-empty moduleKey."
+  )
+  assertStringArray(
+    catalog.actions,
+    "Abac module catalog actions must be an array of non-empty strings."
+  )
+  assertStringArray(
+    catalog.capabilities,
+    "Abac module catalog capabilities must be an array of non-empty strings."
+  )
+  if (
+    !catalog.fields ||
+    typeof catalog.fields !== "object" ||
+    Array.isArray(catalog.fields)
+  ) {
+    throw new ConfigurationError("Abac module catalog fields must be an object.")
+  }
+  for (const key of Object.keys(catalog.fields)) {
+    assertCatalogFieldEntry(key, catalog.fields[key])
+  }
   const safeFields = {} as Record<string, AbacFieldDefinition>
   Object.setPrototypeOf(safeFields, null)
   for (const key of Object.keys(catalog.fields)) {

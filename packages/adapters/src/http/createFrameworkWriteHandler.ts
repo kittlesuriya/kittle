@@ -6,6 +6,7 @@ import {
   type RateLimitStore,
 } from "kittle-core/rate-limit"
 import {
+  assertIdempotencyAcquireResult,
   isAtomicBatchIdempotencyPort,
   isDurableIdempotencyPort,
   isTransactionalIdempotencyPort,
@@ -550,6 +551,11 @@ export function createFrameworkWriteHandler<
           )
         }
         const acquired = await port.acquire(idempotencyRequest)
+        // Fail closed on a malformed store response: unknown outcomes,
+        // tokenless acquisitions, and resultless replays throw
+        // ConfigurationError here (mapped to 500 below) instead of replaying
+        // `undefined` or authorizing an unfenced mutation.
+        assertIdempotencyAcquireResult<SerializedResponse>(acquired)
         if (acquired.outcome === "replay") {
           return responseWithMetadata(
             deserializeResponse(acquired.result),

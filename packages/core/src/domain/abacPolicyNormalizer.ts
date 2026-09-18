@@ -1,9 +1,16 @@
 import { policyConditionsToPredicate } from "./abacConditionCompiler"
 import { validatePayloadAgainstCatalog } from "./abacPolicySchema"
-import type { AbacPolicy, NormalizedAbacPolicy, AbacContext } from "./abacTypes"
+import type { AbacPolicyEffect } from "./abacPolicySchema"
+import type {
+  AbacPolicy,
+  NormalizedAbacPolicy,
+  AbacContext,
+  AbacScopeType,
+} from "./abacTypes"
 import type { AbacFieldDefinition, AbacModuleCatalog } from "./abacCatalog"
 import type { PredicateNode } from "./predicate"
 import { deepFreeze } from "./abacBundleIntegrity"
+import { ConfigurationError } from "../foundation/errors"
 import {
   findNonPortablePredicate,
   findUnsupportedPredicateCombination,
@@ -26,6 +33,84 @@ export interface NormalizationError {
   message: string
   path?: string
   policyId?: string
+}
+
+const POLICY_SCOPE_TYPES: readonly string[] = [
+  "tenant_default",
+  "platform_default",
+  "role",
+  "branch",
+  "department",
+  "user",
+]
+
+function describePolicyValue(value: unknown): string {
+  try {
+    return JSON.stringify(value) ?? "undefined"
+  } catch {
+    return "[unserializable]"
+  }
+}
+
+/**
+ * Fail-fast contract checks for provider-supplied policy headers. Every
+ * decision path funnels into resolveTieredDecision, where a matched policy
+ * whose effect is not "deny" falls through to ALLOW — so an unknown effect
+ * would grant access, and unknown scope types or non-integer priorities
+ * would corrupt tiering. The helpers throw ConfigurationError and
+ * normalizeAbacPolicy converts them to NormalizationError failures so the
+ * factory keeps surfacing per-policy InvalidPolicyConfigurationError.
+ */
+export function assertPolicyEffect(
+  effect: unknown,
+  policyId?: string
+): asserts effect is AbacPolicyEffect {
+  if (effect !== "allow" && effect !== "deny") {
+    throw new ConfigurationError(
+      `Policy effect must be "allow" or "deny", got ${describePolicyValue(effect)}`,
+      { code: "POLICY_EFFECT_INVALID", policyId }
+    )
+  }
+}
+
+export function assertPolicyPriority(
+  priority: unknown,
+  policyId?: string
+): asserts priority is number {
+  if (typeof priority !== "number" || !Number.isSafeInteger(priority)) {
+    throw new ConfigurationError(
+      `Policy priority must be a safe integer, got ${describePolicyValue(priority)}`,
+      { code: "POLICY_PRIORITY_INVALID", policyId }
+    )
+  }
+}
+
+export function assertPolicyScopeType(
+  scopeType: unknown,
+  policyId?: string
+): asserts scopeType is AbacScopeType {
+  if (typeof scopeType !== "string" || !POLICY_SCOPE_TYPES.includes(scopeType)) {
+    throw new ConfigurationError(
+      `Policy scopeType must be one of ${POLICY_SCOPE_TYPES.join(", ")}, got ${describePolicyValue(scopeType)}`,
+      { code: "POLICY_SCOPE_INVALID", policyId }
+    )
+  }
+}
+
+function toNormalizationError(
+  error: unknown,
+  policyId?: string
+): NormalizationError {
+  if (error instanceof ConfigurationError) {
+    const details =
+      error.details && typeof error.details === "object"
+        ? (error.details as { code?: unknown })
+        : undefined
+    const code =
+      typeof details?.code === "string" ? details.code : "POLICY_HEADER_INVALID"
+    return { code, message: error.message, ...(policyId !== undefined ? { policyId } : {}) }
+  }
+  throw error
 }
 
 function asDate(value: Date | string | null | undefined): Date | undefined {
@@ -122,6 +207,24 @@ export function normalizeAbacPolicy(args: {
 }): NormalizePolicyResult {
   const errors: NormalizationError[] = []
   const at = args.at ?? new Date()
+  const policyId = args.policy.source.policyId
+
+  // Fail-fast header checks run before compilation: resolveTieredDecision
+  // treats any matched non-"deny" effect as ALLOW, so an unknown effect
+  // would grant access instead of failing closed. The errors gate below
+  // returns before compilation whenever any check fails.
+  const headerChecks: Array<() => void> = [
+    () => assertPolicyEffect(args.policy.effect, policyId),
+    () => assertPolicyPriority(args.policy.priority, policyId),
+    () => assertPolicyScopeType(args.policy.source.scopeType, policyId),
+  ]
+  for (const check of headerChecks) {
+    try {
+      check()
+    } catch (error) {
+      errors.push(toNormalizationError(error, policyId))
+    }
+  }
 
   const windowValid = validWindow(args.policy.source)
   if (!windowValid) {

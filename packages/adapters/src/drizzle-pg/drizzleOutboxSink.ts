@@ -10,6 +10,7 @@ import type { AnyPgTable } from "drizzle-orm/pg-core"
 import { getTableColumns, sql, type AnyColumn } from "drizzle-orm"
 import { ConfigurationError, ConflictError } from "kittle-core/domain"
 import { getDrizzleSession } from "./drizzlePersistenceProvider"
+import { assertOutboxRecordIdentity } from "../drizzle-shared/sinkGuards"
 
 const OUTBOX_FINGERPRINT_VERSION = "v2"
 
@@ -54,6 +55,7 @@ export class DrizzleOutboxSink implements OutboxSink {
   ) {}
 
   async append(record: OutboxRecord): Promise<void> {
+    assertOutboxRecordIdentity(record, "PostgreSQL outbox")
     const mapped = this.mapRecord(record)
     const fingerprint = await computeOutboxFingerprint(record)
     const columns = getTableColumns(this.table) as Record<string, AnyColumn>

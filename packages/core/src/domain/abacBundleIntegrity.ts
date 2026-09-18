@@ -3,7 +3,18 @@ import { canonicalizeJson } from "../foundation/canonicalJson"
 import { cloneAndFreezeDefinition } from "../foundation/definitionIntegrity"
 import { ConfigurationError } from "../foundation/errors"
 
-const VERIFIED_ABAC_BUNDLE = Symbol("verified-abac-bundle")
+/**
+ * Global-registry brand for verified ABAC bundles. Symbol.for shares the brand
+ * across duplicate module instances in monorepos (bundled twice, linked twice),
+ * so a genuinely verified bundle is not false-rejected. Tradeoff: Symbol.for
+ * is forgeable by any in-process code via Symbol.for("kittle.verified-abac-bundle"),
+ * but such code already has bindAbacSecurityDigest and could mint a fully valid
+ * brand, so Symbol.for strictly dominates a bare Symbol here. The digest
+ * recomputation in assertAbacSecurityDigest is unchanged and still required.
+ */
+const VERIFIED_ABAC_BUNDLE: unique symbol = Symbol.for(
+  "kittle.verified-abac-bundle"
+)
 
 type BrandedVerifiedBundle = VerifiedAbacPolicyBundle & {
   readonly [VERIFIED_ABAC_BUNDLE]: true

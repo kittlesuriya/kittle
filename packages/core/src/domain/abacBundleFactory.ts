@@ -1,4 +1,5 @@
 import type {
+  AbacPolicy,
   NormalizedAbacPolicy,
   AbacPolicyBundle,
   AbacContext,
@@ -45,6 +46,27 @@ function scopeRefMissing(
   )
 }
 
+/**
+ * Fail-closed shape check for a single provider-supplied policy. Normalization
+ * reports per-policy errors keyed by `source.policyId`, so a policy without a
+ * usable source must be rejected here — never dereferenced downstream.
+ */
+function readPolicyId(policy: unknown): string {
+  if (policy && typeof policy === "object" && !Array.isArray(policy)) {
+    const source = (policy as { source?: unknown }).source
+    if (source && typeof source === "object" && !Array.isArray(source)) {
+      const policyId = (source as { policyId?: unknown }).policyId
+      if (typeof policyId === "string" && policyId.length > 0)
+        return policyId
+    }
+  }
+  return "unknown"
+}
+
+function isPolicyShaped(policy: unknown): policy is AbacPolicy {
+  return readPolicyId(policy) !== "unknown"
+}
+
 function scopeMatchesContext(
   policy:
     | NormalizedAbacPolicy
@@ -78,6 +100,59 @@ function scopeMatchesContext(
 export async function createAbacBundle(
   input: CreateAbacBundleInput
 ): Promise<AbacPolicyBundle> {
+  const catalog: unknown = input.catalog
+  if (
+    !catalog ||
+    typeof catalog !== "object" ||
+    Array.isArray(catalog) ||
+    typeof (catalog as { moduleKey?: unknown }).moduleKey !== "string" ||
+    typeof (catalog as { fields?: unknown }).fields !== "object" ||
+    (catalog as { fields?: unknown }).fields === null ||
+    Array.isArray((catalog as { fields?: unknown }).fields)
+  ) {
+    const raw = catalog as { moduleKey?: unknown } | null
+    const catalogModuleKey =
+      raw !== null &&
+      typeof raw === "object" &&
+      !Array.isArray(raw) &&
+      typeof raw.moduleKey === "string"
+        ? raw.moduleKey
+        : undefined
+    throw new InvalidPolicyConfigurationError(
+      "ABAC catalog must be an object with a string moduleKey and a fields map",
+      {
+        moduleKey:
+          typeof input.moduleKey === "string" ? input.moduleKey : "unknown",
+        policyId: null,
+        issues: [],
+        ...(catalogModuleKey !== undefined ? { catalogModuleKey } : {}),
+      }
+    )
+  }
+  if (input.mode !== "tenant" && input.mode !== "platform") {
+    throw new InvalidPolicyConfigurationError(
+      "ABAC bundle mode must be tenant or platform",
+      {
+        moduleKey:
+          typeof input.moduleKey === "string" ? input.moduleKey : "unknown",
+        policyId: null,
+        issues: [],
+      }
+    )
+  }
+  if (
+    !input.provider ||
+    typeof input.provider.resolve !== "function"
+  ) {
+    throw new InvalidPolicyConfigurationError(
+      "ABAC policy provider must expose resolve()",
+      {
+        moduleKey: input.moduleKey,
+        policyId: null,
+        issues: [],
+      }
+    )
+  }
   const rawPolicies = await input.provider.resolve({
     mode: input.mode,
     moduleKey: input.moduleKey,
@@ -85,14 +160,35 @@ export async function createAbacBundle(
     ...(input.at ? { at: input.at } : {}),
   })
 
-  if (input.catalog.moduleKey !== input.moduleKey) {
+  if (!Array.isArray(rawPolicies)) {
+    throw new InvalidPolicyConfigurationError(
+      "ABAC policy provider must resolve to an array of policies",
+      {
+        moduleKey: input.moduleKey,
+        policyId: null,
+        issues: [],
+      }
+    )
+  }
+
+  if (
+    !input.catalog ||
+    typeof input.catalog !== "object" ||
+    input.catalog.moduleKey !== input.moduleKey
+  ) {
+    const catalogModuleKey =
+      input.catalog &&
+      typeof input.catalog === "object" &&
+      typeof input.catalog.moduleKey === "string"
+        ? input.catalog.moduleKey
+        : undefined
     throw new InvalidPolicyConfigurationError(
       "Catalog moduleKey does not match input moduleKey",
       {
         moduleKey: input.moduleKey,
-        catalogModuleKey: input.catalog.moduleKey,
         policyId: null,
         issues: [],
+        ...(catalogModuleKey !== undefined ? { catalogModuleKey } : {}),
       }
     )
   }
@@ -102,6 +198,20 @@ export async function createAbacBundle(
   const inactivePolicyIds: string[] = []
 
   for (const policy of rawPolicies) {
+    const policyId = readPolicyId(policy)
+    if (!isPolicyShaped(policy)) {
+      allErrors.push({
+        policyId,
+        errors: [
+          {
+            code: "POLICY_SOURCE_INVALID",
+            message:
+              "Policy must be an object with a source carrying a non-empty policyId",
+          },
+        ],
+      })
+      continue
+    }
     const result = normalizeAbacPolicy({
       policy,
       catalog: input.catalog,

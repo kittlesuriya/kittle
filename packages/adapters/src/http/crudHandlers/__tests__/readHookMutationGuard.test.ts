@@ -151,6 +151,11 @@ function makeShared(overrides: {
       update: false,
       delete: false,
     },
+    writeRuntimeCapabilities: {
+      deferredExecution: true,
+      objectStorage: false,
+      cache: true,
+    },
     enforceReadAccess: async () => abacBundle,
     buildReadScope: () => ({ filter: undefined }),
     enforceReadRateLimit: async () => undefined,

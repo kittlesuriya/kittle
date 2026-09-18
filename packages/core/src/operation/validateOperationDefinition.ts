@@ -68,6 +68,7 @@ export function validateOperationDefinition<TInput, TResult, TCommand>(
   }
 
   validateRuntimeCapabilities(definition)
+  validateHooks(definition)
 
   const atomicity = definition.atomicity
   if (atomicity === undefined) {
@@ -360,6 +361,21 @@ function validateRuntimeCapabilities<TInput, TResult, TCommand>(
       )
     }
     seen.add(capability)
+  }
+}
+
+function validateHooks<TInput, TResult, TCommand>(
+  definition: OperationDefinition<TInput, TResult, TCommand>
+): void {
+  for (const key of ["before", "after", "afterCommit"] as const) {
+    const hooks = (definition as unknown as Record<string, unknown>)[key]
+    if (hooks === undefined) continue
+    const list = Array.isArray(hooks) ? hooks : [hooks]
+    if (!list.every((hook) => typeof hook === "function")) {
+      throw new ValidationError(
+        `Invalid ${key} hooks for operation ${definition.key}: hooks must be functions.`
+      )
+    }
   }
 }
 

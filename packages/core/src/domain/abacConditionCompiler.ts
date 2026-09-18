@@ -13,6 +13,7 @@ import type {
 import { normalizeUserAttribute } from "./abacPolicySchema"
 import { coercePolicyValue, coercePolicyValueList } from "./coercePolicyValue"
 import type { AbacFieldDefinition } from "./abacCatalog"
+import { ConfigurationError } from "../foundation/errors"
 
 export type PredicateCompileResult =
   | { success: true; predicate: PredicateNode }
@@ -97,6 +98,33 @@ function resolveClauseValue(
   return clause.value
 }
 
+/**
+ * Fail-closed guard for context-bound scalar clauses. Every AbacContext field
+ * is optional, so a clause on a known user attribute (one of the five
+ * "user.*" attributes the parser accepts) can resolve to undefined. Scalar
+ * operators would then flow into coercePolicyValue's string/identifier case
+ * and be stringified to the literal "undefined" — a silent never-match that
+ * fail-OPENS deny policies. Reject the clause so the policy fails closed
+ * instead. The in-family operators keep their empty-to-alwaysFalse mapping,
+ * null keeps its eq-null semantics, and unknown attribute names keep their
+ * legacy behavior, so none of those paths go through this guard.
+ */
+export function assertUserAttrResolved(args: {
+  userAttr: string | undefined
+  resolvedValue: unknown
+  field: string
+}): void {
+  if (
+    args.userAttr !== undefined &&
+    normalizeUserAttribute(args.userAttr) !== undefined &&
+    args.resolvedValue === undefined
+  ) {
+    throw new ConfigurationError(
+      `Missing context value for user attribute "${args.userAttr}" on field "${args.field}"; refusing to compile a never-matching clause`
+    )
+  }
+}
+
 function coerceClauseValue(
   field: string,
   value: unknown,
@@ -144,6 +172,28 @@ export function policyClauseToPredicate(args: {
     return { success: true, predicate: Predicate.isNotNull(field) }
 
   const resolvedValue = resolveClauseValue(args.clause, args.context)
+
+  if (
+    operator !== "includesAny" &&
+    operator !== "includesAll" &&
+    operator !== "in"
+  ) {
+    try {
+      assertUserAttrResolved({
+        userAttr: args.clause.userAttr,
+        resolvedValue,
+        field,
+      })
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to resolve user attribute for clause",
+      }
+    }
+  }
 
   if (
     operator === "includesAny" ||

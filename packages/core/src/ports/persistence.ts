@@ -1,5 +1,6 @@
 import type { PersistenceCapabilities } from "./capabilities"
-import type { PredicateNode } from "../domain/predicate"
+import { assertPersistenceCapabilities } from "./capabilities"
+import { assertPredicateNode, type PredicateNode } from "../domain/predicate"
 import type { AuditRecord } from "./audit"
 import type { OutboxRecord } from "./outbox"
 import { ConfigurationError } from "../foundation/errors"
@@ -227,6 +228,91 @@ export function supportsInteractiveTransactions(
     typeof (provider as Partial<InteractiveTransactionProvider>)
       .runInTransaction === "function"
   )
+}
+
+/**
+ * Fail-closed shape check for caller-supplied query options.
+ * Catches malformed filters, pagination, and sort specs at the boundary
+ * instead of letting them surface as downstream TypeErrors in adapters.
+ */
+export function assertQueryOptions(
+  options: unknown
+): asserts options is QueryOptions | undefined {
+  if (options === undefined) return
+  if (!options || typeof options !== "object" || Array.isArray(options)) {
+    throw new ConfigurationError("Query options must be an object.")
+  }
+  const candidate = options as {
+    filter?: unknown
+    pagination?: unknown
+    sort?: unknown
+  }
+  if (candidate.filter !== undefined) {
+    assertPredicateNode(candidate.filter)
+  }
+  if (candidate.pagination !== undefined) {
+    const pagination = candidate.pagination
+    if (!pagination || typeof pagination !== "object" || Array.isArray(pagination)) {
+      throw new ConfigurationError("Query pagination must be an object.")
+    }
+    const spec = pagination as { page?: unknown; pageSize?: unknown }
+    if (
+      !Number.isSafeInteger(spec.page) ||
+      (spec.page as number) < 1 ||
+      !Number.isSafeInteger(spec.pageSize) ||
+      (spec.pageSize as number) < 1
+    ) {
+      throw new ConfigurationError(
+        'Query pagination requires safe-integer "page" and "pageSize" >= 1.'
+      )
+    }
+  }
+  if (candidate.sort !== undefined) {
+    if (!Array.isArray(candidate.sort)) {
+      throw new ConfigurationError("Query sort must be an array.")
+    }
+    for (const entry of candidate.sort) {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        throw new ConfigurationError("Query sort entries must be objects.")
+      }
+      const spec = entry as { field?: unknown; direction?: unknown }
+      if (typeof spec.field !== "string" || spec.field.length === 0) {
+        throw new ConfigurationError(
+          "Query sort entries require a non-empty field."
+        )
+      }
+      if (spec.direction !== "asc" && spec.direction !== "desc") {
+        throw new ConfigurationError(
+          'Query sort direction must be "asc" or "desc".'
+        )
+      }
+    }
+  }
+}
+
+/**
+ * Fail-closed shape check for an adapter-supplied persistence provider.
+ * Catches missing providers, missing repositories, and malformed capability
+ * documents at operation entry instead of mid-pipeline TypeErrors.
+ */
+export function assertPersistenceProviderShape(
+  provider: unknown
+): asserts provider is PersistenceProvider {
+  if (!provider || typeof provider !== "object" || Array.isArray(provider)) {
+    throw new ConfigurationError("Persistence provider must be an object.")
+  }
+  const candidate = provider as Partial<PersistenceProvider>
+  if (typeof candidate.dialect !== "string" || candidate.dialect.trim() === "") {
+    throw new ConfigurationError(
+      "Persistence provider must declare a non-empty dialect."
+    )
+  }
+  assertPersistenceCapabilities(candidate.capabilities)
+  if (typeof candidate.repository !== "function") {
+    throw new ConfigurationError(
+      "Persistence provider must expose repository()."
+    )
+  }
 }
 
 export type AtomicBatchItem<TCommand = unknown> =

@@ -70,6 +70,9 @@ export class OperationEffectCollector {
     initial?: Partial<OperationEffectStateWithCommitMarkers>,
     private readonly policy: OperationEffectPolicy = {}
   ) {
+    for (const marker of initial?.commitMarkers ?? []) {
+      assertCommitMarker(marker)
+    }
     this.effectsState = {
       transactionalEffects: [...(initial?.transactionalEffects ?? [])],
       outboxRecords: [...(initial?.outboxRecords ?? [])],
@@ -110,6 +113,7 @@ export class OperationEffectCollector {
 
   registerCommitMarker(entry: CommitMarkerEntry): void {
     this.assertPreCommit()
+    assertCommitMarker(entry)
     this.register(() => this.effectsState.commitMarkers.push(entry))
   }
 
@@ -120,6 +124,7 @@ export class OperationEffectCollector {
     ) => Promise<void>,
     policy = this.policy
   ): void {
+    assertEffectRegistration(name, execute, "Transactional effect")
     if (policy.allowTransactionalEffects === false) {
       throw new ConfigurationError(
         "Transactional effects cannot be registered after commit."
@@ -145,6 +150,7 @@ export class OperationEffectCollector {
     name: string,
     execute: (operation?: PostCommitOperationContext) => Promise<void>
   ): void {
+    assertEffectRegistration(name, execute, "Best-effort effect")
     if (this.policy.allowDeferredEffects === false) {
       throw new ConfigurationError(
         "Read-only operations cannot register deferred effects."
@@ -237,6 +243,36 @@ export class OperationEffectCollector {
     if (this.lifecycle !== "pre-commit") {
       throw new EffectCollectorDisposedError(
         "Transactional effects can only be registered before commit."
+      )
+    }
+  }
+}
+
+function assertEffectRegistration(
+  name: unknown,
+  execute: unknown,
+  label: string
+): asserts execute is (...args: never[]) => Promise<void> {
+  if (typeof name !== "string" || name.trim() === "") {
+    throw new ConfigurationError(`${label} requires a non-empty name.`)
+  }
+  if (typeof execute !== "function") {
+    throw new ConfigurationError(`${label} "${name}" requires an execute function.`)
+  }
+}
+
+function assertCommitMarker(entry: unknown): asserts entry is CommitMarkerEntry {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+    throw new ConfigurationError("Commit marker must be an object.")
+  }
+  const candidate = entry as Partial<CommitMarkerEntry>
+  if (typeof candidate.name !== "string" || candidate.name.trim() === "") {
+    throw new ConfigurationError("Commit marker requires a non-empty name.")
+  }
+  for (const key of ["fence", "commit", "batchItem"] as const) {
+    if (candidate[key] !== undefined && typeof candidate[key] !== "function") {
+      throw new ConfigurationError(
+        `Commit marker "${candidate.name}" requires ${key} to be a function when provided.`
       )
     }
   }

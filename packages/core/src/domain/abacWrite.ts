@@ -108,15 +108,30 @@ export function enforceAbacWrite(args: {
 }): void {
   assertVerifiedAbacBundle(args.bundle)
   if (args.action !== "delete") {
-    assertPolicyWritableFields({
-      policies: args.bundle.policies,
-      moduleKey: args.bundle.moduleKey,
-      action: args.action,
-      record: args.record,
-      ...(args.changedFields !== undefined
-        ? { changedFields: args.changedFields }
-        : {}),
-    })
+    // Check-before-field-deny: assertPolicyWritableFields is independently
+    // fail-closed on zero relevant policies, but through this path the
+    // record-level NO_RELEVANT_POLICY / NO_POLICY_MATCHED_RECORD reason codes
+    // stay dominant. Skipping the field throw when nothing is relevant lets
+    // the record evaluation below produce the observable denial; the field
+    // check still runs (and keeps its ABAC_FIELD_WRITE_DENIED precedence)
+    // whenever at least one policy is relevant to this record.
+    const hasRelevantPolicy = args.bundle.policies.some(
+      (policy) =>
+        policy.moduleKey === args.bundle.moduleKey &&
+        policyAppliesToAction(policy, args.action) &&
+        policyMatchesRecord(policy, args.record)
+    )
+    if (hasRelevantPolicy) {
+      assertPolicyWritableFields({
+        policies: args.bundle.policies,
+        moduleKey: args.bundle.moduleKey,
+        action: args.action,
+        record: args.record,
+        ...(args.changedFields !== undefined
+          ? { changedFields: args.changedFields }
+          : {}),
+      })
+    }
   }
 
   const evaluation = evaluateWriteAccessForRecordDetailed({

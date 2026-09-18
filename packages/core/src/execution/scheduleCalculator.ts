@@ -396,6 +396,52 @@ export function getNextOccurrence(
   )
 }
 
+const OVERLAP_POLICY_TYPES: readonly string[] = ["allow", "skip", "queue"]
+const MISFIRE_POLICY_TYPES: readonly string[] = ["skip", "fire_now", "queue_all"]
+
+function describeSchedulePolicyType(policy: unknown): string {
+  const type =
+    policy && typeof policy === "object" && "type" in policy
+      ? (policy as { type?: unknown }).type
+      : undefined
+  try {
+    return JSON.stringify(type) ?? "undefined"
+  } catch {
+    return "[unserializable]"
+  }
+}
+
+/**
+ * Fail-fast validation for store-supplied schedule policies. The overlap
+ * switch previously fell through unknown types to "fire", granting execution
+ * to schedules with unrecognized policy data. Unknown overlap or misfire
+ * types are malformed data, so both are rejected with ValidationError before
+ * any firing decision is made.
+ */
+export function assertSchedulePolicies(args: {
+  overlapPolicy: { type: string }
+  misfirePolicy: { type: string }
+}): void {
+  if (
+    !args.overlapPolicy ||
+    typeof args.overlapPolicy.type !== "string" ||
+    !OVERLAP_POLICY_TYPES.includes(args.overlapPolicy.type)
+  ) {
+    throw new ValidationError(
+      `Unknown schedule overlapPolicy type: ${describeSchedulePolicyType(args.overlapPolicy)}`
+    )
+  }
+  if (
+    !args.misfirePolicy ||
+    typeof args.misfirePolicy.type !== "string" ||
+    !MISFIRE_POLICY_TYPES.includes(args.misfirePolicy.type)
+  ) {
+    throw new ValidationError(
+      `Unknown schedule misfirePolicy type: ${describeSchedulePolicyType(args.misfirePolicy)}`
+    )
+  }
+}
+
 export function shouldFireSchedule(args: {
   schedule: Pick<
     ScheduleDefinition,
@@ -412,6 +458,7 @@ export function shouldFireSchedule(args: {
   priorExecutionStatus?: PriorScheduleExecutionStatus | null
   tzAdapter?: CronTimezoneAdapter
 }): "fire" | "skip" | "queue" | "ignore" {
+  assertSchedulePolicies(args.schedule)
   if (
     !args.schedule.enabled ||
     !args.schedule.nextRunAt ||
@@ -437,8 +484,11 @@ export function shouldFireSchedule(args: {
       return "queue"
     case "allow":
       return "fire"
+    default:
+      throw new ValidationError(
+        `Unknown schedule overlapPolicy type: ${describeSchedulePolicyType(args.schedule.overlapPolicy)}`
+      )
   }
-  return "fire"
 }
 
 export function computeScheduleOccurrences(args: {

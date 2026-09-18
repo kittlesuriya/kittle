@@ -50,7 +50,7 @@
     "vitest": "^4.1.7"
   },
   "dependencies": {
-    "kittle-core": "^0.1.0",
-    "kittle-adapters": "^0.1.0"
+    "kittle-core": "^0.3.0",
+    "kittle-adapters": "^0.4.0"
   }
 }
