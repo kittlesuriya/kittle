@@ -11,7 +11,7 @@ changes.
 Package versions are currently maintained independently:
 
 - `kittle-core` — `0.3.1`
-- `kittle-adapters` — `0.4.1`
+- `kittle-adapters` — `0.4.2`
 - `testing` — private workspace package, `0.1.0`
 
 ## [Unreleased]
@@ -64,6 +64,15 @@ Future changes will be documented here.
 - Bounded request bodies, query input, pagination, filtering, sorting, and
   durable payloads.
 - Fenced leases, claim tokens, replay protection, and crash-recovery paths.
+
+## Runtime adapters package `0.4.2` — 2026-09-24
+
+### Added
+
+- Added the optional `kittle-adapters/nestjs` controller and dynamic-module
+  integration for Nest Express and Fastify applications.
+- Reused the Fetch HTTP boundary so security, validation, tenancy, idempotency,
+  and error serialization remain centralized.
 
 ## Core reference package `0.3.0`
 

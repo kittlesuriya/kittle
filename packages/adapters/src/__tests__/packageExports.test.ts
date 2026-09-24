@@ -28,4 +28,11 @@ describe("adapters package exports", () => {
       default: "./dist/fastify/index.js",
     })
   })
+
+  it("exports the NestJS adapter", () => {
+    expect(manifest.exports["./nestjs"]).toEqual({
+      types: "./dist/nestjs/index.d.ts",
+      default: "./dist/nestjs/index.js",
+    })
+  })
 })

@@ -1,6 +1,6 @@
 {
   "name": "kittle-adapters",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Production HTTP, database, cache, and execution adapters for the application security and execution specification.",
   "keywords": [
     "kittle",
@@ -88,6 +88,10 @@
     "./fastify": {
       "types": "./dist/fastify/index.d.ts",
       "default": "./dist/fastify/index.js"
+    },
+    "./nestjs": {
+      "types": "./dist/nestjs/index.d.ts",
+      "default": "./dist/nestjs/index.js"
     }
   },
   "dependencies": {
@@ -96,5 +100,16 @@
     "kittle-core": "^0.3.0",
     "uuidv7": "^1.2.1",
     "zod": "^4.3.6"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^10.0.0 || ^11.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/common": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@nestjs/common": "^11.2.6"
   }
 }

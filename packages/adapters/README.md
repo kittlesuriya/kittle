@@ -35,6 +35,7 @@ but is not required at runtime.
 | `kittle-adapters/drizzle-mysql` | MySQL provider, repositories, sinks, idempotency, jobs, and schedules.                           |
 | `kittle-adapters/cache`         | In-memory, KV, shared-generation cache, and rate-limit stores.                                   |
 | `kittle-adapters/fastify`       | Fastify route registration and project integration.                                              |
+| `kittle-adapters/nestjs`        | NestJS controller and module integration for Express or Fastify.                                 |
 | `kittle-adapters/utils/redact`  | Audit-oriented email, phone, and sensitive-text redaction helpers.                               |
 
 Use package subpaths instead of importing from `src`. The package export map is
@@ -53,7 +54,42 @@ Adapters are intentionally explicit. An application supplies:
 The handlers use Fetch `Request` and `Response`, so they can be mounted in
 Hono, Cloudflare Workers, Next-style route handlers, or a custom server. The
 Fastify integration translates framework requests at the edge and keeps the
-core HTTP handlers framework-neutral.
+core HTTP handlers framework-neutral. The NestJS integration uses the same
+boundary and does not duplicate authorization, validation, tenancy, or error
+serialization.
+
+### NestJS
+
+Install NestJS in an application that uses this optional adapter:
+
+```sh
+npm install @nestjs/common
+```
+
+Create a controller from the handlers returned by `CRUD`:
+
+```ts
+import { Module } from "@nestjs/common"
+import { CRUD } from "kittle-adapters/http"
+import { createNestCrudController } from "kittle-adapters/nestjs"
+
+const TasksController = createNestCrudController({
+  prefix: "tasks",
+  handlers: CRUD(taskEntity, runtime),
+})
+
+@Module({ controllers: [TasksController] })
+export class TasksModule {}
+```
+
+The generated controller provides `GET /tasks`, `GET /tasks/:id`, `POST
+/tasks`, `PUT/PATCH /tasks/:id`, and `DELETE /tasks/:id`. A dynamic module is
+also available through `createNestCrudModule({ prefix, handlers })`.
+
+The adapter supports Nest applications running on Express or Fastify by using
+their common request and response surface. Nest body parsing and proxy setup
+remain application responsibilities; the existing Fetch handlers still apply
+their validation, authorization, idempotency, and error-exposure rules.
 
 ## Database setup
 

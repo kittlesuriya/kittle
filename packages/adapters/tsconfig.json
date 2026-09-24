@@ -3,6 +3,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "noEmit": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "skipLibCheck": true,
     "paths": {
       "kittle-core": ["../core/src"],
