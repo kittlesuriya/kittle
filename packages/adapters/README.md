@@ -1,454 +1,402 @@
-# kittle-adapters
+# Runtime and persistence adapters
 
-Drizzle (D1/Postgres), HTTP, cache, and server adapters implementing the `kittle-core` ports.
-
-> Implements persistence, idempotency, audit, and outbox contracts. Cache and rate-limit adapters depend on `kittle-core/cache` and `kittle-core/rate-limit` respectively.
+This package connects the TypeScript reference implementation to real
+application runtimes. It provides Fetch-compatible HTTP handlers, Drizzle persistence
+providers, cache and rate-limit adapters, server authorization wiring,
+idempotency stores, audit/outbox sinks, and durable job/schedule stores.
 
 ## Install
 
 ```sh
-npm install kittle-adapters kittle-core drizzle-orm zod uuidv7
-# plus one of: drizzle-orm pg driver (pg) or Cloudflare D1
+npm install kittle-core kittle-adapters
 ```
 
-* ESM only (`"type":"module"`), Node `>=20` (`packages/adapters/package.json:23`)
-* Requires `drizzle-orm ^0.45.2`, `zod ^4.3.6`, `uuidv7 ^1.2.1`
-* `drizzle-kit` for migrations (not a runtime dep)
+The package is ESM-only and requires Node.js 20 or newer. Add the database
+driver required by the selected dialect and use the matching Drizzle runtime:
 
-## Entrypoints
+| Dialect       | Adapter                         | Runtime dependency                   |
+| ------------- | ------------------------------- | ------------------------------------ |
+| PostgreSQL    | `kittle-adapters/drizzle-pg`    | `drizzle-orm/node-postgres` and `pg` |
+| Cloudflare D1 | `kittle-adapters/drizzle-d1`    | `drizzle-orm/d1` and a D1 binding    |
+| MySQL         | `kittle-adapters/drizzle-mysql` | matching Drizzle MySQL driver        |
 
-| Import | What it wires |
-|---|---|
-| `kittle-adapters` | barrel: `http` + `cache` + `server` + `drizzle-d1` |
-| `kittle-adapters/http` | `CRUD`/`createFrameworkWriteHandler`/`handleFrameworkCoreError`/`requestBody` |
-| `kittle-adapters/server` | `FrameworkAdapterDeps` + `createAuthorizedRepository` + `buildActionScope` re-export |
-| `kittle-adapters/drizzle-d1` | Cloudflare D1 SQLite: `DrizzlePersistenceProvider` (atomic-batch), `Repository`, sinks, job/schedule/idempotency stores |
-| `kittle-adapters/drizzle-pg` | Postgres: `DrizzlePersistenceProvider` (interactive transactions), `Repository`, sinks, job/schedule/idempotency stores |
-| `kittle-adapters/cache` | `InMemoryCacheAdapter`, `KvCacheAdapter`, `SharedGenerationCacheAdapter`, `DbTagGenerationStore`, rate-limit stores |
-| `kittle-adapters/utils/redact` | `redactPhi`/`redactPhiDeep` (used as `auditSanitizer`) |
+Migrations are application-owned. `drizzle-kit` is useful during development
+but is not required at runtime.
 
-`packages/adapters/package.json:33` is authoritative; `drizzle-pg` is also available as `kittle-adapters/drizzle-pg` (namespaced via `drizzlePg` barrel).
+## Entry points
 
----
+| Import                          | Contents                                                                                         |
+| ------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `kittle-adapters`               | Main barrel: HTTP, cache, server, and D1 exports. PostgreSQL is namespaced as `drizzlePg`.       |
+| `kittle-adapters/http`          | `CRUD`, custom write handlers, request parsing, error serialization, and idempotency finalizers. |
+| `kittle-adapters/server`        | `FrameworkAdapterDeps`, authorized repositories, and server-side ABAC helpers.                   |
+| `kittle-adapters/drizzle-pg`    | PostgreSQL provider, registry, repositories, sinks, idempotency, jobs, and schedules.            |
+| `kittle-adapters/drizzle-d1`    | D1 provider, atomic batches, repositories, sinks, idempotency, jobs, and schedules.              |
+| `kittle-adapters/drizzle-mysql` | MySQL provider, repositories, sinks, idempotency, jobs, and schedules.                           |
+| `kittle-adapters/cache`         | In-memory, KV, shared-generation cache, and rate-limit stores.                                   |
+| `kittle-adapters/fastify`       | Fastify route registration and project integration.                                              |
+| `kittle-adapters/utils/redact`  | Audit-oriented email, phone, and sensitive-text redaction helpers.                               |
 
-## How to use — from DB to HTTP
+Use package subpaths instead of importing from `src`. The package export map is
+the supported API surface.
 
-### 1. Pick a persistence provider
+## Integration model
 
-Both dialects share `DrizzleEntityRegistry`. Register **every** entity your operations will touch.
+Adapters are intentionally explicit. An application supplies:
 
-#### Postgres (interactive transactions)
+1. a session resolver and trusted request metadata;
+2. an ABAC bundle resolver;
+3. a persistence provider and entity registry;
+4. cache, audit, outbox, and idempotency implementations as needed;
+5. route registration for the chosen web framework.
+
+The handlers use Fetch `Request` and `Response`, so they can be mounted in
+Hono, Cloudflare Workers, Next-style route handlers, or a custom server. The
+Fastify integration translates framework requests at the edge and keeps the
+core HTTP handlers framework-neutral.
+
+## Database setup
+
+### PostgreSQL
+
+PostgreSQL supports interactive transactions. Register every entity touched by
+operations and map every declared field to a Drizzle column.
 
 ```ts
-import { drizzle } from "drizzle-orm/node-postgres";
-import { pgTable, text, integer } from "drizzle-orm/pg-core";
-import { DrizzleEntityRegistry, createDrizzlePersistenceProvider } from "kittle-adapters/drizzle-pg";
-import { taskEntity } from "./entities/task"; // defineEntity(...) from kittle-core/entity
+import { drizzle } from "drizzle-orm/node-postgres"
+import { pgTable, text, integer } from "drizzle-orm/pg-core"
+import {
+  DrizzleEntityRegistry,
+  createDrizzlePersistenceProvider,
+} from "kittle-adapters/drizzle-pg"
 
-export const tasks = pgTable("tasks", {
+const tasks = pgTable("tasks", {
   id: text("id").primaryKey(),
   tenantId: text("tenant_id").notNull(),
   title: text("title").notNull(),
   status: text("status").notNull(),
   version: integer("version").notNull(),
-});
+})
 
-const db = drizzle(process.env.DATABASE_URL!);
+const db = drizzle(process.env.DATABASE_URL!)
+const registry = new DrizzleEntityRegistry().register(
+  taskEntity.entity,
+  tasks,
+  {
+    id: tasks.id,
+    tenantId: tasks.tenantId,
+    title: tasks.title,
+    status: tasks.status,
+    version: tasks.version,
+  }
+)
 
-const registry = new DrizzleEntityRegistry()
-  .register(taskEntity.entity, tasks, {
-    id: tasks.id, tenantId: tasks.tenantId, title: tasks.title, status: tasks.status, version: tasks.version,
-  });
-
-export const pgProvider = createDrizzlePersistenceProvider({
-  db, registry, constraintMap: { tasks_title_unique: "tasks.title" }, limits:{ maxPageSize: 100 },
-});
-// capabilities: { interactiveTransactions:true, atomicBatch:false, returningInsert:true, conditionalAbacUpdate:true }
+const provider = createDrizzlePersistenceProvider({ db, registry })
 ```
 
-* `getDrizzleSession(provider)` at `packages/adapters/src/drizzle-pg/drizzlePersistenceProvider.ts:17` gives you the bound `DrizzleSessionLike` for sink factories.
-* Throws `ConfigurationError` if `columnMap` misses `fields`, `primaryKey`, or `versionField`.
+PostgreSQL can use interactive transaction capabilities and `returning()` for
+mutation results. SQL constraint errors are classified into conflict, business
+rule, validation, and retryable persistence errors where the dialect permits.
 
-#### Cloudflare D1 (atomic batch)
+### Cloudflare D1
 
-D1 has no interactive transactions — writes are batched atomically via `executeAtomicBatch`.
+D1 does not provide interactive transactions. The D1 adapter uses Drizzle's raw batch
+capability for atomic-batch operations and validates statement, bind-parameter,
+and batch-item limits before execution.
 
 ```ts
-import { drizzle } from "drizzle-orm/d1";
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
-import { DrizzleEntityRegistry, createDrizzlePersistenceProvider } from "kittle-adapters/drizzle-d1";
-import { createDrizzleD1Adapter } from "kittle-adapters/drizzle-d1";
-import { taskEntity } from "./entities/task";
+import { drizzle } from "drizzle-orm/d1"
+import { createDrizzleD1Adapter } from "kittle-adapters/drizzle-d1"
+import {
+  DrizzleEntityRegistry,
+  createDrizzlePersistenceProvider,
+} from "kittle-adapters/drizzle-d1"
 
-export const tasks = sqliteTable("tasks", {
-  id: text("id").primaryKey(),
-  tenantId: text("tenant_id").notNull(),
-  title: text("title").notNull(),
-  status: text("status").notNull(),
-  version: integer("version").notNull(),
-});
-
-export function makeD1Provider(d1: D1Database) {
-  const db = drizzle(d1);
-  const adapter = createDrizzleD1Adapter(db); // provides .raw.batch()
-  const registry = new DrizzleEntityRegistry().register(taskEntity.entity, tasks, {
-    id: tasks.id, tenantId: tasks.tenantId, title: tasks.title, status: tasks.status, version: tasks.version,
-  });
-  return createDrizzlePersistenceProvider({
-    db: adapter, registry,
-    auditTable: auditTable, outboxTable: outboxTable,
-    idempotencyTable: idempoTable, idempotencyAssertionTable: idempoAssertTable,
-    mutationAssertionTable: mutationAssertTable,
-    mapOutboxRecord: (r) => ({ id:r.id, type:r.type, payload: JSON.stringify(r.payload), tenantId: r.tenantId ?? null }),
-    limits:{ maxPageSize:100, maxBindParams:100, maxStatementBytes:100_000, maxBatchItems:100 },
-  });
+export function createProvider(database: D1Database) {
+  const db = drizzle(database)
+  const adapter = createDrizzleD1Adapter(db)
+  const registry = new DrizzleEntityRegistry().register(
+    taskEntity.entity,
+    tasks,
+    {
+      id: tasks.id,
+      tenantId: tasks.tenantId,
+      title: tasks.title,
+      status: tasks.status,
+      version: tasks.version,
+    }
+  )
+  return createDrizzlePersistenceProvider({ db: adapter, registry })
 }
-// capabilities: { interactiveTransactions:false, atomicBatch:true, atomicBatchScope:"unscoped", atomicBatchIdempotency: !!(idempotencyTable&&assertion), returningInsert:false }
 ```
 
-* `D1BatchLimitExceededError` at `packages/adapters/src/drizzle-d1/d1BatchLimits.ts:1` is thrown before `raw.batch()` if estimated `bindParams`/`statementBytes`/`batchItems` exceed limits.
-* Tenant-scoped batches use `adapter.createTenantScopedCommandEncoder(tenantId).encode({kind:"insert"|"update"|"delete", ...})` — inserts auto-add `tenantField`+`version=1`, updates/deletes fence with `tenantField=tenantId` + `versionField+1`.
-* D1 `repository.insert` does `insert.values` then `findFirst(where pk)`; PG uses `returning()`.
+D1 providers must be created per request when the D1 binding is request-scoped.
+Use tenant-scoped command encoding for atomic writes and configure the tables
+required by audit, outbox, and idempotency guarantees.
 
-**Repository contract both dialects honor** (`packages/adapters/src/drizzle-pg/drizzleRepository.ts:1` / `drizzle-d1/drizzleRepository.ts:1`):
+### MySQL
 
-* `findMany({filter, sort, pagination})` — pagination validated (`page>=1`, `pageSize 1..maxPageSize`), stable pagination appends `PK` tie-breaker, `PredicateNode` compiled via `DrizzlePredicateCompiler` with `COALESCE(expr,FALSE)` so `NOT UNKNOWN` is sound
-* `updateOneWhereReturning`/`deleteWhere` guard empty predicates → `ValidationError`, all-true `Predicate.and()` → `ConfigurationError`, multi-row fetch → `ValidationError`
-* OCC: `versionField` auto `+1` SQL, `expectedVersion` required; mismatch → `OptimisticConcurrencyError`
-* Constraint mapping: PG `23505→ConflictError, 23503→BusinessRuleError, 40001→RetryablePersistenceError`; D1 `SQLITE_CONSTRAINT→Conflict` etc.
+The MySQL adapter follows the same entity registry and repository contracts.
+Use `kittle-adapters/drizzle-mysql` for dialect-specific stores and map the
+database's duplicate-key, foreign-key, nullability, check, deadlock, and lock
+timeout errors through the provider's classification logic.
 
----
+## HTTP CRUD
 
-### 2. Expose HTTP
-
-Two levels: one-liner `CRUD()` for entities, or `createFrameworkWriteHandler` for custom operations.
-
-#### One-liner CRUD
-
-`CRUD()` validates `ENTITY_DEFINITION_BRAND` + `validateEntity` + `skipCapabilityCheck` vs `customCapabilityKey` before wiring.
+`CRUD()` wires an entity definition to list, detail, create, update, and delete
+handlers.
 
 ```ts
-import { CRUD } from "kittle-adapters/http";
-import { taskEntity } from "./entities/task";
-import type { FrameworkAdapterDeps } from "kittle-adapters/server";
-
-const deps: FrameworkAdapterDeps = {
-  resolveSession: async ({ scope, request }) => { /* return FrameworkSession */ },
-  resolveAbacBundle: async ({ scope, moduleKey, session }) => bundle, // VerifiedAbacPolicyBundle
-  hasCapability: ({ capabilityKey, session }) => true,
-  assertValidCsrf: (req) => {},
-  assertModuleEnabled: () => {},
-  assertModuleActionEnabled: () => {},
-  assertModuleCapabilityEnabled: () => {},
-  isOwnerBypass: ({ session }) => !!session.actor?.bypassAuthority,
-  // optional: getRateLimitStore, createIdempotencyPort, resolveClientIp, effectFailureReporter
-};
+import { CRUD } from "kittle-adapters/http"
 
 const handlers = CRUD(taskEntity, {
-  adapterDeps: deps,
-  scope: { type:"tenant", moduleKey:"tenant.tasks" }, // CrudScopeConfig
-  createPersistence: (session) => session.tenantId ? createTenantScopedProvider(pgProvider, session.tenantId) : pgProvider,
-  getCacheAdapter: () => getCacheAdapter({ engine:"memory" }, factories),
-  getRateLimitStore: () => Promise.resolve(rateLimitStore),
-  auditSinkFactory: (session) => createDrizzleAuditSink(pgProvider),
-  outboxSinkFactory: (session) => createDrizzleOutboxSink(pgProvider),
-  runtimeCapabilities: { cache:true, deferredExecution:true, objectStorage:false },
-});
-
-// Hono / Next / Cloudflare Workers — all are Fetch Request/Response
-app.get("/tasks", (req) => handlers.list(req));
-app.get("/tasks/:id", (req) => handlers.detail(req));
-app.post("/tasks", (req) => handlers.create(req));
-app.patch("/tasks/:id", (req) => handlers.update(req));
-app.delete("/tasks/:id", (req) => handlers.delete(req));
-```
-
-What you get per route (`packages/adapters/src/http/crudHandlers/*.ts`):
-
-* **list/detail**: `structuralScope` (`tenantField=tenantId`) `AND` ABAC `buildActionScope("read")` `AND` `filtersToPredicate` → `PredicateNode` → SQL; `sort` via `parseSortString` (max 3 keys); `q`/`filters` JSON validated (max 64KiB, depth 5, conditions 50); field-level `resolveFieldQueryDenials` → `assertFieldQueryAccess` throws `ForbiddenError` before DB; result rows `projectResponseRecord` with `fieldReadPlan`; cached via `CacheService` key `buildKey(prefix, partition:abacDigest:scopeKey, serializeCacheKeyPart({type:list, query}))` tags `[tag:scopeKey, scope:scope]`
-* **create/update/delete**: `Idempotency-Key` required (255 bytes, fingerprint `v2:hex(SHA-256(canonicalJson(module/action/securityContext/clientMutation/preconditions/abacDigest)))`), `resolveExistingRecord` + `resolveInput`, tenant-scoped `PersistenceProvider`, heartbeat `renew` every `lease/3`, durable receipt (`business-committed` without result in same tx/batch), bounded `invalidateAfterCommit`, `complete` after projection — idempotent replay returns prior `SerializedResponse`
-
-#### Custom operation
-
-```ts
-import { createFrameworkWriteHandler } from "kittle-adapters/http";
-import { z } from "zod";
-
-const updateStatus = createFrameworkWriteHandler({
-  adapterDeps: deps,
-  scope: { type:"tenant", moduleKey:"tenant.tasks" },
-  moduleKey:"tenant.tasks", action:"update",
-  validation: { body: z.object({ status: z.enum(["open","done"]), expectedVersion: z.number().int() }) },
-  rateLimit: { max:20, timeWindow:"1 minute", consistency:"atomic" },
-  getRateLimitStore: () => pgRateLimitStore,
-  getCacheAdapter: () => kvAdapter,
-  createPersistence: (session) => provider,
-  definition: {
-    key:"tenant.tasks.updateStatus", kind:"mutation", atomicity:{ kind:"standard", mode:"required" },
-    authorization:{ authorize: async()=>({ allowed:true }) },
-    execute: async ({ operation, input }) => {
-      const repo = operation.persistence.repository(taskEntity.entity);
-      return repo.updateOneWhereReturning(Predicate.eq("id", input.id), { status: input.status }, { expectedVersion: input.expectedVersion });
-    },
+  adapterDeps,
+  scope: { scope: "tenant" },
+  createPersistence: (session) =>
+    createTenantScopedPersistenceProvider(
+      provider,
+      session.tenant.id,
+      Predicate.eq("tenantId", session.tenant.id)
+    ),
+  getCacheAdapter: () => cache,
+  getRateLimitStore: () => rateLimitStore,
+  auditSinkFactory: (_session, persistence) => createAuditSink(persistence),
+  outboxSinkFactory: (_session, persistence) => createOutboxSink(persistence),
+  runtimeCapabilities: {
+    cache: true,
+    deferredExecution: true,
+    objectStorage: false,
   },
-  resolveInput: async ({ request, body }) => ({ id: request.params.id, ...body }),
-  resolveExistingRecord: async ({ input, operation }) => operation.persistence.repository(taskEntity.entity).findById(input.id),
-  resolveResourceIdentity: () => ({ entity:"tenant.tasks", id: input.id }),
-  recoverCommittedResponse: async ({ input }) => Response.json(await repo.findById(input.id)),
-  toResponse: (row) => Response.json(row, { status:200 }),
-});
-```
-
-#### Error mapping
-
-```ts
-import { createFrameworkErrorHandler } from "kittle-adapters/http";
-const onError = createFrameworkErrorHandler({ reportError: console.error });
-// Unauthorized→401, Forbidden/Capability→403, NotFound→404, Conflict→409, InvalidJson→400, RequestBodyTooLarge→413, UnsupportedMediaType→415, ZodError→400 with details, RateLimit→429+Retry-After, Configuration/RuntimeCapability→500, fallback 500
-// Always sets x-request-id / x-correlation-id / cache-control:no-store
-```
-
-`requestBody.ts:1` caps `content-length` + stream bytes at `1MiB`, validates `content-type: application/json; charset=utf-8`, bounds `x-correlation-id` 256 / `user-agent` 512, `parseUniqueQueryParameters` rejects duplicate keys.
-
----
-
-### 3. Server — ABAC + tenant enforcement outside HTTP
-
-```ts
-import { createAuthorizedRepository } from "kittle-adapters/server";
-import { createAbacAuthorizer } from "kittle-core/domain";
-import { Predicate } from "kittle-core/domain/predicate";
-import { createTenantScopedPersistenceProvider } from "kittle-core/ports";
-
-const authorizer = createAbacAuthorizer(bundle);
-const structuralScope = Predicate.eq("tenantId", session.tenant.id); // or scopeFilter for global entities
-
-const secured = createAuthorizedRepository({
-  repository: pgProvider.repository(taskEntity.entity),
-  entity: taskEntity.entity,
-  authorizer,
-  structuralScope,
-  structuralInsertValues: { tenantId: session.tenant.id },
-  bundle,
-});
-// secured.findMany({ filter, pagination, sort }) // merges structuralScope AND buildActionScope("read") AND caller filter
-// secured.insert({ title }) // blocks pk/tenant/version/immutable writes, asserts authorizer.assertWrite(create), rereads under read scope
-// secured.update(id, patch, { expectedVersion }) // OCC fenced via updateOneWhereReturning
-// secured.delete(id, { expectedVersion }) // requires integer expectedVersion
-```
-
-`FrameworkSession` at `packages/adapters/src/server/frameworkAdapterDeps.ts:1`:
-
-```ts
-type FrameworkSession =
- | { scope:"tenant", actor:{ id, type:"tenant", roleId, tenantId, branchId, bypassAuthority? }, tenant:{ id, enabledModuleKeys, enabledModuleActions }, raw }
- | { scope:"platform", actor:{ id, type:"platform", roleId }, raw }
- | { scope:"public", actor:null, raw }
-```
-
----
-
-### 4. Cache
-
-Cache adapters implement the `kittle-core/cache` `CacheAdapter` interface.
-
-| Adapter | Consistency | Coherence | Use |
-|---|---|---|---|
-| `InMemoryCacheAdapter` | `linearizable` | `process` | single-instance / tests — `incrementRateLimitAtomically` via Map |
-| `KvCacheAdapter` | `eventual` | `shared` | Cloudflare KV — best-effort `addToTag` |
-| `SharedGenerationCacheAdapter` | `linearizable` | `shared` | Wraps `Kv`/`Memory` payload with a `TagGenerationStore` (DB) so invalidation is correctness-critical |
-| `DbTagGenerationStore` | atomic `INSERT … ON CONFLICT DO UPDATE … RETURNING generation+1` | — | Postgres (`pgTable`) or D1 (`sqliteTable`) `{tag, generation}` table |
-
-```ts
-import { getCacheAdapter } from "kittle-adapters/cache";
-import { InMemoryCacheAdapter } from "kittle-adapters/cache";
-import { KvCacheAdapter } from "kittle-adapters/cache";
-import { SharedGenerationCacheAdapter, DbTagGenerationStore } from "kittle-adapters/cache";
-
-const factories = {
-  memory: () => new InMemoryCacheAdapter(),
-  kv: async () => new KvCacheAdapter(kvNamespace),
-};
-
-// Memoized per factories WeakMap, promise dedup, evict on error:
-const mem = await getCacheAdapter({ engine:"memory" }, factories);
-const kv  = await getCacheAdapter({ engine:"kv" }, factories);
-
-// Correctness-critical shared invalidation (PG example):
-const tagStore = new DbTagGenerationStore(pgDb, tagTable); // pgTable("cache_tags", { tag:text().primaryKey(), generation: integer().notNull() })
-const shared = new SharedGenerationCacheAdapter({ payload: kv, generations: tagStore });
-
-// CRUD handlers use: get(key) / set(key,data,ttlMs) / delete(key) / addToTag(tag,key) / advanceTagGeneration(tag)
-```
-
-Rate limiting over cache:
-
-```ts
-import { CacheBackedRateLimitStore, AtomicCacheBackedRateLimitStore } from "kittle-adapters/cache";
-import type { RateLimitStore } from "kittle-core/rate-limit";
-const bestEffort = new CacheBackedRateLimitStore(cache); // consistency:"best-effort" — read-modify-write
-const atomic    = new AtomicCacheBackedRateLimitStore(cache); // consistency:"atomic" — delegates to cache.incrementRateLimitAtomically
-// Key namespaced scope:tenant:module:action:ip/custom + boundRateLimitKeyMaterial fingerprint for long keys
-```
-
----
-
-### 5. Idempotency — exactly-once commit
-
-Both dialects guarantee the business mutation and the durable receipt commit atomically.
-
-* **PG** (`DrizzlePgIdempotencyStore` `packages/adapters/src/drizzle-pg/drizzleIdempotencyStore.ts:1`): `TransactionalIdempotencyPort` — `acquire` inserts `in-progress` row → on `23505` rereads, `resolveExisting` (fingerprint mismatch→`Conflict`, `completed`→replay, `business-committed`→businessCommitted), `renew` updates `createdAt`, `markCommittedInTransaction` updates to `business-committed` inside same `runInTransaction`
-* **D1** (`DrizzleD1IdempotencyStore` `packages/adapters/src/drizzle-d1/drizzleIdempotencyStore.ts:1`): `AtomicBatchIdempotencyPort` — `createCommitBatchItem` returns `{kind:"idempotency", commit:{scope,key,fingerprint,token,resource,invalidations}}` joined into the same `batch()`, plus an `idempotencyAssertionTable` BEFORE INSERT trigger that `RAISE`s if the reservation token is stale (aborts whole batch)
-
-Lease: `30s` default, `1ms..24h` via `validateLeaseDuration`, heartbeat `lease/3` by `createFrameworkWriteHandler`.
-
-**Finalizer (drain pending invalidations):**
-
-```ts
-import { drainPendingInvalidations, createIdempotencyFinalizerService } from "kittle-adapters/http";
-
-await drainPendingInvalidations({
-  port: d1IdempotencyStore, // IdempotencyFinalizationPort: claimPendingInvalidations + ack/complete
-  invalidate: async (tags) => {
-    for (const tag of tags) await shared.advanceTagGeneration(tag);
+  errorExposure: {
+    exposeBusinessRuleMessage: true,
   },
-  limit: 100, claimOwner:"worker-1", leaseMs:30_000,
-});
+})
 
-const svc = createIdempotencyFinalizerService({ drain: () => drainPendingInvalidations({...}), intervalMs: 10_000 });
-svc.start(); // interval with in-flight guard, telemetry.onError
-// Call svc.stop() on shutdown
+app.get("/tasks", (request) => handlers.list(request))
+app.get("/tasks/:id", (request, context) =>
+  handlers.detail(request, context.params)
+)
+app.post("/tasks", (request) => handlers.create(request))
+app.patch("/tasks/:id", (request, context) => handlers.update(request, context))
+app.delete("/tasks/:id", (request, context) =>
+  handlers.delete(request, context)
+)
 ```
 
----
+CRUD handlers enforce the entity's validation, tenancy, capability, ABAC,
+field-access, rate-limit, cache, audit, outbox, idempotency, and concurrency
+configuration. The application still owns route prefixes, authentication, and
+framework-specific middleware.
 
-### 6. Jobs & schedules
+### Error responses
 
-DDL is yours (see `packages/adapters/src/drizzle-pg/drizzleJobStore.ts` / `drizzle-d1/drizzleJobStore.ts` for columns). Minimal:
-
-```sql
--- Postgres jobs: id, job_type, job_version, tenant_id, scope, payload, status, priority, attempts_completed, current_attempt, max_attempts, run_at, next_attempt_at, lease_owner, lease_expires_at, claim_token, idempotency_key, fingerprint, correlation_id, last_error, result_payload, metadata, partition_key, created_at, started_at, completed_at
--- Schedules: id, scope, job_type, job_version, tenant_id, payload, cron_expression, timezone, enabled, overlap_policy, misfire_policy, next_run_at, last_run_at, last_status, created_at, updated_at, lease_owner, claim_token, lease_expires_at
-```
+`createFrameworkErrorHandler` maps typed errors to safe HTTP responses and adds
+request/correlation headers:
 
 ```ts
-import { DrizzleJobStore, DrizzleScheduleStore } from "kittle-adapters/drizzle-pg";
-import { dispatchDueJobs } from "kittle-core/execution/dispatcher";
-import { materializeDueSchedules } from "kittle-core/execution/scheduleDispatcher";
-import { createIntlCronTimezoneAdapter } from "kittle-core/execution";
+import { createFrameworkErrorHandler } from "kittle-adapters/http"
 
-const jobStore = new DrizzleJobStore(pgDb, { jobsTable, executionsTable, executionHistory:"required", columnMap });
-const scheduleStore = new DrizzleScheduleStore(pgDb, { schedulesTable, columnMap, resolveTenantTimezones, platformTimezone:"UTC" });
-
-// Worker loops
-setInterval(async () => {
-  await dispatchDueJobs({ store: jobStore, registry, workerId:"w1", leaseDurationMs:30_000, claimLimit:20, requester:{ scope:"system" } });
-}, 5_000);
-
-setInterval(async () => {
-  await materializeDueSchedules({
-    scheduleStore, jobStore, workerId:"w1", limit:20, maxQueueAllOccurrences:50, now:new Date(),
-    tzAdapter: createIntlCronTimezoneAdapter(), // DST-aware via Intl.DateTimeFormat
-    leaseDurationMs:30_000,
-  });
-}, 30_000);
+app.onError(
+  createFrameworkErrorHandler({
+    reportError: (error) => logger.error(error),
+  })
+)
 ```
 
-* `jobStore.enqueue` computes `fingerprintJob(buildJobFingerprintInput(NewJob))` (`v2:hex(SHA-256(canonicalJson))`) and `idempotencyScope = tenant:tenantId | scope` — duplicate `scope+idempotencyKey` with different fingerprint → `JobIdempotencyConflictError`
-* `claimDue` selects `pending|retrying` (`attempts<max && nextAttemptAt<=now`) OR expired `running` leases, ordered `priority asc, runAt asc`, fenced with `NOT EXISTS running sibling where partition_key` for `partitionKey` serialization (`schedule:<id>` for queued schedules)
-* Schedule materialization: `claimDueSchedules` fenced by `claimToken` (uuidv7), `getLatestPriorScheduleExecution` (fenced by `schedule:occurrence` not wall-clock) drives `shouldFireSchedule` `skip|queue|allow` + misfire `skip|fire_now|queue_all` per occurrence
+Typical responses include:
 
----
+| Error                          | Status |
+| ------------------------------ | -----: |
+| Unauthorized                   |    401 |
+| Forbidden / capability denied  |    403 |
+| Validation / business rule     |    400 |
+| Not found                      |    404 |
+| Conflict / OCC failure         |    409 |
+| Request body too large         |    413 |
+| Unsupported media type         |    415 |
+| Rate limit exceeded            |    429 |
+| Configuration/internal failure |    500 |
 
-### 7. Predicate compilation
+Responses include a stable string `code` and numeric `numericCode`. Internal
+messages and details are not serialized by default.
 
-```ts
-import { DrizzlePredicateCompiler, compileDrizzlePredicate } from "kittle-adapters/drizzle-pg";
-import { Predicate } from "kittle-core/domain/predicate";
+### Opt-in business-rule messages
 
-const compiler = new DrizzlePredicateCompiler();
-// or: compileDrizzlePredicate(filter, columnMap)
-const where = compiler.compile(Predicate.and(Predicate.eq("status","open"), Predicate.gte("priority", 1)));
-// -> SQL: COALESCE(status = 'open', FALSE) AND COALESCE(priority >= 1, FALSE)
-```
-
-Shared at `packages/adapters/src/drizzle-shared/predicateCompiler.ts:1`: `LIKE ESCAPE '\\'` with `escapeLike`, `isEmpty→ isNull OR =''`, `isNotEmpty→ isNotNull AND <>''`, `in→ inArray` or `1=0`, `between→ gte/lte`, all leaves `COALESCE(...,FALSE)` via `strictBoolean`. Throws for `includesAny/includesAll`.
-
----
-
-### 8. Recipes
-
-#### End-to-end: tasks with tenant ABAC, cache, audit, outbox (PG + Hono)
+CRUD catches errors internally, so configure exposure on its runtime rather than
+expecting an outer framework `onError` callback to recover the original error.
 
 ```ts
-import { Hono } from "hono";
-import { CRUD } from "kittle-adapters/http";
-import { createFrameworkErrorHandler, createIdempotencyFinalizerService, drainPendingInvalidations } from "kittle-adapters/http";
-import { DrizzleEntityRegistry, createDrizzlePersistenceProvider, DrizzleJobStore } from "kittle-adapters/drizzle-pg";
-import { DrizzleAuditSink, DrizzleOutboxSink } from "kittle-adapters/drizzle-pg";
-import { DrizzlePgIdempotencyStore } from "kittle-adapters/drizzle-pg";
-import { getCacheAdapter } from "kittle-adapters/cache";
-import { taskEntity } from "./entities/task";
-import { tasks } from "./db/schema";
-import { db } from "./db";
-import { deps } from "./server/deps"; // FrameworkAdapterDeps impl + resolveAbacBundle via createAbacBundle
-
-const registry = new DrizzleEntityRegistry().register(taskEntity.entity, tasks, { id:tasks.id, tenantId:tasks.tenantId, title:tasks.title, status:tasks.status, version:tasks.version });
-const provider = createDrizzlePersistenceProvider({ db, registry });
 const handlers = CRUD(taskEntity, {
-  adapterDeps: deps, scope:{ type:"tenant", moduleKey:"tenant.tasks" },
-  createPersistence: (s) => createTenantScopedPersistenceProvider(provider, s.tenant!.id, Predicate.eq("tenantId", s.tenant!.id)),
-  getCacheAdapter: () => getCacheAdapter({ engine:"memory" }, factories),
-  auditSinkFactory: () => new DrizzleAuditSink(db, auditTable),
-  outboxSinkFactory: () => new DrizzleOutboxSink(db, outboxTable, (r)=>({ type:r.type, payload: JSON.stringify(r.payload) })),
-});
-const app = new Hono();
-app.get("/tasks", (c) => handlers.list(c.req.raw));
-app.post("/tasks", (c) => handlers.create(c.req.raw));
-app.onError(createFrameworkErrorHandler());
+  // existing CRUD runtime fields
+  adapterDeps,
+  scope: { scope: "tenant" },
+  createPersistence,
+  getCacheAdapter,
+  errorExposure: {
+    exposeBusinessRuleMessage: true,
+    // Keep false unless the details have been deliberately designed for clients.
+    exposeBusinessRuleDetails: false,
+  },
+})
 ```
 
-#### D1 + Cloudflare Workers
+With the option enabled, a `BusinessRuleError("Cannot delete role with assigned users")`
+becomes:
+
+```json
+{
+  "error": "Cannot delete role with assigned users",
+  "code": "BAD_REQUEST",
+  "numericCode": 1002
+}
+```
+
+Message exposure is opt-in because business messages can accidentally include
+database details, identifiers, or sensitive policy information.
+
+## Request boundaries
+
+The HTTP layer provides defensive limits and normalization:
+
+- JSON bodies are limited to the configured maximum, defaulting to 1 MiB.
+- Content type must be JSON with UTF-8 encoding.
+- Query parameter names must be unique.
+- Query/filter/sort payloads have byte, depth, and item limits.
+- Request and correlation metadata are bounded before propagation.
+- Forwarded client IP headers are trusted only through an authenticated,
+  configured proxy chain.
+- Responses set `cache-control: no-store` and carry request/correlation IDs.
+
+## Cache and rate limits
+
+| Adapter                        | Behavior                                | Appropriate for                                |
+| ------------------------------ | --------------------------------------- | ---------------------------------------------- |
+| `InMemoryCacheAdapter`         | Process-local, linearizable             | Tests and single-instance deployments.         |
+| `KvCacheAdapter`               | Shared, eventual KV storage             | Best-effort caching and globally shared reads. |
+| `SharedGenerationCacheAdapter` | Shared payloads plus generation fencing | Correctness-critical invalidation.             |
+| `DbTagGenerationStore`         | Atomic tag-generation storage           | PostgreSQL or D1 shared invalidation.          |
+
+Atomic rate limits require an adapter implementing
+`incrementRateLimitAtomically`. Otherwise use the explicitly best-effort store.
+Do not describe an eventual cache as correctness-critical without generation
+fencing.
+
+## Idempotency
+
+Mutation handlers use an `Idempotency-Key` when idempotency is required. The
+fingerprint includes the module/action, security context, client mutation,
+preconditions, and ABAC digest. A matching completed request replays the stored
+response; a key reused with a different fingerprint becomes a conflict.
+
+PostgreSQL stores receipts in the transaction. D1 includes the receipt and
+assertion command in the atomic batch. Configure the finalizer service to drain
+pending cache invalidations after a crash:
 
 ```ts
-import { createDrizzleD1Adapter, DrizzleEntityRegistry, createDrizzlePersistenceProvider } from "kittle-adapters/drizzle-d1";
-export default {
-  async fetch(request, env) {
-    const provider = makeD1Provider(env.DB); // per-request D1Database
-    const handlers = CRUD(taskEntity, { adapterDeps: makeDeps(env), scope:{ type:"tenant", moduleKey:"tenant.tasks" }, createPersistence:()=>provider, getCacheAdapter: ()=>kvAdapter(env.KV) });
-    return handlers.list(request);
-  },
-  async scheduled(event, env, ctx) {
-    ctx.waitUntil(materializeDueSchedules({ scheduleStore: makeScheduleStore(env.DB), jobStore: makeJobStore(env.DB), workerId:"worker-1", limit:20, now:new Date(), tzAdapter: createIntlCronTimezoneAdapter() }));
-  },
-};
+import {
+  createIdempotencyFinalizerService,
+  drainPendingInvalidations,
+} from "kittle-adapters/http"
+
+const finalizer = createIdempotencyFinalizerService({
+  intervalMs: 10_000,
+  drain: () =>
+    drainPendingInvalidations({
+      port: idempotencyPort,
+      invalidate: (tags) => cache.invalidateTags(tags),
+      limit: 100,
+      claimOwner: "worker-1",
+      leaseMs: 30_000,
+    }),
+})
+
+finalizer.start()
 ```
 
-#### Field masking
+Stop background services during graceful shutdown.
+
+## Jobs and schedules
+
+Drizzle job and schedule stores implement the core execution contracts. Workers
+should renew leases at approximately one third of the lease duration, use a
+stable worker ID, and handle process restarts. Configure execution history when
+schedule overlap and misfire decisions need durable evidence.
+
+The core dispatcher remains storage-independent:
 
 ```ts
-import { redactPhiDeep } from "kittle-adapters/utils/redact";
-// createOperationContext({ auditSanitizer: redactPhiDeep, ... })
-// redactPhi("user@example.com 415-555-0100") -> "[email redacted] [phone redacted]"
+import { dispatchDueJobs, materializeDueSchedules } from "kittle-core/execution"
+
+await dispatchDueJobs({
+  store: jobStore,
+  registry,
+  workerId: "worker-1",
+  leaseDurationMs: 30_000,
+  claimLimit: 20,
+  requester: { scope: "platform", actorId: "worker-1" },
+})
+
+await materializeDueSchedules({
+  scheduleStore,
+  jobStore,
+  workerId: "worker-1",
+  limit: 20,
+  now: new Date(),
+  tzAdapter: createIntlCronTimezoneAdapter(),
+})
 ```
 
----
+## Audit and outbox
 
-### 9. Deployment notes
+Audit and outbox sinks receive the persistence provider bound to the current
+operation. This is important: constructing a sink from an unrelated database
+connection can move records outside the business transaction.
 
-* **D1 batch limits** — `maxBindParams:100`/`maxStatementBytes:100_000`/`maxBatchItems:100` validated via `assertD1BatchLimits` — large outbox + audit + idempotency batches must stay within the Cloudflare 100-statement `raw.batch()` limit
-* **KV invalidation** — raw `KvCacheAdapter` is `eventual`/`shared`; wrap with `SharedGenerationCacheAdapter` + `DbTagGenerationStore` for correctness-critical reads (listed list/detail must not serve stale)
-* **Rate limit coherence** — `consistency:"atomic"` requires `AtomicCacheBackedRateLimitStore` i.e. cache providing `incrementRateLimitAtomically` (InMemory or SharedGeneration); otherwise it throws and CRUD falls back to `CacheBackedRateLimitStore` best-effort
-* **Trusted proxy** — `resolveTrustedClientIp(req, {trustedProxyIps, trustedProxyHops}, {peerAddress, trustedProxy})` validates `x-forwarded-for` length `== hops+1` and that last `hops` are trusted before trusting `forwarded[0]`
+Choose guarantees deliberately:
+
+- `best-effort`: the business operation may succeed if the side effect fails;
+- `atomic`: the mutation and record must succeed together;
+- `durable`: use an outbox-backed obligation for later delivery.
+
+Sanitize values before writing audit records and classify fields explicitly.
+
+## Predicate compilation
+
+The dialect adapters compile core predicates into SQL. Compilation preserves
+boolean semantics by coalescing nullable expressions and rejects unsupported
+operators rather than silently approximating them.
+
+```ts
+import { Predicate } from "kittle-core/domain/predicate"
+import { DrizzlePredicateCompiler } from "kittle-adapters/drizzle-pg"
+
+const filter = Predicate.and(
+  Predicate.eq("status", "open"),
+  Predicate.gte("priority", 1)
+)
+const where = new DrizzlePredicateCompiler().compile(filter)
+```
+
+## Deployment checklist
+
+- Run database migrations before enabling routes.
+- Register every entity field used by operations.
+- Configure tenant scope and verify structural predicates in integration tests.
+- Require CSRF protection for browser-authenticated non-public writes.
+- Configure trusted proxy addresses before using forwarded client IPs.
+- Use a shared-generation cache for correctness-critical invalidation.
+- Configure the idempotency finalizer for crash recovery.
+- Run workers with stable IDs and graceful lease shutdown.
+- Do not expose business messages or details without reviewing their contents.
+- Keep request, correlation, and audit logs free of secrets.
 
 ## Development
 
 ```sh
-npm run typecheck:adapters      # tsc -p packages/adapters/tsconfig.json --noEmit
-npm run lint:adapters           # eslint src --max-warnings=0
-npm test --workspace kittle-adapters  # vitest run — 46 files / 410 tests
+npm run typecheck:adapters
+npm run lint:adapters
+npm test --workspace kittle-adapters
 npm run build --workspace kittle-adapters
-npm run verify:hardening && npm run verify:release
 ```
 
 ## License

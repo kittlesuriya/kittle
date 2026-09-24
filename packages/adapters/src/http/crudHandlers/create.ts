@@ -241,6 +241,7 @@ export function createCreateHandler<
     moduleKey: options.moduleKey,
     action: "create",
     ...shared.writeCapabilityConfig,
+    ...(options.errorExposure ? { errorExposure: options.errorExposure } : {}),
     ...(options.validation?.createBody
       ? { validation: { body: options.validation.createBody } }
       : {}),

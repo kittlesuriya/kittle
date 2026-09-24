@@ -469,6 +469,7 @@ export function createUpdateHandler<
     moduleKey: options.moduleKey,
     action: "update",
     ...shared.writeCapabilityConfig,
+    ...(options.errorExposure ? { errorExposure: options.errorExposure } : {}),
     resolveResourceIdentity: ({ input }) => {
       const versionField =
         options.optimisticConcurrency?.versionField ?? entity.versionField

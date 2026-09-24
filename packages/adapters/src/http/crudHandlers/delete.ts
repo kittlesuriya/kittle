@@ -266,6 +266,7 @@ export function createDeleteHandler<
     moduleKey: options.moduleKey,
     action: "delete",
     ...shared.writeCapabilityConfig,
+    ...(options.errorExposure ? { errorExposure: options.errorExposure } : {}),
     resolveResourceIdentity: ({ input }) => ({
       entity: options.moduleKey,
       id: input.id,

@@ -20,8 +20,43 @@ export type FrameworkCoreErrorCode =
   | "EFFECT_COLLECTOR_DISPOSED"
   | "EFFECTS_ALREADY_DRAINED"
 
+/** Stable numeric identifiers for framework errors.
+ *
+ * These are intentionally separate from HTTP status codes. HTTP statuses
+ * describe the transport response, while these identifiers describe the
+ * application error and remain stable across transports.
+ */
+export const FRAMEWORK_ERROR_NUMERIC_CODES = {
+  VALIDATION_ERROR: 1001,
+  BAD_REQUEST: 1002,
+  UNAUTHORIZED: 1101,
+  FORBIDDEN: 1102,
+  CAPABILITY_REQUIRED: 1103,
+  RUNTIME_CAPABILITY_REQUIRED: 1104,
+  NOT_FOUND: 1201,
+  CONFLICT: 1202,
+  OPTIMISTIC_CONCURRENCY_FAILED: 1203,
+  RATE_LIMIT_EXCEEDED: 1301,
+  AUDIT_SINK_MISSING: 2001,
+  AUDIT_ACTOR_MISSING: 2002,
+  OUTBOX_SINK_MISSING: 2003,
+  CONFIGURATION_ERROR: 2004,
+  INVALID_POLICY_CONFIGURATION: 2005,
+  RETRYABLE_PERSISTENCE_ERROR: 3001,
+  OPERATION_CONTEXT_INACTIVE: 4001,
+  EFFECT_REGISTRATION_CLOSED: 4002,
+  EFFECT_COLLECTOR_DISPOSED: 4003,
+  EFFECTS_ALREADY_DRAINED: 4004,
+} as const satisfies Record<FrameworkCoreErrorCode, number>
+
+export type FrameworkCoreErrorNumericCode =
+  (typeof FRAMEWORK_ERROR_NUMERIC_CODES)[FrameworkCoreErrorCode]
+
+export const INTERNAL_SERVER_ERROR_NUMERIC_CODE = 5001
+
 export class FrameworkCoreError extends Error {
   public readonly code: FrameworkCoreErrorCode
+  public readonly numericCode: FrameworkCoreErrorNumericCode
   public readonly details?: unknown
 
   constructor(
@@ -32,6 +67,7 @@ export class FrameworkCoreError extends Error {
     super(message)
     this.name = this.constructor.name
     this.code = code
+    this.numericCode = FRAMEWORK_ERROR_NUMERIC_CODES[code]
     this.details = details
   }
 }

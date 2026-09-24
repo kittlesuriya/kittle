@@ -130,6 +130,7 @@ describe("ABAC enforcement requires the verified brand at the enforcement bounda
     expect(await response.json()).toEqual({
       error: "Internal Server Error",
       code: "INTERNAL_SERVER_ERROR",
+      numericCode: 5001,
     })
   })
 
@@ -183,6 +184,7 @@ describe("ABAC enforcement requires the verified brand at the enforcement bounda
     expect(await response.json()).toEqual({
       error: "Internal Server Error",
       code: "INTERNAL_SERVER_ERROR",
+      numericCode: 5001,
     })
   })
 })

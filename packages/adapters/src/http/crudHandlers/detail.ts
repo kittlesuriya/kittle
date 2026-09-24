@@ -34,8 +34,6 @@ import {
   withScopedPersistence,
 } from "./shared"
 
-const frameworkErrorHandler = createFrameworkErrorHandler()
-
 export function createDetailHandler<
   TRow extends SelectableRow,
   A,
@@ -44,6 +42,9 @@ export function createDetailHandler<
   D extends SelectableRow,
 >(shared: CrudShared<TRow, A, B, L, D>) {
   const { options, entity } = shared
+  const frameworkErrorHandler = createFrameworkErrorHandler({
+    ...(options.errorExposure ? { errorExposure: options.errorExposure } : {}),
+  })
   return async (
     request: Request,
     params: Record<string, string>

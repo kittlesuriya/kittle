@@ -64,12 +64,16 @@ function releaseEvidence() {
     ]),
   }
   const packageHashes = Object.fromEntries(
-    ["kittle-core", "kittle-adapters", "testing"].map((pkg) => [
+    [
+      ["kittle-core", "core"],
+      ["kittle-adapters", "adapters"],
+      ["testing", "testing"],
+    ].map(([pkg, directory]) => [
       pkg,
       {
-        treeSha256: treeHash(join(root, "packages", pkg)),
+        treeSha256: treeHash(join(root, "packages", directory)),
         packageSha256: sha256(
-          readFileSync(join(root, "packages", pkg, "package.json"))
+          readFileSync(join(root, "packages", directory, "package.json"))
         ),
       },
     ])
@@ -118,7 +122,9 @@ function adapterEvidence(): string[] {
       join(root, "scripts/verification/adapter-conformance.json"),
       "utf8"
     )
-  ) as { adapters: Record<string, { implementation: string }> }
+  ) as {
+    "kittle-adapters": Record<string, { implementation: string }>
+  }
   const inventory = JSON.parse(
     readFileSync(
       join(root, "scripts/verification/adapter-coverage.json"),
@@ -128,7 +134,9 @@ function adapterEvidence(): string[] {
     required: string[]
     evidence: Record<string, Record<string, string[]>>
   }
-  for (const [adapter, definition] of Object.entries(matrix.adapters)) {
+  for (const [adapter, definition] of Object.entries(
+    matrix["kittle-adapters"]
+  )) {
     if (!existsSync(join(root, definition.implementation)))
       failures.push(`${adapter}: implementation directory is missing`)
     for (const capability of inventory.required) {

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import { ZodError } from "zod"
 import {
+  BusinessRuleError,
   CapabilityError,
   ForbiddenError,
   UnauthorizedError,
@@ -22,7 +23,7 @@ describe("framework HTTP error serialization", () => {
     [
       new UnauthorizedError("credential detail", { userId: "user-1" }),
       401,
-      { error: "Unauthorized", code: "UNAUTHORIZED" },
+      { error: "Unauthorized", code: "UNAUTHORIZED", numericCode: 1101 },
     ],
     [
       new ForbiddenError("ABAC policy detail", {
@@ -30,14 +31,14 @@ describe("framework HTTP error serialization", () => {
         fields: ["ssn"],
       }),
       403,
-      { error: "Forbidden", code: "FORBIDDEN" },
+      { error: "Forbidden", code: "FORBIDDEN", numericCode: 1102 },
     ],
     [
       new CapabilityError("tenant.module:manage", {
         moduleKey: "tenant.module",
       }),
       403,
-      { error: "Forbidden", code: "CAPABILITY_REQUIRED" },
+      { error: "Forbidden", code: "CAPABILITY_REQUIRED", numericCode: 1103 },
     ],
   ] as const)("sanitizes %s responses", async (error, status, expected) => {
     const reportError = vi.fn()
@@ -55,17 +56,29 @@ describe("framework HTTP error serialization", () => {
           dbPassword: "s3cret",
         }),
         400,
-        { error: "Validation failed", code: "VALIDATION_ERROR" },
+        {
+          error: "Validation failed",
+          code: "VALIDATION_ERROR",
+          numericCode: 1001,
+        },
       ],
       [
         new RequestBodyTooLargeError(1024),
         413,
-        { error: "Request body is too large", code: "REQUEST_BODY_TOO_LARGE" },
+        {
+          error: "Request body is too large",
+          code: "REQUEST_BODY_TOO_LARGE",
+          numericCode: 1004,
+        },
       ],
       [
         new UnsupportedMediaTypeError(),
         415,
-        { error: "Unsupported media type", code: "UNSUPPORTED_MEDIA_TYPE" },
+        {
+          error: "Unsupported media type",
+          code: "UNSUPPORTED_MEDIA_TYPE",
+          numericCode: 1005,
+        },
       ],
     ]
     for (const [error, status, expected] of cases) {
@@ -77,6 +90,50 @@ describe("framework HTTP error serialization", () => {
       })
       expect(body).toEqual(expected)
     }
+  })
+
+  it("exposes business-rule messages only when explicitly configured", async () => {
+    const error = new BusinessRuleError(
+      "Cannot delete role with assigned users",
+      {
+        roleId: "role-1",
+      }
+    )
+
+    const sanitized = createFrameworkErrorHandler()(error)
+    expect(await responseBody(sanitized)).toEqual({
+      error: "Business rule violation",
+      code: "BAD_REQUEST",
+      numericCode: 1002,
+    })
+
+    const exposed = createFrameworkErrorHandler({
+      errorExposure: { exposeBusinessRuleMessage: true },
+    })(error)
+    expect(await responseBody(exposed)).toEqual({
+      error: "Cannot delete role with assigned users",
+      code: "BAD_REQUEST",
+      numericCode: 1002,
+    })
+  })
+
+  it("exposes business-rule details only when separately configured", async () => {
+    const error = new BusinessRuleError("Business rule failed", {
+      roleId: "role-1",
+    })
+    const response = createFrameworkErrorHandler({
+      errorExposure: {
+        exposeBusinessRuleMessage: true,
+        exposeBusinessRuleDetails: true,
+      },
+    })(error)
+
+    expect(await responseBody(response)).toEqual({
+      error: "Business rule failed",
+      code: "BAD_REQUEST",
+      numericCode: 1002,
+      details: { roleId: "role-1" },
+    })
   })
 
   it("sanitizes ZodError issues and never returns raw issues", async () => {
@@ -96,6 +153,7 @@ describe("framework HTTP error serialization", () => {
     expect(body).toEqual({
       error: "Validation failed",
       code: "VALIDATION_ERROR",
+      numericCode: 1001,
       details: [{ code: "custom", path: "a.1.nested", message: "boom" }],
     })
     expect(JSON.stringify(body)).not.toContain("do-not-leak")

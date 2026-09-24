@@ -1,6 +1,31 @@
 {
   "name": "testing",
   "version": "0.1.0",
+  "description": "Reusable contract suites for verifying specification-conforming adapters.",
+  "keywords": [
+    "kittle",
+    "contract-testing",
+    "adapter-testing",
+    "persistence-testing",
+    "repository-testing",
+    "property-based-testing",
+    "concurrency-testing",
+    "abac-testing",
+    "cache-testing",
+    "vitest",
+    "typescript"
+  ],
+  "license": "MIT",
+  "author": "Suriyaprakash",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kittlesuriya/kittle.git",
+    "directory": "packages/testing"
+  },
+  "bugs": {
+    "url": "https://github.com/kittlesuriya/kittle/issues"
+  },
+  "homepage": "https://github.com/kittlesuriya/kittle/tree/main/packages/testing",
   "type": "module",
   "private": true,
   "exports": {

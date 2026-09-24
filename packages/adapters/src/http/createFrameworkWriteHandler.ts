@@ -41,6 +41,7 @@ import { CacheService } from "kittle-core/cache"
 import {
   createFrameworkErrorHandler,
   frameworkJson,
+  type FrameworkErrorExposure,
 } from "./handleFrameworkCoreError"
 import {
   parseJsonBodySafely,
@@ -60,8 +61,6 @@ import {
   type SerializedResponse,
   type SerializedResponseIdempotencyPort,
 } from "./idempotency"
-
-const frameworkErrorHandler = createFrameworkErrorHandler()
 
 export type ScopedFrameworkValidation = {
   params?: ValidationSchema
@@ -188,8 +187,12 @@ export function createFrameworkWriteHandler<
       session: FrameworkSession
     }) => Promise<TResult | null>
     toResponse?: (result: TResult) => Response
+    errorExposure?: FrameworkErrorExposure
   } & CapabilityCheckConfig
 ) {
+  const frameworkErrorHandler = createFrameworkErrorHandler({
+    ...(args.errorExposure ? { errorExposure: args.errorExposure } : {}),
+  })
   // Correctness-critical cache invalidation requires a durable obligation, which
   // is only available when the mutation participates in idempotency.
   if (args.invalidateTags && args.scope.idempotency?.required !== true) {

@@ -15,6 +15,7 @@ import type {
 import type { FrameworkAdapterDeps, FrameworkSession } from "../server"
 import { createCrudHandlersInternal } from "./createCrudHandlers"
 import type { CrudScopeConfig } from "./createFrameworkWriteHandler"
+import type { FrameworkErrorExposure } from "./handleFrameworkCoreError"
 
 type SelectableRow = Record<string, unknown>
 
@@ -23,7 +24,9 @@ export interface CrudRuntime {
   scope: CrudScopeConfig
   createPersistence: (session: FrameworkSession) => PersistenceProvider
   getCacheAdapter: () => Promise<CacheAdapter>
-  getRateLimitStore?: () => Promise<import("kittle-core/rate-limit").RateLimitStore>
+  getRateLimitStore?: () => Promise<
+    import("kittle-core/rate-limit").RateLimitStore
+  >
   auditSinkFactory?: (
     session: FrameworkSession,
     persistence?: PersistenceProvider
@@ -33,6 +36,7 @@ export interface CrudRuntime {
     persistence?: PersistenceProvider
   ) => OutboxSink
   runtimeCapabilities?: RuntimeCapabilities
+  errorExposure?: FrameworkErrorExposure
 }
 
 export function CRUD<
@@ -129,6 +133,7 @@ export function CRUD<
       objectStorage: false,
       cache: false,
     },
+    ...(runtime.errorExposure ? { errorExposure: runtime.errorExposure } : {}),
     validation: definition.validation,
     rateLimit: definition.rateLimit,
     crud: definition.crud,

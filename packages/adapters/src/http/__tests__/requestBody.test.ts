@@ -249,6 +249,7 @@ describe("HTTP request boundary helpers", () => {
     expect(await response.json()).toEqual({
       error: "Request body is too large",
       code: "REQUEST_BODY_TOO_LARGE",
+      numericCode: 1004,
     })
     expect(execute).not.toHaveBeenCalled()
     expect(resolveHttpMetadata).toHaveBeenCalledWith(expect.any(Request))

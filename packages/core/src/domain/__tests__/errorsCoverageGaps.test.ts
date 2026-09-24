@@ -30,6 +30,9 @@ describe("framework error defaults and metadata", () => {
       instances.every((error) => error instanceof errors.FrameworkCoreError)
     ).toBe(true)
     expect(new errors.RateLimitError(42).retryAfterMs).toBe(42)
+    expect(new errors.ValidationError().numericCode).toBe(1001)
+    expect(new errors.ForbiddenError().numericCode).toBe(1102)
+    expect(new errors.ConfigurationError().numericCode).toBe(2004)
     expect(
       new errors.InvalidPolicyConfigurationError("bad", {
         moduleKey: "m",

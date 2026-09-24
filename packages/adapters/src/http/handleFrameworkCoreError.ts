@@ -8,6 +8,7 @@ import {
   ConflictError,
   ForbiddenError,
   FrameworkCoreError,
+  INTERNAL_SERVER_ERROR_NUMERIC_CODE,
   NotFoundError,
   RateLimitError,
   RuntimeCapabilityError,
@@ -29,6 +30,12 @@ export function frameworkJson<T>(data: T, init: ResponseInit = {}) {
 
 export interface FrameworkErrorHandlerOptions {
   reportError?: (error: unknown) => void
+  errorExposure?: FrameworkErrorExposure
+}
+
+export interface FrameworkErrorExposure {
+  exposeBusinessRuleMessage?: boolean
+  exposeBusinessRuleDetails?: boolean
 }
 
 export type FrameworkResponseMetadata = {
@@ -51,7 +58,7 @@ function defaultReportError(_error: unknown) {}
 export function createFrameworkErrorHandler(
   options: FrameworkErrorHandlerOptions = {}
 ) {
-  const { reportError = defaultReportError } = options
+  const { reportError = defaultReportError, errorExposure = {} } = options
   return (error: unknown, metadata?: FrameworkResponseMetadata): Response => {
     const finish = (response: Response): Response => {
       if (metadata?.requestId)
@@ -64,65 +71,121 @@ export function createFrameworkErrorHandler(
       finish(frameworkJson(data, init))
     if (error instanceof UnauthorizedError) {
       reportError(error)
-      return json({ error: "Unauthorized", code: error.code }, { status: 401 })
+      return json(
+        {
+          error: "Unauthorized",
+          code: error.code,
+          numericCode: error.numericCode,
+        },
+        { status: 401 }
+      )
     }
 
     if (error instanceof ForbiddenError) {
       reportError(error)
-      return json({ error: "Forbidden", code: error.code }, { status: 403 })
+      return json(
+        {
+          error: "Forbidden",
+          code: error.code,
+          numericCode: error.numericCode,
+        },
+        { status: 403 }
+      )
     }
 
     if (error instanceof NotFoundError) {
-      return json({ error: "Not found", code: error.code }, { status: 404 })
+      return json(
+        {
+          error: "Not found",
+          code: error.code,
+          numericCode: error.numericCode,
+        },
+        { status: 404 }
+      )
     }
 
     if (error instanceof ConflictError) {
-      return json({ error: "Conflict", code: error.code }, { status: 409 })
+      return json(
+        { error: "Conflict", code: error.code, numericCode: error.numericCode },
+        { status: 409 }
+      )
     }
 
     if (error instanceof InvalidJsonError) {
       return json(
-        { error: "Invalid JSON body", code: error.code },
+        {
+          error: "Invalid JSON body",
+          code: error.code,
+          numericCode: error.numericCode,
+        },
         { status: 400 }
       )
     }
 
     if (error instanceof RequestBodyTooLargeError) {
       return json(
-        { error: "Request body is too large", code: error.code },
+        {
+          error: "Request body is too large",
+          code: error.code,
+          numericCode: error.numericCode,
+        },
         { status: 413 }
       )
     }
 
     if (error instanceof UnsupportedMediaTypeError) {
       return json(
-        { error: "Unsupported media type", code: error.code },
+        {
+          error: "Unsupported media type",
+          code: error.code,
+          numericCode: error.numericCode,
+        },
         { status: 415 }
       )
     }
 
     if (error instanceof ValidationError) {
       return json(
-        { error: "Validation failed", code: error.code },
+        {
+          error: "Validation failed",
+          code: error.code,
+          numericCode: error.numericCode,
+        },
         { status: 400 }
       )
     }
 
     if (error instanceof BusinessRuleError) {
-      return json(
-        { error: "Business rule violation", code: error.code },
-        { status: 400 }
-      )
+      const body: Record<string, unknown> = {
+        error: errorExposure.exposeBusinessRuleMessage
+          ? error.message
+          : "Business rule violation",
+        code: error.code,
+        numericCode: error.numericCode,
+      }
+      if (errorExposure.exposeBusinessRuleDetails) body.details = error.details
+      return json(body, { status: 400 })
     }
 
     if (error instanceof CapabilityError) {
       reportError(error)
-      return json({ error: "Forbidden", code: error.code }, { status: 403 })
+      return json(
+        {
+          error: "Forbidden",
+          code: error.code,
+          numericCode: error.numericCode,
+        },
+        { status: 403 }
+      )
     }
 
     if (error instanceof RateLimitError) {
       return json(
-        { error: error.message, code: error.code },
+        {
+          error: error.message,
+          code: error.code,
+          numericCode: error.numericCode,
+        },
         {
           status: 429,
           headers: {
@@ -141,7 +204,11 @@ export function createFrameworkErrorHandler(
       // 5xx framework errors never serialize internal implementation details.
       reportError(error)
       return json(
-        { error: "Internal Server Error", code: "INTERNAL_SERVER_ERROR" },
+        {
+          error: "Internal Server Error",
+          code: "INTERNAL_SERVER_ERROR",
+          numericCode: INTERNAL_SERVER_ERROR_NUMERIC_CODE,
+        },
         { status: 500 }
       )
     }
@@ -149,7 +216,11 @@ export function createFrameworkErrorHandler(
     if (error instanceof FrameworkCoreError) {
       reportError(error)
       return json(
-        { error: "Internal Server Error", code: "INTERNAL_SERVER_ERROR" },
+        {
+          error: "Internal Server Error",
+          code: "INTERNAL_SERVER_ERROR",
+          numericCode: INTERNAL_SERVER_ERROR_NUMERIC_CODE,
+        },
         { status: 500 }
       )
     }
@@ -159,6 +230,7 @@ export function createFrameworkErrorHandler(
         {
           error: "Validation failed",
           code: "VALIDATION_ERROR",
+          numericCode: 1001,
           details: error.issues.map((issue) => ({
             code: issue.code,
             path: formatIssuePath(issue.path),
@@ -171,7 +243,11 @@ export function createFrameworkErrorHandler(
 
     reportError(error)
     return json(
-      { error: "Internal Server Error", code: "INTERNAL_SERVER_ERROR" },
+      {
+        error: "Internal Server Error",
+        code: "INTERNAL_SERVER_ERROR",
+        numericCode: INTERNAL_SERVER_ERROR_NUMERIC_CODE,
+      },
       { status: 500 }
     )
   }

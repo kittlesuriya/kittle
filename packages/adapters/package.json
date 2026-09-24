@@ -1,18 +1,40 @@
 {
   "name": "kittle-adapters",
-  "version": "0.4.0",
-  "description": "Drizzle (D1/Postgres), HTTP, cache, and server adapters implementing the kittle-core ports.",
+  "version": "0.4.1",
+  "description": "Production HTTP, database, cache, and execution adapters for the application security and execution specification.",
   "keywords": [
-    "typescript",
-    "drizzle-orm",
-    "cloudflare-d1",
-    "postgres",
+    "kittle",
     "http",
-    "cache",
-    "multi-tenancy"
+    "rest-api",
+    "crud",
+    "drizzle",
+    "postgresql",
+    "mysql",
+    "cloudflare-d1",
+    "cloudflare-workers",
+    "multi-tenant",
+    "abac",
+    "authorization",
+    "idempotency",
+    "optimistic-concurrency",
+    "audit-log",
+    "outbox-pattern",
+    "rate-limiting",
+    "caching",
+    "durable-jobs",
+    "typescript"
   ],
   "license": "MIT",
   "author": "Suriyaprakash",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kittlesuriya/kittle.git",
+    "directory": "packages/adapters"
+  },
+  "bugs": {
+    "url": "https://github.com/kittlesuriya/kittle/issues"
+  },
+  "homepage": "https://github.com/kittlesuriya/kittle/tree/main/packages/adapters",
   "type": "module",
   "files": [
     "dist"

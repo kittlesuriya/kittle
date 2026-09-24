@@ -51,8 +51,6 @@ import {
   withScopedPersistence,
 } from "./shared"
 
-const frameworkErrorHandler = createFrameworkErrorHandler()
-
 type ListReadResult<TRow> = {
   rows: TRow[]
   rowCount: number
@@ -68,6 +66,9 @@ export function createListHandler<
   D extends SelectableRow,
 >(shared: CrudShared<TRow, A, B, L, D>) {
   const { options, entity } = shared
+  const frameworkErrorHandler = createFrameworkErrorHandler({
+    ...(options.errorExposure ? { errorExposure: options.errorExposure } : {}),
+  })
   return async (request: Request): Promise<Response> => {
     let requestMetadata: ReturnType<typeof resolveRequestMetadata> | undefined
     try {

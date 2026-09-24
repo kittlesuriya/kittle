@@ -19,6 +19,7 @@ import type {
   ScopedFrameworkValidatedContext,
 } from "../createFrameworkWriteHandler"
 import type { FilterFieldMeta } from "kittle-core/domain"
+import type { FrameworkErrorExposure } from "../handleFrameworkCoreError"
 
 export type SelectableRow = Record<string, unknown>
 export type AuditObject = Record<string, unknown>
@@ -104,7 +105,9 @@ export interface CrudOptions<
   policy: CapabilityCheckConfig
   cache: { enabled?: boolean; tag: string; keyPrefix: string }
   getCacheAdapter: () => Promise<CacheAdapter>
-  getRateLimitStore?: () => Promise<import("kittle-core/rate-limit").RateLimitStore>
+  getRateLimitStore?: () => Promise<
+    import("kittle-core/rate-limit").RateLimitStore
+  >
   createPersistence: (session: FrameworkSession) => PersistenceProvider
   auditSinkFactory?: (
     session: FrameworkSession,
@@ -129,6 +132,7 @@ export interface CrudOptions<
   filterFieldMeta?: Record<string, FilterFieldMeta>
   listDefaults?: ListDefaults
   optimisticConcurrency?: OptimisticConcurrencyConfig<TRow>
+  errorExposure?: FrameworkErrorExposure
 }
 
 export const defaultListQuerySchema = z.object({

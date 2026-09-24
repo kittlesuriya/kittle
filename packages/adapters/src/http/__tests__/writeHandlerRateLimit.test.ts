@@ -157,6 +157,7 @@ describe("HTTP write handler rate-limit configuration", () => {
     expect(await response.json()).toEqual({
       error: "Internal Server Error",
       code: "INTERNAL_SERVER_ERROR",
+      numericCode: 5001,
     })
     expect(execute).not.toHaveBeenCalled()
   })

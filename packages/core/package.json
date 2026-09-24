@@ -1,17 +1,40 @@
 {
   "name": "kittle-core",
-  "version": "0.3.0",
-  "description": "Domain, entity, execution, operation, and persistence-port primitives for building tenant-aware TypeScript applications.",
+  "version": "0.3.1",
+  "description": "TypeScript reference implementation of a portable application security and execution specification.",
   "keywords": [
-    "typescript",
-    "domain-driven-design",
+    "kittle",
+    "application-specification",
+    "security-specification",
+    "authorization",
     "abac",
+    "access-control",
+    "policy-engine",
+    "multi-tenant",
+    "tenant-isolation",
+    "domain-driven-design",
+    "hexagonal-architecture",
+    "ports-and-adapters",
+    "optimistic-concurrency",
     "idempotency",
-    "outbox",
-    "multi-tenancy"
+    "outbox-pattern",
+    "durable-execution",
+    "workflow-engine",
+    "persistence-agnostic",
+    "typescript",
+    "reference-implementation"
   ],
   "license": "MIT",
   "author": "Suriyaprakash",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kittlesuriya/kittle.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/kittlesuriya/kittle/issues"
+  },
+  "homepage": "https://github.com/kittlesuriya/kittle/tree/main/packages/core",
   "type": "module",
   "files": [
     "dist"

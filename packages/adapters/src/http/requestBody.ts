@@ -6,6 +6,7 @@ export const DEFAULT_MAX_JSON_BODY_BYTES = 1024 * 1024
 
 export class InvalidJsonError extends Error {
   readonly code = "INVALID_JSON"
+  readonly numericCode = 1003
 
   constructor() {
     super("Invalid JSON body")
@@ -15,6 +16,7 @@ export class InvalidJsonError extends Error {
 
 export class RequestBodyTooLargeError extends Error {
   readonly code = "REQUEST_BODY_TOO_LARGE"
+  readonly numericCode = 1004
 
   constructor(readonly maxBytes: number) {
     super("Request body is too large")
@@ -24,6 +26,7 @@ export class RequestBodyTooLargeError extends Error {
 
 export class UnsupportedMediaTypeError extends Error {
   readonly code = "UNSUPPORTED_MEDIA_TYPE"
+  readonly numericCode = 1005
 
   constructor() {
     super("Request content type must be JSON encoded as UTF-8")

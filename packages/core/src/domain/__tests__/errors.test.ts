@@ -16,6 +16,7 @@ describe("RetryablePersistenceError", () => {
     expect(error).not.toBeInstanceOf(ConflictError)
     expect(error).toMatchObject({
       code: "RETRYABLE_PERSISTENCE_ERROR",
+      numericCode: 3001,
       kind: "retryable",
       details: { postgresCode: "40001" },
     })
