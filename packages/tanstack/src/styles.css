@@ -1,0 +1,123 @@
+:root {
+  --ui-border: #d1d5db;
+  --ui-muted: #6b7280;
+  --ui-surface: #ffffff;
+  --ui-surface-muted: #f3f4f6;
+  --ui-text: #111827;
+  --ui-primary: #2563eb;
+  --ui-danger: #b91c1c;
+}
+
+.ui {
+  color: var(--ui-text);
+  font:
+    14px/1.4 system-ui,
+    sans-serif;
+}
+.ui button,
+.ui input,
+.ui select,
+.ui textarea {
+  font: inherit;
+}
+.ui button {
+  cursor: pointer;
+}
+.ui button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.ui__button {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+.ui__button--primary {
+  background: var(--ui-primary);
+  border-color: var(--ui-primary);
+  color: white;
+}
+.ui__button--danger {
+  color: var(--ui-danger);
+}
+.ui__field {
+  display: grid;
+  gap: 5px;
+}
+.ui__field label {
+  font-weight: 600;
+}
+.ui__field input,
+.ui__field select,
+.ui__field textarea {
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  padding: 7px 9px;
+}
+.ui__error {
+  color: var(--ui-danger);
+  font-size: 12px;
+}
+.ui__muted {
+  color: var(--ui-muted);
+}
+.ui__table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.ui__table th,
+.ui__table td {
+  border-bottom: 1px solid var(--ui-border);
+  padding: 8px;
+  text-align: left;
+}
+.ui__table th {
+  background: var(--ui-surface-muted);
+}
+.ui__toolbar,
+.ui__pagination {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+.ui__query-group {
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+}
+.ui__query-condition {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ui__sidebar {
+  background: var(--ui-surface);
+  border-right: 1px solid var(--ui-border);
+  min-height: 100%;
+  padding: 12px;
+  width: 240px;
+}
+.ui__sidebar--collapsed {
+  width: 52px;
+}
+.ui__nav-item {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  text-align: left;
+  width: 100%;
+}
+.ui__nav-item:hover,
+.ui__nav-item--active {
+  background: var(--ui-surface-muted);
+}

@@ -1,0 +1,73 @@
+{
+  "name": "kittle-tanstack",
+  "version": "0.1.0",
+  "description": "Reusable React and TanStack data tables, schema forms, query builders, and navigation components.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kittlesuriya/kittle.git",
+    "directory": "packages/tanstack"
+  },
+  "homepage": "https://github.com/kittlesuriya/kittle/tree/main/packages/tanstack",
+  "bugs": {
+    "url": "https://github.com/kittlesuriya/kittle/issues"
+  },
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json && node -e \"require('node:fs').copyFileSync('src/styles.css', 'dist/styles.css')\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --max-warnings=0",
+    "test": "vitest run"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ui": {
+      "types": "./dist/ui.d.ts",
+      "default": "./dist/ui.js"
+    },
+    "./data-table": {
+      "types": "./dist/data-table/index.d.ts",
+      "default": "./dist/data-table/index.js"
+    },
+    "./schema-form": {
+      "types": "./dist/schema-form/index.d.ts",
+      "default": "./dist/schema-form/index.js"
+    },
+    "./query-builder": {
+      "types": "./dist/query-builder/index.d.ts",
+      "default": "./dist/query-builder/index.js"
+    },
+    "./sidebar": {
+      "types": "./dist/sidebar/index.d.ts",
+      "default": "./dist/sidebar/index.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./adapters": {
+      "types": "./dist/adapters.d.ts",
+      "default": "./dist/adapters.js"
+    }
+  },
+  "peerDependencies": {
+    "@tanstack/react-table": "^8.0.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-table": "^8.21.3",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^4.0.0"
+  }
+}

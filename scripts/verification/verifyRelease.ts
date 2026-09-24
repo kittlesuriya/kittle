@@ -67,6 +67,7 @@ function releaseEvidence() {
     [
       ["kittle-core", "core"],
       ["kittle-adapters", "adapters"],
+      ["kittle-tanstack", "tanstack"],
       ["testing", "testing"],
     ].map(([pkg, directory]) => [
       pkg,
@@ -101,12 +102,15 @@ export function releaseCommands(): string[] {
     "typecheck:core",
     "typecheck:adapters",
     "typecheck:testing",
+    "typecheck:tanstack",
     "lint:core",
     "lint:adapters",
     "lint:testing",
+    "lint:tanstack",
     "test:core",
     "test:adapters",
     "test:testing",
+    "test:tanstack",
     "test:property",
     "test:race",
     "test:crash",

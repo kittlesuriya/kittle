@@ -12,11 +12,31 @@ Package versions are currently maintained independently:
 
 - `kittle-core` — `0.3.1`
 - `kittle-adapters` — `0.4.2`
+- `kittle-tanstack` — `0.1.0`
 - `testing` — private workspace package, `0.1.0`
 
 ## [Unreleased]
 
-Future changes will be documented here.
+### Shared TanStack UI package
+
+- Added the initial `kittle-tanstack` package for reusable DataTable,
+  SchemaForm, QueryBuilder, and Sidebar components.
+- Added public subpath exports, shared styles, typed data-source contracts, and
+  application-owned permission and customization callbacks.
+- Added DataTable client/server pagination, search, filters, grouped columns,
+  visibility persistence, selection callbacks, retry/refresh actions, and
+  export hooks.
+- Added SchemaForm Zod adaptation, metadata/layout helpers, nested arrays,
+  conditional visibility, validation modes, server errors, guards, field slots,
+  custom renderers, and specialized application field registration.
+- Added QueryBuilder simple/advanced modes, nested groups, operator metadata,
+  persisted state, custom value renderers, and clear/apply behavior.
+- Added Sidebar recursive permission filtering, search, active descendant
+  state, collapsible navigation, persistence, keyboard activation, and custom
+  item rendering.
+- Added brand-neutral UI contracts and the `withUi` HOC for reusable
+  application-specific component bundles, including autocomplete, multiselect,
+  switch, checkbox, and custom field renderers.
 
 ## Runtime adapters package `0.4.1` — 2026-09-24
 

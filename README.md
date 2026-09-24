@@ -20,9 +20,11 @@ The specification is designed around a few non-negotiable properties:
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | [`kittle-core`](./packages/core)         | Domain models, entities, ABAC, operations, execution contracts, predicates, errors, and ports.                                       |
 | [`kittle-adapters`](./packages/adapters) | HTTP CRUD, Drizzle persistence for PostgreSQL/D1/MySQL, cache adapters, server wiring, audit/outbox, and idempotency.                |
+| [`kittle-tanstack`](./packages/tanstack) | Reusable React/TanStack DataTable, SchemaForm, QueryBuilder, Sidebar, and shared UI contracts.                                       |
 | [`testing`](./packages/testing)          | Reusable contract suites for persistence providers, repositories, predicates, ABAC, cache adapters, atomic batches, and concurrency. |
 
-For an application, install `kittle-core` and `kittle-adapters`. The `testing`
+For an application, install `kittle-core`, `kittle-adapters`, and optionally
+`kittle-tanstack` for shared React UI. The `testing`
 package is a private workspace package used to verify implementations and is
 not part of the public runtime installation path.
 
@@ -30,6 +32,8 @@ not part of the public runtime installation path.
 
 ```sh
 npm install kittle-core kittle-adapters
+# React/TanStack applications may also install:
+npm install kittle-tanstack @tanstack/react-table zod
 ```
 
 The reference packages are ESM-only and require Node.js 20 or newer. Applications should use
@@ -54,6 +58,7 @@ application
     ├── kittle-adapters/server     Session, ABAC, and repository composition
     ├── kittle-adapters/drizzle-*  Database implementations
     └── kittle-adapters/cache      Cache and rate-limit implementations
+    ├── kittle-tanstack             Shared React/TanStack UI components
     │
     └── kittle-core                Domain rules, operations, ports, execution
 ```
