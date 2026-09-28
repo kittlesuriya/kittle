@@ -20,12 +20,22 @@ export type ReleaseResult = {
   testCount?: number
 }
 
-function commandVersion(
+export function commandVersion(
   command: string,
   args: string[] = ["--version"]
 ): string {
-  const result = spawnSync(command, args, { cwd: root, encoding: "utf8" })
-  return (result.stdout || result.stderr || "unknown").trim()
+  const result = spawnSync(command, args, {
+    cwd: root,
+    encoding: "utf8",
+    shell: process.platform === "win32" && command.endsWith(".cmd"),
+  })
+  // A clean `git status --porcelain` succeeds with empty output. Treating
+  // that as an unknown command falsely marks every clean release as dirty.
+  return (
+    result.stdout ||
+    result.stderr ||
+    (result.status === 0 ? "" : "unknown")
+  ).trim()
 }
 
 function sha256(data: Buffer | string): string {

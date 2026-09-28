@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest"
-import { releaseCommands } from "./verifyRelease"
+import { commandVersion, releaseCommands } from "./verifyRelease"
 
 describe("release verification gates", () => {
+  it("recognizes a successful command with empty output", () => {
+    expect(commandVersion(process.execPath, ["-e", ""])).toBe("")
+  })
+
   it("covers each authoritative release gate", () => {
     expect(releaseCommands()).toEqual(
       expect.arrayContaining([
