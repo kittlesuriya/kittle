@@ -4,13 +4,13 @@ import {
   ConfigurationError,
   ConflictError,
   NotFoundError,
-  OptimisticConcurrencyError,
   ValidationError,
 } from "kittle-core/domain"
 import {
   createDrizzleRepository,
   type DrizzleSessionLike,
   type DrizzleUpdateResult,
+  type SelectableRow,
 } from "../drizzleRepository"
 import type { EntityDescriptor } from "kittle-core/ports"
 
@@ -61,13 +61,16 @@ const versionedEntity: EntityDescriptor<{
   },
 }
 
-function createDb(overrides: {
-  selectRows?: Record<string, unknown>[]
-  updateAffectedRows?: number
-  insertError?: Error
-} = {}): DrizzleSessionLike {
+function createDb(
+  overrides: {
+    selectRows?: Record<string, unknown>[]
+    updateAffectedRows?: number
+    insertError?: Error
+  } = {}
+): DrizzleSessionLike {
   const selectRows = overrides.selectRows ?? []
   const updateAffected = overrides.updateAffectedRows ?? 1
+  const insertError = overrides.insertError
 
   const db: DrizzleSessionLike = {
     select: vi.fn(() => ({
@@ -81,30 +84,32 @@ function createDb(overrides: {
           })),
         })),
       })),
-    })) as unknown as DrizzleSessionLike["select"],
+    })),
     insert: vi.fn(() => ({
-      values: overrides.insertError
-        ? (() => { throw overrides.insertError })()
+      values: insertError
+        ? (() => {
+            throw insertError
+          })()
         : vi.fn(async () => ({ affectedRows: 1 })),
-    })) as unknown as DrizzleSessionLike["insert"],
+    })),
     update: vi.fn(() => ({
       set: vi.fn(() => ({
         where: vi.fn(async (): Promise<DrizzleUpdateResult> => ({
           affectedRows: updateAffected,
         })),
       })),
-    })) as unknown as DrizzleSessionLike["update"],
+    })),
     delete: vi.fn(() => ({
       where: vi.fn(async (): Promise<DrizzleUpdateResult> => ({
         affectedRows: 1,
       })),
-    })) as unknown as DrizzleSessionLike["delete"],
+    })),
   }
   return db
 }
 
 function createRepo(db: DrizzleSessionLike, useVersioned = false) {
-  return createDrizzleRepository({
+  return createDrizzleRepository<SelectableRow>({
     db,
     table: itemTable,
     entity: useVersioned ? versionedEntity : entity,
@@ -159,9 +164,9 @@ describe("createDrizzleRepository (MySQL)", () => {
       error.code = "ER_DUP_ENTRY"
       const db = createDb({ insertError: error })
       const repo = createRepo(db)
-      await expect(
-        repo.insert({ id: "1", name: "Dup" })
-      ).rejects.toThrow(ConflictError)
+      await expect(repo.insert({ id: "1", name: "Dup" })).rejects.toThrow(
+        ConflictError
+      )
     })
   })
 
@@ -193,14 +198,19 @@ describe("createDrizzleRepository (MySQL)", () => {
       const db = createDb()
       const repo = createRepo(db, true)
       await expect(
-        repo.update("1", { version: 99 } as never, {
-          optimisticConcurrency: { expectedVersion: 1 },
-        })
+        repo.update(
+          "1",
+          { version: 99 },
+          {
+            optimisticConcurrency: { expectedVersion: 1 },
+          }
+        )
       ).rejects.toThrow(ConfigurationError)
     })
 
     it("rejects optimistic concurrency without version field on entity", async () => {
-      const entityNoVersion = { ...versionedEntity, versionField: undefined }
+      const { versionField: _versionField, ...entityNoVersion } =
+        versionedEntity
       const db = createDb()
       const repo = createDrizzleRepository({
         db,
@@ -209,7 +219,11 @@ describe("createDrizzleRepository (MySQL)", () => {
         columnMap,
       })
       await expect(
-        repo.update("1", { name: "X" }, { optimisticConcurrency: { expectedVersion: 1 } })
+        repo.update(
+          "1",
+          { name: "X" },
+          { optimisticConcurrency: { expectedVersion: 1 } }
+        )
       ).rejects.toThrow(ConfigurationError)
     })
   })
@@ -219,7 +233,7 @@ describe("createDrizzleRepository (MySQL)", () => {
       const db = createDb()
       const repo = createRepo(db)
       await expect(
-        repo.updateOneWhere(undefined as never, { name: "X" })
+        repo.updateOneWhere!(undefined as never, { name: "X" })
       ).rejects.toThrow(ValidationError)
     })
 
@@ -227,18 +241,22 @@ describe("createDrizzleRepository (MySQL)", () => {
       const db = createDb()
       const repo = createRepo(db)
       await expect(
-        repo.updateOneWhere(
-          { kind: "literal", value: true } as never,
-          { name: "X" }
-        )
+        repo.updateOneWhere!({ kind: "literal", value: true } as never, {
+          name: "X",
+        })
       ).rejects.toThrow(ConfigurationError)
     })
 
     it("returns updatedCount: 0 when no rows match", async () => {
       const db = createDb({ selectRows: [], updateAffectedRows: 0 })
       const repo = createRepo(db)
-      const result = await repo.updateOneWhere(
-        { kind: "condition", field: "status", op: "eq", value: "active" } as never,
+      const result = await repo.updateOneWhere!(
+        {
+          kind: "condition",
+          field: "status",
+          op: "eq",
+          value: "active",
+        } as never,
         { name: "X" }
       )
       expect(result.updatedCount).toBe(0)
@@ -287,18 +305,16 @@ describe("createDrizzleRepository (MySQL)", () => {
     it("rejects empty predicate", async () => {
       const db = createDb()
       const repo = createRepo(db)
-      await expect(
-        repo.deleteWhere(undefined as never)
-      ).rejects.toThrow(ValidationError)
+      await expect(repo.deleteWhere!(undefined as never)).rejects.toThrow(
+        ValidationError
+      )
     })
 
     it("rejects always-true predicate", async () => {
       const db = createDb()
       const repo = createRepo(db)
       await expect(
-        repo.deleteWhere(
-          { kind: "literal", value: true } as never
-        )
+        repo.deleteWhere!({ kind: "literal", value: true } as never)
       ).rejects.toThrow(ConfigurationError)
     })
 
@@ -312,9 +328,12 @@ describe("createDrizzleRepository (MySQL)", () => {
         })),
       } as unknown as DrizzleSessionLike
       const repo = createRepo(deleteDb)
-      const result = await repo.deleteWhere(
-        { kind: "condition", field: "status", op: "eq", value: "archived" } as never
-      )
+      const result = await repo.deleteWhere!({
+        kind: "condition",
+        field: "status",
+        op: "eq",
+        value: "archived",
+      } as never)
       expect(result.deletedCount).toBe(3)
     })
   })

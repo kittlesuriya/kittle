@@ -19,7 +19,8 @@ function parseField(
 
   for (const part of field.split(",")) {
     const match = part.match(/^(\*|\d+(?:-\d+)?)(?:\/(\d+))?$/)
-    if (!match) throw new ConfigurationError(`Invalid cron field value: "${part}"`)
+    if (!match)
+      throw new ConfigurationError(`Invalid cron field value: "${part}"`)
 
     const range =
       match[1] === "*"
@@ -34,9 +35,13 @@ function parseField(
     const step = match[2] === undefined ? 1 : Number(match[2])
 
     if (step <= 0 || !Number.isInteger(step))
-      throw new ConfigurationError(`Cron step must be greater than zero: "${part}"`)
+      throw new ConfigurationError(
+        `Cron step must be greater than zero: "${part}"`
+      )
     if (start < min || end > max || start > end)
-      throw new ConfigurationError(`Cron range is outside ${min}-${max}: "${part}"`)
+      throw new ConfigurationError(
+        `Cron range is outside ${min}-${max}: "${part}"`
+      )
 
     for (let value = start; value <= end; value += step)
       values.add(normalize?.(value) ?? value)
@@ -210,27 +215,38 @@ function getOffset(
 }
 
 export function createIntlCronTimezoneAdapter(): CronTimezoneAdapter {
+  // Bound the formatter cache for long-lived scheduler instances that may
+  // process schedules from many different timezones.
+  const formatters = new Map<string, Intl.DateTimeFormat>()
+  const MAX_FORMATTERS = 16
   function toLocalDateTimeParts(
     utcDate: Date,
     timezone: string
   ): LocalDateTime {
-    let formatter: Intl.DateTimeFormat
-    try {
-      formatter = new Intl.DateTimeFormat("en-US", {
-        timeZone: timezone,
-        year: "numeric",
-        month: "numeric",
-        day: "numeric",
-        hour: "numeric",
-        minute: "numeric",
-        weekday: "short",
-        hourCycle: "h23",
-      })
-    } catch (error) {
-      throw new ValidationError(`Invalid timezone: ${timezone}`, {
-        timezone,
-        cause: error,
-      })
+    let formatter = formatters.get(timezone)
+    if (!formatter) {
+      try {
+        formatter = new Intl.DateTimeFormat("en-US", {
+          timeZone: timezone,
+          year: "numeric",
+          month: "numeric",
+          day: "numeric",
+          hour: "numeric",
+          minute: "numeric",
+          weekday: "short",
+          hourCycle: "h23",
+        })
+      } catch (error) {
+        throw new ValidationError(`Invalid timezone: ${timezone}`, {
+          timezone,
+          cause: error,
+        })
+      }
+      if (formatters.size >= MAX_FORMATTERS) {
+        const oldest = formatters.keys().next().value
+        if (oldest !== undefined) formatters.delete(oldest)
+      }
+      formatters.set(timezone, formatter)
     }
     const parts = Object.fromEntries(
       formatter.formatToParts(utcDate).map((part) => [part.type, part.value])
@@ -321,6 +337,8 @@ function getNextLocalOccurrence(
   disambiguation: CronDisambiguation
 ): Date | null {
   if (!hasPossibleCalendarDate(cron)) return null
+  const sortedHours = [...cron.hours].sort((a, b) => a - b)
+  const sortedMinutes = [...cron.minutes].sort((a, b) => a - b)
   let local = nextLocalMinute(adapter.toLocalDateTimeParts(afterUtc, timezone))
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     if (!localDateIsValid(local)) {
@@ -336,9 +354,7 @@ function getNextLocalOccurrence(
       continue
     }
     if (!cron.hours.has(local.hour)) {
-      const nextHour = [...cron.hours]
-        .sort((a, b) => a - b)
-        .find((hour) => hour > local.hour)
+      const nextHour = sortedHours.find((hour) => hour > local.hour)
       local =
         nextHour === undefined
           ? nextLocalDay(local)
@@ -346,9 +362,7 @@ function getNextLocalOccurrence(
       continue
     }
     if (!cron.minutes.has(local.minute)) {
-      const nextMinute = [...cron.minutes]
-        .sort((a, b) => a - b)
-        .find((minute) => minute > local.minute)
+      const nextMinute = sortedMinutes.find((minute) => minute > local.minute)
       local =
         nextMinute === undefined
           ? nextLocalMinute({ ...local, minute: 59 })
@@ -397,7 +411,11 @@ export function getNextOccurrence(
 }
 
 const OVERLAP_POLICY_TYPES: readonly string[] = ["allow", "skip", "queue"]
-const MISFIRE_POLICY_TYPES: readonly string[] = ["skip", "fire_now", "queue_all"]
+const MISFIRE_POLICY_TYPES: readonly string[] = [
+  "skip",
+  "fire_now",
+  "queue_all",
+]
 
 function describeSchedulePolicyType(policy: unknown): string {
   const type =

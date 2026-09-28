@@ -1,6 +1,5 @@
 import type { FastifyInstance } from "fastify"
 import type { BrandedEntityDefinition } from "kittle-core/entity"
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { CRUD, type CrudRuntime } from "../http/CRUD"
 import { wrapFetchHandler } from "./plugin"
 
@@ -48,7 +47,10 @@ export interface RegisterCrudRoutesOptions {
  * by unwrapping `context.params` and passing it directly to the handler.
  */
 function adaptDetailHandler(
-  handler: (request: Request, params: Record<string, string>) => Promise<Response>
+  handler: (
+    request: Request,
+    params: Record<string, string>
+  ) => Promise<Response>
 ) {
   return async (
     request: Request,
@@ -90,9 +92,7 @@ function adaptDetailHandler(
  * })
  * ```
  */
-export function registerCrudRoutes(
-  options: RegisterCrudRoutesOptions
-): void {
+export function registerCrudRoutes(options: RegisterCrudRoutesOptions): void {
   const { app, routes, definition, runtime, prefix = "" } = options
 
   // Generate Fetch-based handlers from the entity definition + runtime
@@ -103,11 +103,7 @@ export function registerCrudRoutes(
     if (!route) continue
 
     const method = route.method.toLowerCase() as
-      | "get"
-      | "post"
-      | "put"
-      | "delete"
-      | "patch"
+      "get" | "post" | "put" | "delete" | "patch"
     const fullPath = `${prefix}${route.path}`
 
     // The detail handler has a different signature (request, params) vs
@@ -116,7 +112,7 @@ export function registerCrudRoutes(
     if (key === "detail" && handlers.detail) {
       app[method](
         fullPath,
-        wrapFetchHandler(adaptDetailHandler(handlers.detail as any))
+        wrapFetchHandler(adaptDetailHandler(handlers.detail))
       )
     } else {
       const handler = handlers[key as keyof typeof handlers]

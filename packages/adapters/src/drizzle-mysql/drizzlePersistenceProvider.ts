@@ -192,7 +192,7 @@ export function createDrizzlePersistenceProvider(
 
       async runInTransaction<TResult>(
         work: (scoped: InteractiveTransactionProvider) => Promise<TResult>,
-        options?: TransactionOptions
+        _options?: TransactionOptions
       ): Promise<TResult> {
         if (inTransaction) {
           throw new ConfigurationError(

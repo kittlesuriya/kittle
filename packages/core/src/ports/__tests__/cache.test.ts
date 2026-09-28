@@ -279,6 +279,24 @@ describe("cache ports", () => {
     expect(generation).toBe("1")
   })
 
+  it("does not maintain physical tag indexes for correctness-critical fills", async () => {
+    const adapter = createAdapter({
+      tagGenerationConsistency: "linearizable",
+      coherenceScope: "shared",
+    })
+    adapter.getTagGeneration = vi.fn(async () => "0")
+    adapter.advanceTagGeneration = vi.fn(async () => "1")
+    const cache = new CacheService({ adapter, correctnessCritical: true })
+
+    await expect(
+      cache.getOrSet("key", async () => "value", ["rows"])
+    ).resolves.toBe("value")
+    const mocks = adapter as unknown as {
+      addToTag: ReturnType<typeof vi.fn>
+    }
+    expect(mocks.addToTag).not.toHaveBeenCalled()
+  })
+
   it("delegates cache operations and returns cached values", async () => {
     const adapter = createAdapter()
     const mocks = adapter as unknown as {
@@ -310,6 +328,23 @@ describe("cache ports", () => {
     expect(
       serializeCacheKeyPart([undefined, Number.NEGATIVE_INFINITY])
     ).toContain('"-Infinity"')
+  })
+
+  it("keeps Map and Set cache-key order and equal-key insertion order", () => {
+    expect(
+      serializeCacheKeyPart(
+        new Map<unknown, string>([
+          [{ b: 2, a: 1 }, "first"],
+          ["z", "last"],
+          [{ a: 1, b: 2 }, "second"],
+        ])
+      )
+    ).toBe(
+      '{"$type":"Map","value":[["z","last"],[{"a":1,"b":2},"first"],[{"a":1,"b":2},"second"]]}'
+    )
+    expect(serializeCacheKeyPart(new Set([3, 1, 2]))).toBe(
+      '{"$type":"Set","value":[1,2,3]}'
+    )
   })
 
   it("rejects caller-forged $type markers while keeping Date keys distinct", () => {

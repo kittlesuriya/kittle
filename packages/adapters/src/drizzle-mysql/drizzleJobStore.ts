@@ -536,7 +536,6 @@ export class DrizzleJobStore implements JobStore {
 
   async markSucceeded(args: CompleteJobArgs): Promise<JobTransitionResult> {
     const now = new Date()
-    const token = uuidv7()
     const where = and(
       eq(this.jobs.id!, args.jobId),
       eq(this.jobs.leaseOwner!, args.workerId),
@@ -580,7 +579,6 @@ export class DrizzleJobStore implements JobStore {
       inArray(this.jobs.status!, ["running"]),
       gt(this.jobs.leaseExpiresAt!, sql`NOW()`)
     )
-    const token = uuidv7()
     const result = await this.db
       .update(this.jobsTable)
       .set({
@@ -615,7 +613,6 @@ export class DrizzleJobStore implements JobStore {
       eq(this.jobs.status!, "running"),
       gt(this.jobs.leaseExpiresAt!, sql`NOW()`)
     )
-    const token = uuidv7()
     const result = await this.db
       .update(this.jobsTable)
       .set({

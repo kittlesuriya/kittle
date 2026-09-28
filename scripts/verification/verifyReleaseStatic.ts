@@ -27,7 +27,10 @@ const matrix = JSON.parse(
   )
 ) as {
   adapters?: Record<string, { implementation: string; checks: string[] }>
-  "kittle-adapters"?: Record<string, { implementation: string; checks: string[] }>
+  "kittle-adapters"?: Record<
+    string,
+    { implementation: string; checks: string[] }
+  >
 }
 const adaptersMatrix = matrix.adapters ?? matrix["kittle-adapters"] ?? {}
 const inventory = JSON.parse(
@@ -167,8 +170,7 @@ function checkBuiltTreeParity(pkg: string): void {
     "built JavaScript and declarations differ"
   )
 }
-for (const { dir } of packageManifests)
-  checkBuiltTreeParity(`packages/${dir}`)
+for (const { dir } of packageManifests) checkBuiltTreeParity(`packages/${dir}`)
 
 function npmCommand(): string {
   return process.platform === "win32" ? "npm.cmd" : "npm"
@@ -223,6 +225,11 @@ function packConsumerSmoke(): void {
         "--ignore-scripts",
         "--package-lock=false",
         "--legacy-peer-deps",
+        // The NestJS entrypoint is an optional peer; install it explicitly
+        // when smoke-importing every public subpath.
+        "@nestjs/common@^11.0.0",
+        "reflect-metadata@^0.2.0",
+        "rxjs@^7.1.0",
         ...tarballs,
       ],
       root

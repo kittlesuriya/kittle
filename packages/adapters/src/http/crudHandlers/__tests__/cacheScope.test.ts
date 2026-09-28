@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { CacheAdapter } from "kittle-core/cache"
-import type {
-  EntityDescriptor,
-  PersistenceProvider,
-} from "kittle-core/ports"
+import type { EntityDescriptor, PersistenceProvider } from "kittle-core/ports"
 import {
   bindAbacSecurityDigest,
   type AbacPolicyBundle,
@@ -155,6 +152,34 @@ function makeShared(
 }
 
 describe("CRUD ABAC read cache scope", () => {
+  it("keeps detail reads available when the best-effort read audit fails", async () => {
+    const cache = createGateCompliantAdapter()
+    const currentSession = { value: makeSession("actor-a") }
+    const calls = { list: 0, detail: 0 }
+    const shared = makeShared(
+      cache,
+      currentSession,
+      undefined,
+      calls,
+      abacBundle,
+      {
+        audit: { resource: "test.cache", readAudit: true },
+        auditSinkFactory: () => ({
+          write: async () => {
+            throw new Error("audit unavailable")
+          },
+        }),
+      }
+    )
+    const id = "00000000-0000-4000-8000-000000000001"
+    const response = await createDetailHandler(shared)(
+      new Request(`https://example.test/items/${id}`),
+      { id }
+    )
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ id: "row-1", value: "actor-a" })
+  })
+
   it("does not leak list results between actors when the ABAC scope key is missing", async () => {
     const cache = createGateCompliantAdapter()
     const currentSession = { value: makeSession("actor-a") }
@@ -209,6 +234,39 @@ describe("CRUD ABAC read cache scope", () => {
     await handler(new Request("https://example.test/items"))
 
     expect(calls.list).toBe(1)
+  })
+
+  it("does not create read persistence on list or detail cache hits", async () => {
+    const cache = createGateCompliantAdapter()
+    const currentSession = { value: makeSession("actor-a") }
+    const calls = { list: 0, detail: 0 }
+    const shared = makeShared(cache, currentSession, "policy-scope", calls)
+    const originalCreatePersistence = shared.options.createPersistence
+    let persistenceCreations = 0
+    shared.options.createPersistence = (session) => {
+      persistenceCreations += 1
+      return originalCreatePersistence(session)
+    }
+    const list = createListHandler(shared)
+    const detail = createDetailHandler(shared)
+    const id = "00000000-0000-4000-8000-000000000001"
+
+    expect((await list(new Request("https://example.test/items"))).status).toBe(
+      200
+    )
+    expect((await list(new Request("https://example.test/items"))).status).toBe(
+      200
+    )
+    expect(
+      (await detail(new Request(`https://example.test/items/${id}`), { id }))
+        .status
+    ).toBe(200)
+    expect(
+      (await detail(new Request(`https://example.test/items/${id}`), { id }))
+        .status
+    ).toBe(200)
+    expect(calls).toEqual({ list: 1, detail: 1 })
+    expect(persistenceCreations).toBe(2)
   })
 
   it("never shares list cache entries between bundles with the same scope key but different security digests", async () => {

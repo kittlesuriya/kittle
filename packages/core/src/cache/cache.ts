@@ -4,10 +4,18 @@ export const MAX_CACHE_KEY_DEPTH = 100
 export const MAX_CACHE_KEY_KEYS = 10_000
 export const MAX_CACHE_KEY_BYTES = 2 * 1024
 
-function compareSerialized(left: unknown, right: unknown): number {
-  const a = JSON.stringify(left) ?? ""
-  const b = JSON.stringify(right) ?? ""
-  return a < b ? -1 : a > b ? 1 : 0
+function sortBySerialized<T>(items: T[], key: (item: T) => unknown): T[] {
+  if (items.length < 2) return items
+  return items
+    .map((item) => ({ item, serialized: JSON.stringify(key(item)) ?? "" }))
+    .sort((left, right) =>
+      left.serialized < right.serialized
+        ? -1
+        : left.serialized > right.serialized
+          ? 1
+          : 0
+    )
+    .map(({ item }) => item)
 }
 
 function assertAcyclic(value: object, seen: Set<object>): void {
@@ -47,23 +55,27 @@ function sortForSerialization(
   }
   if (value instanceof Map) {
     assertAcyclic(value, seen)
-    const entries = Array.from(value.entries())
-      .map(
+    const entries = sortBySerialized(
+      Array.from(value.entries()).map(
         ([k, v]) =>
           [
             sortForSerialization(k, depth + 1, seen),
             sortForSerialization(v, depth + 1, seen),
           ] as const
-      )
-      .sort((left, right) => compareSerialized(left[0], right[0]))
+      ),
+      (entry) => entry[0]
+    )
     seen.delete(value)
     return { $type: "Map", value: entries }
   }
   if (value instanceof Set) {
     assertAcyclic(value, seen)
-    const items = Array.from(value)
-      .map((item) => sortForSerialization(item, depth + 1, seen))
-      .sort(compareSerialized)
+    const items = sortBySerialized(
+      Array.from(value).map((item) =>
+        sortForSerialization(item, depth + 1, seen)
+      ),
+      (item) => item
+    )
     seen.delete(value)
     return { $type: "Set", value: items }
   }
@@ -176,6 +188,6 @@ export interface CacheCapabilities {
   coherenceScope?: "process" | "shared"
 }
 
-// Re-export CacheService from its dedicated module for backward compatibility.
+// Keep CacheService available through the cache entrypoint.
 export { CacheService } from "./cacheService"
 export type { CacheConfig, CacheTelemetry } from "./cacheService"

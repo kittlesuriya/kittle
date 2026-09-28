@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
 import { mysqlTable, text, int, boolean } from "drizzle-orm/mysql-core"
-import { ConfigurationError, ValidationError } from "kittle-core/domain"
-import { createDrizzleScheduleStore, type DrizzleScheduleStoreConfig } from "../drizzleScheduleStore"
+import { ConfigurationError } from "kittle-core/domain"
+import {
+  createDrizzleScheduleStore,
+  type DrizzleScheduleStoreConfig,
+} from "../drizzleScheduleStore"
 import type { DrizzleSessionLike } from "../drizzleRepository"
 
 const schedulesTable = mysqlTable("schedules", {
@@ -54,7 +57,9 @@ function createConfig(
         claimToken: schedulesTable.claimToken,
       },
     },
-    ...overrides,
+    ...(overrides.resolveTenantTimezones
+      ? { resolveTenantTimezones: overrides.resolveTenantTimezones }
+      : {}),
   }
 }
 
@@ -134,9 +139,9 @@ describe("DrizzleScheduleStore (MySQL)", () => {
         limit: 10,
       })
       expect(claims).toHaveLength(1)
-      expect(claims[0].scheduleId).toBe("s1")
-      expect(claims[0].scope).toBe("tenant")
-      expect(claims[0].timezone).toBe("UTC")
+      expect(claims[0]?.scheduleId).toBe("s1")
+      expect(claims[0]?.scope).toBe("tenant")
+      expect(claims[0]?.timezone).toBe("UTC")
     })
 
     it("returns empty when no eligible schedules", async () => {
@@ -150,7 +155,14 @@ describe("DrizzleScheduleStore (MySQL)", () => {
     })
 
     it("rejects invalid workerId", async () => {
-      const { store } = createStore([{ id: "s1", enabled: true, nextRunAt: new Date().toISOString(), lastStatus: null }])
+      const { store } = createStore([
+        {
+          id: "s1",
+          enabled: true,
+          nextRunAt: new Date().toISOString(),
+          lastStatus: null,
+        },
+      ])
       await expect(
         store.claimDueSchedules({
           workerId: "",
@@ -183,7 +195,7 @@ describe("DrizzleScheduleStore (MySQL)", () => {
         leaseDurationMs: 30_000,
         limit: 10,
       })
-      expect(claims[0].timezone).toBe("America/New_York")
+      expect(claims[0]?.timezone).toBe("America/New_York")
     })
   })
 
@@ -206,7 +218,7 @@ describe("DrizzleScheduleStore (MySQL)", () => {
       const result = await store.advanceSchedule({
         scheduleId: "s1",
         workerId: "w1",
-        claimToken: undefined,
+        claimToken: undefined as unknown as string,
         nextRunAt: new Date(),
         lastRunAt: new Date(),
         lastStatus: "succeeded",
@@ -231,7 +243,7 @@ describe("DrizzleScheduleStore (MySQL)", () => {
       const result = await store.releaseSchedule({
         scheduleId: "s1",
         workerId: "w1",
-        claimToken: undefined,
+        claimToken: undefined as unknown as string,
       })
       expect(result).toBe(false)
     })
@@ -245,6 +257,7 @@ describe("DrizzleScheduleStore (MySQL)", () => {
         workerId: "w1",
         claimToken: "tok",
         extendByMs: 10_000,
+        now: new Date(),
       })
       expect(result).toBe(true)
     })
@@ -256,6 +269,7 @@ describe("DrizzleScheduleStore (MySQL)", () => {
         workerId: "w1",
         claimToken: "tok",
         extendByMs: -1,
+        now: new Date(),
       })
       expect(result).toBe(false)
     })

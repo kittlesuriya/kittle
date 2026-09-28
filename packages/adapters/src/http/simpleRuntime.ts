@@ -1,9 +1,7 @@
+/* eslint-disable @typescript-eslint/require-await */
 import { bindAbacSecurityDigest } from "kittle-core/domain"
 import type { CacheAdapter } from "kittle-core/cache"
-import type {
-  FrameworkAdapterDeps,
-  FrameworkScope,
-} from "../server"
+import type { FrameworkAdapterDeps, FrameworkScope } from "../server"
 import type { CrudRuntime } from "./CRUD"
 import type { CrudScopeConfig } from "./createFrameworkWriteHandler"
 
@@ -120,12 +118,14 @@ export function resolveScopeConfig(
       idempotency: { required: false },
     }
   }
-  return scope ?? {
-    scope: "public",
-    sessionRequired: false,
-    csrfRequired: false,
-    idempotency: { required: false },
-  }
+  return (
+    scope ?? {
+      scope: "public",
+      sessionRequired: false,
+      csrfRequired: false,
+      idempotency: { required: false },
+    }
+  )
 }
 
 /**

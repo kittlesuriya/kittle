@@ -126,4 +126,57 @@ describe("Batch H: field-write empty-relevant deny", () => {
       }).reasonCode
     ).toBe("NO_POLICY_MATCHED_RECORD")
   })
+
+  it("evaluates each matching write predicate only once", async () => {
+    const bundle = await makeBundle([
+      makePolicy({
+        compiledConditions: Predicate.eq("status", "active"),
+        payload: {
+          ...makePolicy().payload,
+          fieldAccess: { write: ["name"] },
+        },
+      }),
+    ])
+    let reads = 0
+    const record = {
+      get status() {
+        reads += 1
+        return "active"
+      },
+      name: "row",
+    }
+    expect(() =>
+      enforceAbacWrite({
+        bundle,
+        action: "update",
+        record,
+        changedFields: ["name"],
+      })
+    ).not.toThrow()
+    expect(reads).toBe(1)
+  })
+
+  it("preserves field-denial precedence over a matched record denial", async () => {
+    const bundle = await makeBundle([
+      makePolicy({
+        effect: "deny",
+        payload: {
+          ...makePolicy().payload,
+          fieldAccess: { write: ["name"] },
+        },
+      }),
+    ])
+    let caught: unknown
+    try {
+      enforceAbacWrite({
+        bundle,
+        action: "update",
+        record: { name: "row" },
+        changedFields: ["name"],
+      })
+    } catch (error) {
+      caught = error
+    }
+    expect(reasonCodeOf(caught)).toBe("ABAC_FIELD_WRITE_DENIED")
+  })
 })

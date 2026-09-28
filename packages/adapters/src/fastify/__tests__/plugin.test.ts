@@ -44,7 +44,10 @@ describe("wrapFetchHandler", () => {
   })
 
   it("passes params context to handler", async () => {
-    const handler = vi.fn(async () => new Response("ok"))
+    const handler = vi.fn(
+      async (_request: Request, _context?: { params?: Promise<unknown> }) =>
+        new Response("ok")
+    )
     const wrapped = wrapFetchHandler(handler)
     const reply = createMockReply()
     const request = {
@@ -59,9 +62,9 @@ describe("wrapFetchHandler", () => {
 
     await wrapped(request as never, reply as never)
     expect(handler).toHaveBeenCalled()
-    const [, context] = handler.mock.calls[0]!
+    const context = handler.mock.calls[0]?.[1]
     expect(context).toBeDefined()
-    expect(context.params).toBeDefined()
+    expect(context?.params).toBeDefined()
   })
 
   it("handles error responses", async () => {

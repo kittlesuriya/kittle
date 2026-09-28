@@ -7,6 +7,7 @@ import {
 } from "../fieldAccess"
 import { Predicate } from "../predicate"
 import type { NormalizedAbacPolicy } from "../abacTypes"
+import { bindAbacSecurityDigest } from "../abacBundleIntegrity"
 
 function makePolicy(
   overrides: Partial<NormalizedAbacPolicy> = {}
@@ -147,6 +148,48 @@ describe("resolveFieldReadOverrides", () => {
       record: { name: "test", ssn: "123-45-6789" },
     })
     expect(result).toEqual({ ssn: "omit" })
+  })
+
+  it("keeps conditional field decisions per record for immutable bundles", async () => {
+    const bundle = await bindAbacSecurityDigest({
+      mode: "tenant",
+      moduleKey: "test.module",
+      policies: [
+        makePolicy({
+          compiledConditions: Predicate.eq("status", "private"),
+          payload: {
+            ...makePolicy().payload,
+            actions: ["read"],
+            fieldAccess: { read: { name: "mask" } },
+          },
+        }),
+      ],
+      context: { tenantId: "t1" },
+      defaultEffect: "deny",
+      fieldCatalog: {},
+    })
+    const args = { policies: bundle.policies, moduleKey: bundle.moduleKey }
+    expect(
+      resolveFieldReadOverrides({
+        ...args,
+        record: { status: "private", name: "secret" },
+      })
+    ).toEqual({ status: "omit", name: "mask" })
+    expect(
+      resolveFieldReadOverrides({
+        ...args,
+        record: { status: "public", name: "visible" },
+      })
+    ).toEqual({})
+  })
+
+  it("does not reuse selections for mutable policy arrays", () => {
+    const policy = makeReadPolicy({ read: { name: "mask" } })
+    const policies = [policy]
+    const args = { policies, moduleKey: "test.module", record: { name: "a" } }
+    expect(resolveFieldReadOverrides(args)).toEqual({ name: "mask" })
+    policy.payload.actions = ["update"]
+    expect(resolveFieldReadOverrides(args)).toEqual({})
   })
 })
 

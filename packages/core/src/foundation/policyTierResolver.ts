@@ -20,10 +20,9 @@ export function buildTieredPolicyOutcome<TPolicy, TExpression>(args: {
   const groupedByPriority = new Map<number, TPolicy[]>()
   for (const policy of args.policies) {
     const priority = args.getPriority(policy)
-    groupedByPriority.set(priority, [
-      ...(groupedByPriority.get(priority) ?? []),
-      policy,
-    ])
+    const tier = groupedByPriority.get(priority)
+    if (tier) tier.push(policy)
+    else groupedByPriority.set(priority, [policy])
   }
 
   const sortedPriorities = Array.from(groupedByPriority.keys()).sort(
@@ -34,19 +33,18 @@ export function buildTieredPolicyOutcome<TPolicy, TExpression>(args: {
 
   for (const priority of sortedPriorities) {
     const tierPolicies = groupedByPriority.get(priority) ?? []
-    const tierMatched = args.ops.or(
-      tierPolicies.map((policy) => args.getMatch(policy))
-    )
-    const tierAllowMatched = args.ops.or(
-      tierPolicies
-        .filter((policy) => args.getEffect(policy) === "allow")
-        .map((policy) => args.getMatch(policy))
-    )
-    const tierDenyMatched = args.ops.or(
-      tierPolicies
-        .filter((policy) => args.getEffect(policy) === "deny")
-        .map((policy) => args.getMatch(policy))
-    )
+    const all: TExpression[] = []
+    const allows: TExpression[] = []
+    const denies: TExpression[] = []
+    for (const policy of tierPolicies) {
+      const match = args.getMatch(policy)
+      all.push(match)
+      if (args.getEffect(policy) === "allow") allows.push(match)
+      else denies.push(match)
+    }
+    const tierMatched = args.ops.or(all)
+    const tierAllowMatched = args.ops.or(allows)
+    const tierDenyMatched = args.ops.or(denies)
 
     allowAtTierClauses.push(
       args.ops.and([

@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
 import { mysqlTable, text, int } from "drizzle-orm/mysql-core"
 import { ConfigurationError } from "kittle-core/domain"
-import { createDrizzleJobStore, type DrizzleJobStoreConfig } from "../drizzleJobStore"
+import {
+  createDrizzleJobStore,
+  type DrizzleJobStoreConfig,
+} from "../drizzleJobStore"
 import type { DrizzleSessionLike } from "../drizzleRepository"
 
 const jobsTable = mysqlTable("jobs", {
@@ -91,17 +94,20 @@ function createConfig(): DrizzleJobStoreConfig {
   }
 }
 
-function createStore(options: {
-  selectRows?: Record<string, unknown>[]
-  affectedRows?: number
-  insertError?: Error
-} = {}) {
+function createStore(
+  options: {
+    selectRows?: Record<string, unknown>[]
+    affectedRows?: number
+    insertError?: Error
+  } = {}
+) {
   const selectRows = options.selectRows ?? []
   const affectedRows = options.affectedRows ?? 0
+  const insertError = options.insertError
   const db = {
-    insert: options.insertError
+    insert: insertError
       ? vi.fn(() => {
-          throw options.insertError
+          throw insertError
         })
       : vi.fn(() => ({
           values: vi.fn(async () => ({ affectedRows: 1 })),
@@ -188,7 +194,7 @@ describe("DrizzleJobStore (MySQL)", () => {
       })
       const job = await store.getById({
         id: "j1",
-        requester: { scope: "tenant", tenantId: "t1" },
+        requester: { scope: "tenant", tenantId: "t1", actorId: "actor-1" },
       })
       expect(job).not.toBeNull()
       expect(job?.id).toBe("j1")
@@ -199,7 +205,7 @@ describe("DrizzleJobStore (MySQL)", () => {
       const { store } = createStore({ selectRows: [] })
       const job = await store.getById({
         id: "missing",
-        requester: { scope: "platform" },
+        requester: { scope: "platform", actorId: "actor-1" },
       })
       expect(job).toBeNull()
     })
@@ -246,7 +252,7 @@ describe("DrizzleJobStore (MySQL)", () => {
           scope: "platform",
           payload: { data: "test" },
         },
-        requester: { scope: "platform" },
+        requester: { scope: "platform", actorId: "actor-1" },
       })
       expect(job.status).toBe("pending")
       expect(db.insert).toHaveBeenCalled()
@@ -317,7 +323,7 @@ describe("DrizzleJobStore (MySQL)", () => {
       const { store } = createStore({ selectRows: [], affectedRows: 0 })
       const result = await store.cancel({
         jobId: "j1",
-        requester: { scope: "platform" },
+        requester: { scope: "platform", actorId: "actor-1" },
       })
       expect(result.applied).toBe(false)
       expect(result.reason).toBe("INVALID_STATE")
@@ -359,11 +365,11 @@ describe("DrizzleJobStore (MySQL)", () => {
         ],
       })
       const jobs = await store.findPending({
-        requester: { scope: "platform" },
+        requester: { scope: "platform", actorId: "actor-1" },
         limit: 10,
       })
       expect(jobs).toHaveLength(1)
-      expect(jobs[0].id).toBe("j1")
+      expect(jobs[0]?.id).toBe("j1")
     })
   })
 })

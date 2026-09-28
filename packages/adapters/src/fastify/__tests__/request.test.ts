@@ -1,16 +1,18 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 import { PassThrough } from "stream"
 import { toFetchRequest } from "../request"
 
-function createFastifyRequest(overrides: {
-  url?: string
-  method?: string
-  protocol?: string
-  hostname?: string
-  headers?: Record<string, string | string[] | undefined>
-  body?: string | Buffer
-} = {}) {
-  const raw = new PassThrough() as import("http").IncomingMessage & {
+function createFastifyRequest(
+  overrides: {
+    url?: string
+    method?: string
+    protocol?: string
+    hostname?: string
+    headers?: Record<string, string | string[] | undefined>
+    body?: string | Buffer
+  } = {}
+) {
+  const raw = new PassThrough() as unknown as import("http").IncomingMessage & {
     method: string
     url: string
     headers: Record<string, string | string[] | undefined>
@@ -18,7 +20,9 @@ function createFastifyRequest(overrides: {
   raw.method = overrides.method ?? "GET"
   raw.url = overrides.url ?? "/test"
   raw.headers = overrides.headers ?? {}
-  ;(raw as unknown as { socket: unknown }).socket = { remoteAddress: "127.0.0.1" }
+  ;(raw as unknown as { socket: unknown }).socket = {
+    remoteAddress: "127.0.0.1",
+  }
 
   // Write body and end the stream so reads don't hang
   if (overrides.body) {

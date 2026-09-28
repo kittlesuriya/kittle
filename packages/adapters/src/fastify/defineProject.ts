@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- Existing heterogeneous entity facade uses erasure at its dynamic boundary. */
 import type { FastifyInstance, FastifyPluginAsync } from "fastify"
 import type { AnyMySqlTable } from "drizzle-orm/mysql-core"
 import type { BrandedEntityDefinition } from "kittle-core/entity"
@@ -124,11 +125,26 @@ export interface EntityConfig {
   routes?: (
     app: FastifyInstance,
     handlers: {
-      list?: (request: Request, context?: { params?: Promise<unknown> }) => Promise<Response>
-      detail?: (request: Request, params: Record<string, string>) => Promise<Response>
-      create?: (request: Request, context?: { params?: Promise<unknown> }) => Promise<Response>
-      update?: (request: Request, context?: { params?: Promise<unknown> }) => Promise<Response>
-      delete?: (request: Request, context?: { params?: Promise<unknown> }) => Promise<Response>
+      list?: (
+        request: Request,
+        context?: { params?: Promise<unknown> }
+      ) => Promise<Response>
+      detail?: (
+        request: Request,
+        params: Record<string, string>
+      ) => Promise<Response>
+      create?: (
+        request: Request,
+        context?: { params?: Promise<unknown> }
+      ) => Promise<Response>
+      update?: (
+        request: Request,
+        context?: { params?: Promise<unknown> }
+      ) => Promise<Response>
+      delete?: (
+        request: Request,
+        context?: { params?: Promise<unknown> }
+      ) => Promise<Response>
     },
     context?: {
       runtime: CrudRuntime
@@ -146,7 +162,6 @@ interface ResolvedEntity {
   entityConfig: EntityConfig
   moduleKey: string
   crudEnabled: Record<string, boolean>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   definition: BrandedEntityDefinition<any, any, any, any, any, any, any>
   customRoutesFn?: EntityConfig["routes"]
 }
@@ -217,11 +232,11 @@ function resolveCrudRoutes(
  */
 export function defineProject(config: ProjectConfig) {
   const projectDefaults = {
-    scope: (config.scope ?? "platform") as FrameworkScope,
+    scope: config.scope ?? "platform",
     prefix: config.prefix ?? "",
     auth: config.auth ?? false,
     rateLimit: config.rateLimit ?? false,
-    tenantScoping: (config.tenantScoping ?? "none") as "none" | "scoped",
+    tenantScoping: config.tenantScoping ?? "none",
     crud: {
       list: true,
       detail: true,
@@ -238,7 +253,9 @@ export function defineProject(config: ProjectConfig) {
    * Define an entity with minimal config. Project defaults are applied
    * automatically — only entity-specific details are needed.
    */
-  function entity(entityConfig: EntityConfig): BrandedEntityDefinition<any, any, any, any, any, any, any> {
+  function entity(
+    entityConfig: EntityConfig
+  ): BrandedEntityDefinition<any, any, any, any, any, any, any> {
     if (!entityConfig.name || entityConfig.name.trim() === "") {
       throw new Error("Entity name is required")
     }
@@ -252,15 +269,12 @@ export function defineProject(config: ProjectConfig) {
     const crudEnabled = { ...projectDefaults.crud, ...entityConfig.crud }
 
     // Build the full entity definition for defineEntity()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const definition = defineEntity({
       moduleKey,
       entity: {
         name: entityConfig.name,
         primaryKey: entityConfig.primaryKey ?? "id",
-        ...(entityConfig.version
-          ? { versionField: entityConfig.version }
-          : {}),
+        ...(entityConfig.version ? { versionField: entityConfig.version } : {}),
         fields: entityConfig.fields as any,
       } as any,
       tenantScoping:
@@ -268,7 +282,8 @@ export function defineProject(config: ProjectConfig) {
           ? { mode: "none", acknowledged: true }
           : { mode: "scoped" },
       policy:
-        typeof projectDefaults.auth === "object" && projectDefaults.auth !== null
+        typeof projectDefaults.auth === "object" &&
+        projectDefaults.auth !== null
           ? { customCapabilityKey: projectDefaults.auth.capabilityKey }
           : { skipCapabilityCheck: true },
       validation: {
@@ -295,7 +310,9 @@ export function defineProject(config: ProjectConfig) {
       ...(entityConfig.filterable
         ? { filterableColumns: entityConfig.filterable }
         : {}),
-      ...(entityConfig.listDefaults ? { listDefaults: entityConfig.listDefaults } : {}),
+      ...(entityConfig.listDefaults
+        ? { listDefaults: entityConfig.listDefaults }
+        : {}),
       audit: { enabled: false },
       cache: { enabled: false },
     })
@@ -336,7 +353,7 @@ export function defineProject(config: ProjectConfig) {
       }
 
       // Create the persistence provider (shared across all entities)
-      const interactiveProvider = createDrizzlePersistenceProvider({
+      createDrizzlePersistenceProvider({
         db: config.db,
         registry,
       })

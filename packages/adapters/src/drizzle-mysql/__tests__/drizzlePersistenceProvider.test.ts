@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
 import { mysqlTable, text } from "drizzle-orm/mysql-core"
 import { ConfigurationError } from "kittle-core/domain"
-import { createDrizzlePersistenceProvider, DrizzleEntityRegistry, getDrizzleSession } from "../drizzlePersistenceProvider"
+import {
+  createDrizzlePersistenceProvider,
+  DrizzleEntityRegistry,
+  getDrizzleSession,
+} from "../drizzlePersistenceProvider"
 import type { EntityDescriptor } from "kittle-core/ports"
 
 const itemTable = mysqlTable("items", {
@@ -49,7 +53,10 @@ describe("createDrizzlePersistenceProvider (MySQL)", () => {
       id: itemTable.id,
       name: itemTable.name,
     })
-    const provider = createDrizzlePersistenceProvider({ db: db as never, registry })
+    const provider = createDrizzlePersistenceProvider({
+      db: db as never,
+      registry,
+    })
     expect(provider.dialect).toBe("mysql")
   })
 
@@ -60,7 +67,10 @@ describe("createDrizzlePersistenceProvider (MySQL)", () => {
       id: itemTable.id,
       name: itemTable.name,
     })
-    const provider = createDrizzlePersistenceProvider({ db: db as never, registry })
+    const provider = createDrizzlePersistenceProvider({
+      db: db as never,
+      registry,
+    })
     expect(provider.capabilities.interactiveTransactions).toBe(true)
     expect(provider.capabilities.atomicBatch).toBe(false)
     expect(provider.capabilities.returningInsert).toBe(false)
@@ -74,7 +84,10 @@ describe("createDrizzlePersistenceProvider (MySQL)", () => {
       id: itemTable.id,
       name: itemTable.name,
     })
-    const provider = createDrizzlePersistenceProvider({ db: db as never, registry })
+    const provider = createDrizzlePersistenceProvider({
+      db: db as never,
+      registry,
+    })
     const repo = provider.repository(entity)
     expect(repo).toBeDefined()
     expect(typeof repo.findById).toBe("function")
@@ -83,7 +96,10 @@ describe("createDrizzlePersistenceProvider (MySQL)", () => {
   it("throws for unregistered entity", () => {
     const db = createMockDb()
     const registry = new DrizzleEntityRegistry()
-    const provider = createDrizzlePersistenceProvider({ db: db as never, registry })
+    const provider = createDrizzlePersistenceProvider({
+      db: db as never,
+      registry,
+    })
     expect(() => provider.repository(entity)).toThrow(ConfigurationError)
     expect(() => provider.repository(entity)).toThrow(/not registered/)
   })
@@ -95,7 +111,10 @@ describe("createDrizzlePersistenceProvider (MySQL)", () => {
       id: itemTable.id,
       name: itemTable.name,
     })
-    const provider = createDrizzlePersistenceProvider({ db: db as never, registry })
+    const provider = createDrizzlePersistenceProvider({
+      db: db as never,
+      registry,
+    })
     const result = await provider.runInTransaction(async (scoped) => {
       expect(scoped.dialect).toBe("mysql")
       return "done"
@@ -111,10 +130,13 @@ describe("createDrizzlePersistenceProvider (MySQL)", () => {
       id: itemTable.id,
       name: itemTable.name,
     })
-    const provider = createDrizzlePersistenceProvider({ db: db as never, registry })
+    const provider = createDrizzlePersistenceProvider({
+      db: db as never,
+      registry,
+    })
     await expect(
       provider.runInTransaction(async (scoped) => {
-        await scoped.runInTransaction(async () => "nested")
+        await (scoped as typeof provider).runInTransaction(async () => "nested")
       })
     ).rejects.toThrow(ConfigurationError)
   })
@@ -140,15 +162,18 @@ describe("getDrizzleSession", () => {
       id: itemTable.id,
       name: itemTable.name,
     })
-    const provider = createDrizzlePersistenceProvider({ db: db as never, registry })
+    const provider = createDrizzlePersistenceProvider({
+      db: db as never,
+      registry,
+    })
     const session = getDrizzleSession(provider)
     expect(session).toBeDefined()
     expect(typeof session.select).toBe("function")
   })
 
   it("throws for unknown provider", () => {
-    expect(() =>
-      getDrizzleSession({ dialect: "unknown" } as never)
-    ).toThrow(ConfigurationError)
+    expect(() => getDrizzleSession({ dialect: "unknown" } as never)).toThrow(
+      ConfigurationError
+    )
   })
 })

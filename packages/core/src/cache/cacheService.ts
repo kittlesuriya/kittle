@@ -87,12 +87,19 @@ export class CacheService {
       // generation-qualified key is intentionally no longer readable.
       await this.set(storageKey, value, ttlMs ?? this.defaultTtlMs)
 
-      for (const tag of tags) {
-        try {
-          await this.adapter.addToTag(tag, storageKey)
-        } catch {
-          // Cache tags are an invalidation hint, not a correctness boundary.
-        }
+      // Shared, linearizable generations are the correctness boundary in
+      // critical mode. Physical tag indexes are only needed for best-effort
+      // deletion and otherwise add backend work to every cache fill.
+      if (!this.correctnessCritical) {
+        await Promise.all(
+          tags.map(async (tag) => {
+            try {
+              await this.adapter.addToTag(tag, storageKey)
+            } catch {
+              // Cache tags are an invalidation hint, not a correctness boundary.
+            }
+          })
+        )
       }
 
       return value
@@ -116,7 +123,9 @@ export class CacheService {
         this.reportError(
           "get",
           key,
-          new Error("Cache adapter returned null for a miss; expected undefined")
+          new Error(
+            "Cache adapter returned null for a miss; expected undefined"
+          )
         )
         return undefined
       }

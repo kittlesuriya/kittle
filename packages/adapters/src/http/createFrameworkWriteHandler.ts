@@ -771,7 +771,7 @@ export function createFrameworkWriteHandler<
           (error as { committed?: unknown }).committed === true &&
           businessResponse
         )
-          return businessResponse
+          return responseWithMetadata(businessResponse, requestMetadata)
         throw error
       } finally {
         if (heartbeat) clearInterval(heartbeat)

@@ -2,6 +2,7 @@ import { evaluatePredicate } from "./evaluatePredicate"
 import { ForbiddenError } from "../foundation/errors"
 import type { NormalizedAbacPolicy } from "./abacTypes"
 import type { FieldDescriptor, FieldFormat } from "../ports/persistence"
+import { assertMatchedPolicyWritableFields } from "./fieldWriteInternals"
 
 type FieldMetadataEntity = {
   fields: Record<string, FieldDescriptor>
@@ -17,6 +18,55 @@ const RESTRICTIVENESS: Record<FieldReadMode, number> = {
   omit: 2,
 }
 
+// Verified bundles are deeply frozen. Cache only immutable policy lists: a
+// mutable standalone caller must see edits to policies on its next evaluation.
+const readPolicyLists = new WeakMap<
+  NormalizedAbacPolicy[],
+  Map<string, NormalizedAbacPolicy[]>
+>()
+
+function readPoliciesForModule(
+  policies: NormalizedAbacPolicy[],
+  moduleKey: string
+): NormalizedAbacPolicy[] | undefined {
+  if (!Object.isFrozen(policies)) return undefined
+  const cached = readPolicyLists.get(policies)?.get(moduleKey)
+  if (cached) return cached
+  if (
+    !policies.every(
+      (policy) =>
+        Object.isFrozen(policy) &&
+        Number.isSafeInteger(policy.priority) &&
+        Object.isFrozen(policy.payload) &&
+        Object.isFrozen(policy.payload.actions) &&
+        Object.isFrozen(policy.compiledConditions) &&
+        (!policy.payload.fieldAccess ||
+          (Object.isFrozen(policy.payload.fieldAccess) &&
+            (!policy.payload.fieldAccess.read ||
+              Object.isFrozen(policy.payload.fieldAccess.read))))
+    )
+  )
+    return undefined
+  const selected = policies
+    .filter(
+      (policy) =>
+        policy.moduleKey === moduleKey &&
+        policy.payload.actions.includes("read") &&
+        policy.payload.fieldAccess?.read
+    )
+    .sort((left, right) => right.priority - left.priority)
+  let byModule = readPolicyLists.get(policies)
+  if (!byModule) {
+    byModule = new Map()
+    readPolicyLists.set(policies, byModule)
+  }
+  // The bundle's own module is normally the only key. Bound standalone
+  // callers that reuse one frozen policy list across many module names.
+  if (byModule.size >= 16) byModule.clear()
+  byModule.set(moduleKey, selected)
+  return selected
+}
+
 /**
  * Resolve conditional field-read overrides against a TRUSTED record. The
  * record passed here must be the durable authorized row, never hook-controlled
@@ -29,17 +79,26 @@ export function resolveFieldReadOverrides(args: {
   moduleKey: string
   record: Record<string, unknown>
 }): Record<string, FieldReadOverride> {
-  const matches = args.policies
-    .filter(
-      (policy) =>
+  const matches: NormalizedAbacPolicy[] = []
+  const candidates = readPoliciesForModule(args.policies, args.moduleKey)
+  if (candidates) {
+    for (const policy of candidates) {
+      if (evaluatePredicate(args.record, policy.compiledConditions))
+        matches.push(policy)
+    }
+  } else {
+    for (const policy of args.policies) {
+      if (
         policy.moduleKey === args.moduleKey &&
-        policy.payload.actions.includes("read")
-    )
-    .filter((policy) => policy.payload.fieldAccess?.read)
-    .filter((policy) =>
-      evaluatePredicate(args.record, policy.compiledConditions)
-    )
-    .sort((left, right) => right.priority - left.priority)
+        policy.payload.actions.includes("read") &&
+        policy.payload.fieldAccess?.read &&
+        evaluatePredicate(args.record, policy.compiledConditions)
+      ) {
+        matches.push(policy)
+      }
+    }
+    matches.sort((left, right) => right.priority - left.priority)
+  }
 
   const overrides: Record<string, FieldReadOverride> = {}
   const priorities = new Map<string, number>()
@@ -187,81 +246,7 @@ export function assertPolicyWritableFields(args: {
     )
     .filter((p) => evaluatePredicate(args.record, p.compiledConditions))
 
-  if (relevant.length === 0) {
-    // Fail-closed: no policy relevant to this record means no grant. This
-    // makes the field check independently deny even when called without the
-    // record-level evaluation. Through enforceAbacWrite the record-level
-    // NO_RELEVANT_POLICY / NO_POLICY_MATCHED_RECORD reason codes stay
-    // dominant (see enforceAbacWrite's guard), so this throw only surfaces
-    // standalone or when the record-level evaluation would allow.
-    const fields = args.changedFields ?? Object.keys(args.record)
-    throw new ForbiddenError(
-      "You do not have permission to update one or more fields.",
-      {
-        fields,
-        reasonCode: "ABAC_FIELD_WRITE_DENIED",
-      }
-    )
-  }
-
-  // Only the highest matching priority tier is evaluated
-  const priorities = Array.from(new Set(relevant.map((p) => p.priority))).sort(
-    (a, b) => b - a
-  )
-  const topPriority = priorities[0]
-  const topTier = relevant.filter((p) => p.priority === topPriority)
-
-  const denyPolicies = topTier.filter((p) => p.effect === "deny")
-  const allowPolicies = topTier.filter((p) => p.effect === "allow")
-
-  const denyAll = denyPolicies.some(
-    (p) => !p.payload.fieldAccess?.write?.length
-  )
-  const allowAll = allowPolicies.some(
-    (p) => !p.payload.fieldAccess?.write?.length
-  )
-
-  const fields = args.changedFields ?? Object.keys(args.record)
-  const denied: string[] = []
-
-  for (const field of fields) {
-    // Deny + missing write list → all fields denied
-    if (denyAll) {
-      denied.push(field)
-      continue
-    }
-    // Deny + write list → listed fields denied
-    const fieldDenied = denyPolicies.some((p) =>
-      (p.payload.fieldAccess?.write ?? []).includes(field)
-    )
-    if (fieldDenied) {
-      denied.push(field)
-      continue
-    }
-
-    // Allow + missing write list → all fields allowed
-    if (allowAll) continue
-    // Allow + write list → only listed fields allowed
-    const fieldAllowed = allowPolicies.some((p) =>
-      (p.payload.fieldAccess?.write ?? []).includes(field)
-    )
-    if (fieldAllowed) continue
-
-    // Not mentioned by any allow policy with lists → implicitly denied
-    if (allowPolicies.length > 0) {
-      denied.push(field)
-    }
-  }
-
-  if (denied.length > 0) {
-    throw new ForbiddenError(
-      "You do not have permission to update one or more fields.",
-      {
-        fields: denied,
-        reasonCode: "ABAC_FIELD_WRITE_DENIED",
-      }
-    )
-  }
+  assertMatchedPolicyWritableFields(relevant, args.record, args.changedFields)
 }
 
 export interface FieldQueryAccess {
@@ -286,7 +271,7 @@ function collectDeniedQueryFields(
   policies: NormalizedAbacPolicy[],
   moduleKey: string
 ): string[] {
-  const denied: string[] = []
+  const denied = new Set<string>()
   for (const policy of policies) {
     if (policy.moduleKey !== moduleKey) continue
     const read = policy.payload.fieldAccess?.read
@@ -295,11 +280,11 @@ function collectDeniedQueryFields(
       // Deny-effect policies fold every read mode to omit, mirroring
       // resolveFieldReadOverrides. Allow-effect policies hide omit/mask fields.
       if (policy.effect === "deny" || mode === "omit" || mode === "mask") {
-        if (!denied.includes(field)) denied.push(field)
+        denied.add(field)
       }
     }
   }
-  return denied
+  return [...denied]
 }
 
 function collectQueryGrants(
@@ -307,13 +292,21 @@ function collectQueryGrants(
   moduleKey: string
 ): FieldQueryAccess {
   const grants = emptyFieldQueryAccess()
+  const seen = {
+    filter: new Set<string>(),
+    search: new Set<string>(),
+    sort: new Set<string>(),
+  }
   for (const policy of policies) {
     if (policy.moduleKey !== moduleKey) continue
     const query = policy.payload.fieldAccess?.query
     if (!query) continue
     for (const mode of FIELD_QUERY_MODES) {
       for (const field of query[mode] ?? []) {
-        if (!grants[mode].includes(field)) grants[mode].push(field)
+        if (!seen[mode].has(field)) {
+          seen[mode].add(field)
+          grants[mode].push(field)
+        }
       }
     }
   }
@@ -335,11 +328,20 @@ export function resolveFieldQueryAccess(args: {
   moduleKey: string
 }): FieldQueryAccess {
   const deniedFields = collectDeniedQueryFields(args.policies, args.moduleKey)
+  const deniedSet = new Set(deniedFields)
   const allowed = emptyFieldQueryAccess()
   const grants = collectQueryGrants(args.policies, args.moduleKey)
+  const seen = {
+    filter: new Set<string>(),
+    search: new Set<string>(),
+    sort: new Set<string>(),
+  }
   for (const mode of FIELD_QUERY_MODES) {
     for (const field of grants[mode]) {
-      if (!allowed[mode].includes(field)) allowed[mode].push(field)
+      if (!seen[mode].has(field)) {
+        seen[mode].add(field)
+        allowed[mode].push(field)
+      }
     }
   }
   // Explicitly readable fields carry no read restriction, so they stay
@@ -352,11 +354,13 @@ export function resolveFieldQueryAccess(args: {
       if (
         mode === "allow" &&
         policy.effect !== "deny" &&
-        !deniedFields.includes(field)
+        !deniedSet.has(field)
       ) {
         for (const queryMode of FIELD_QUERY_MODES) {
-          if (!allowed[queryMode].includes(field))
+          if (!seen[queryMode].has(field)) {
+            seen[queryMode].add(field)
             allowed[queryMode].push(field)
+          }
         }
       }
     }
@@ -376,10 +380,13 @@ export function resolveFieldQueryDenials(args: {
 }): FieldQueryAccess {
   const deniedFields = collectDeniedQueryFields(args.policies, args.moduleKey)
   const grants = collectQueryGrants(args.policies, args.moduleKey)
+  const grantedFilter = new Set(grants.filter)
+  const grantedSearch = new Set(grants.search)
+  const grantedSort = new Set(grants.sort)
   return {
-    filter: deniedFields.filter((field) => !grants.filter.includes(field)),
-    search: deniedFields.filter((field) => !grants.search.includes(field)),
-    sort: deniedFields.filter((field) => !grants.sort.includes(field)),
+    filter: deniedFields.filter((field) => !grantedFilter.has(field)),
+    search: deniedFields.filter((field) => !grantedSearch.has(field)),
+    sort: deniedFields.filter((field) => !grantedSort.has(field)),
   }
 }
 

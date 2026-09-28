@@ -103,6 +103,45 @@ function createHandler(
 }
 
 describe("framework write handler idempotency", () => {
+  it("keeps no-store and request metadata on an optional-idempotency committed response", async () => {
+    const port = createPort(vi.fn())
+    const handler = createFrameworkWriteHandler({
+      adapterDeps: createDeps(port),
+      scope: { scope: "platform" },
+      moduleKey: "test.module",
+      action: "create",
+      skipCapabilityCheck: true,
+      runtimeCapabilities: {
+        deferredExecution: true,
+        objectStorage: false,
+        cache: true,
+      },
+      createPersistence: () => persistence,
+      definition: {
+        key: "test.committed-effect",
+        kind: "mutation",
+        atomicity: { kind: "standard", mode: "required" },
+        authorization: { authorize: async () => ({ allowed: true }) },
+        execute: async () => ({ id: "committed" }),
+        afterCommit: async () => {
+          throw new Error("post-commit hook failed")
+        },
+      },
+      resolveInput: async () => ({}),
+    })
+    const response = await handler(
+      new Request("https://example.test", {
+        method: "POST",
+        headers: { "x-correlation-id": "corr-1" },
+      })
+    )
+    expect(response.status).toBe(200)
+    expect(response.headers.get("cache-control")).toBe("no-store")
+    expect(response.headers.get("x-request-id")).toBeTruthy()
+    expect(response.headers.get("x-correlation-id")).toBe("corr-1")
+    expect(await response.json()).toEqual({ id: "committed" })
+  })
+
   it("leaves requests without a key unchanged when idempotency is optional", async () => {
     const execute = vi.fn(async () => ({ id: "created" }))
     const acquire = vi.fn<SerializedResponseIdempotencyPort["acquire"]>()

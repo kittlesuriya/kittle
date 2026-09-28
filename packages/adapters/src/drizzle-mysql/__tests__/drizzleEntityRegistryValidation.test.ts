@@ -61,7 +61,7 @@ describe("DrizzleEntityRegistry (MySQL)", () => {
     const registry = new DrizzleEntityRegistry()
     expect(() =>
       registry.register(
-        { ...entity, name: "noFields", fields: {} },
+        { ...entity, name: "noFields", fields: {} as typeof entity.fields },
         table,
         columns
       )
@@ -71,12 +71,12 @@ describe("DrizzleEntityRegistry (MySQL)", () => {
   it("rejects missing column map fields", () => {
     const registry = new DrizzleEntityRegistry()
     const incompleteColumns = { id: table.id }
-    expect(() =>
-      registry.register(entity, table, incompleteColumns)
-    ).toThrow(ConfigurationError)
-    expect(() =>
-      registry.register(entity, table, incompleteColumns)
-    ).toThrow(/missing fields/)
+    expect(() => registry.register(entity, table, incompleteColumns)).toThrow(
+      ConfigurationError
+    )
+    expect(() => registry.register(entity, table, incompleteColumns)).toThrow(
+      /missing fields/
+    )
   })
 
   it("rejects empty column map key", () => {

@@ -79,6 +79,7 @@ export function createListHandler<
         shared.deps.resolveClientIp,
         shared.deps.resolveHttpMetadata?.(request)
       )
+      const readMetadata = requestMetadata
       const session = await shared.deps.resolveSession({
         scope: options.scope.scope,
         request,
@@ -130,43 +131,44 @@ export function createListHandler<
         ...(parsed.sorting !== undefined ? { sorting: parsed.sorting } : {}),
         ...(parsed.filters !== undefined ? { filters: parsed.filters } : {}),
       }
-      const basePersistence = options.createPersistence(session)
-      const persistence = entity.tenantField
-        ? withScopedPersistence(session, basePersistence)
-        : basePersistence
-
-      const readEnvironment = createOperationContext({
-        persistence: createReadOnlyPersistenceProvider(
-          persistence
-        ) as unknown as PersistenceProvider,
-        runtimeCapabilities: shared.writeRuntimeCapabilities,
-        request: {
-          requestId: requestMetadata.requestId,
-          correlationId: requestMetadata.correlationId,
-          tenantId: session.actor?.tenantId ?? null,
-          ...(session.actor
-            ? {
-                actor: {
-                  id: session.actor.id,
-                  type: session.actor.type,
-                  impersonatedById: session.actor.impersonatedById ?? null,
-                },
-              }
-            : {}),
-          metadata: {
-            requestId: requestMetadata.requestId,
-            ipAddress: requestMetadata.ipAddress,
-            userAgent: requestMetadata.userAgent,
-            scope: session.scope,
-            frameworkSession: session,
+      const createReadEnvironment = () => {
+        const basePersistence = options.createPersistence(session)
+        const persistence = entity.tenantField
+          ? withScopedPersistence(session, basePersistence)
+          : basePersistence
+        return createOperationContext({
+          persistence: createReadOnlyPersistenceProvider(
+            persistence
+          ) as unknown as PersistenceProvider,
+          runtimeCapabilities: shared.writeRuntimeCapabilities,
+          request: {
+            requestId: readMetadata.requestId,
+            correlationId: readMetadata.correlationId,
+            tenantId: session.actor?.tenantId ?? null,
+            ...(session.actor
+              ? {
+                  actor: {
+                    id: session.actor.id,
+                    type: session.actor.type,
+                    impersonatedById: session.actor.impersonatedById ?? null,
+                  },
+                }
+              : {}),
+            metadata: {
+              requestId: readMetadata.requestId,
+              ipAddress: readMetadata.ipAddress,
+              userAgent: readMetadata.userAgent,
+              scope: session.scope,
+              frameworkSession: session,
+            },
           },
-        },
-      })
+        })
+      }
 
-      const definition: OperationDefinition<
+      const createReadDefinition = (): OperationDefinition<
         { query: ReadQuery },
         ListReadResult<SelectableRow>
-      > = {
+      > => ({
         key: `${options.moduleKey}.list`,
         kind: "read",
         atomicity: { kind: "standard", mode: "none" },
@@ -235,20 +237,25 @@ export function createListHandler<
           // Internal identity tokens come from the trusted durable rows BEFORE
           // projection, so the order/cardinality contract never depends on
           // whether the ABAC plan happens to leave the primary key visible.
-          const durableKeys = durableRows.map((row) => String(row[primaryKey]))
-          const projectedRows = durableRows.map((durableRow) =>
+          const durableKeys = options.crud?.list?.afterCommitRepresentation
+            ? durableRows.map((row) => String(row[primaryKey]))
+            : []
+          const visibilityPlans = abacBundle
+            ? durableRows.map((durableRow) =>
+                resolveFieldReadOverrides({
+                  policies: abacBundle.policies,
+                  moduleKey: options.moduleKey,
+                  record: durableRow,
+                })
+              )
+            : undefined
+          const projectedRows = durableRows.map((durableRow, index) =>
             projectResponseRecord({
               entity,
               record: durableRow,
               // The visibility plan is decided against the trusted durable row.
-              ...(abacBundle
-                ? {
-                    overrides: resolveFieldReadOverrides({
-                      policies: abacBundle.policies,
-                      moduleKey: options.moduleKey,
-                      record: durableRow,
-                    }),
-                  }
+              ...(visibilityPlans
+                ? { overrides: visibilityPlans[index]! }
                 : {}),
             })
           )
@@ -290,20 +297,14 @@ export function createListHandler<
               projectResponseRecord({
                 entity,
                 record: row,
-                ...(abacBundle
-                  ? {
-                      overrides: resolveFieldReadOverrides({
-                        policies: abacBundle.policies,
-                        moduleKey: options.moduleKey,
-                        record: durableRows[index]!,
-                      }),
-                    }
+                ...(visibilityPlans
+                  ? { overrides: visibilityPlans[index]! }
                   : {}),
               })
             ),
           }
         },
-      }
+      })
       if (
         options.queryLimits?.maxOffset !== undefined &&
         (query.page - 1) * query.pageSize > options.queryLimits.maxOffset
@@ -313,10 +314,13 @@ export function createListHandler<
         )
       }
 
+      const hookEnvironment = options.crud?.list?.beforeCommitTransform
+        ? createReadEnvironment()
+        : undefined
       const transformedQuery = options.crud?.list?.beforeCommitTransform
         ? (
             await runOperation<{ query: ReadQuery }, { query: ReadQuery }>({
-              operation: readEnvironment,
+              operation: hookEnvironment!,
               definition: {
                 key: `${options.moduleKey}.list.beforeCommitTransform`,
                 kind: "read",
@@ -343,19 +347,27 @@ export function createListHandler<
 
       // Hooks may return values that did not come from the request schema.
       // Normalize and bound the transformed query before caching or execution.
-      const transformedParsed = listQuerySchema.parse(
-        transformedQuery
-      ) as Partial<ReadQuery>
-      const validatedTransformedQuery: ReadQuery = {
-        page: transformedParsed.page ?? 1,
-        pageSize: transformedParsed.pageSize ?? 10,
-        ...(transformedParsed.sorting !== undefined
-          ? { sorting: transformedParsed.sorting }
-          : {}),
-        ...(transformedParsed.filters !== undefined
-          ? { filters: transformedParsed.filters }
-          : {}),
-      }
+      // The initial request query has already been schema-parsed and
+      // normalized above. Re-parse only hook output, since hooks can introduce
+      // values that did not pass through the request validation boundary.
+      const validatedTransformedQuery = options.crud?.list
+        ?.beforeCommitTransform
+        ? (() => {
+            const transformedParsed = listQuerySchema.parse(
+              transformedQuery
+            ) as Partial<ReadQuery>
+            return {
+              page: transformedParsed.page ?? 1,
+              pageSize: transformedParsed.pageSize ?? 10,
+              ...(transformedParsed.sorting !== undefined
+                ? { sorting: transformedParsed.sorting }
+                : {}),
+              ...(transformedParsed.filters !== undefined
+                ? { filters: transformedParsed.filters }
+                : {}),
+            }
+          })()
+        : query
       if (
         options.queryLimits?.maxOffset !== undefined &&
         (validatedTransformedQuery.page - 1) *
@@ -391,8 +403,8 @@ export function createListHandler<
 
       const resolveList = () =>
         runOperation<{ query: ReadQuery }, ListReadResult<SelectableRow>>({
-          operation: readEnvironment,
-          definition,
+          operation: hookEnvironment ?? createReadEnvironment(),
+          definition: createReadDefinition(),
           input: { query: validatedTransformedQuery },
         })
       const scopeKey =

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/require-await */
 import type {
   FastifyInstance,
   FastifyPluginAsync,
@@ -22,13 +23,16 @@ import { sendFetchResponse } from "./reply"
  * ```
  */
 export function wrapFetchHandler(
-  handler: (request: Request, context?: { params?: Promise<unknown> }) => Promise<Response>,
-  options?: { bodyMaxBytes?: number }
-): (
-  request: FastifyRequest,
-  reply: FastifyReply
-) => Promise<void> {
-  return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  handler: (
+    request: Request,
+    context?: { params?: Promise<unknown> }
+  ) => Promise<Response>,
+  _options?: { bodyMaxBytes?: number }
+): (request: FastifyRequest, reply: FastifyReply) => Promise<void> {
+  return async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<void> => {
     const fetchRequest = await toFetchRequest(request)
     const context = {
       params: Promise.resolve(request.params),
@@ -60,6 +64,7 @@ export function wrapFetchHandler(
  * fastify.get("/api/items", fastify.kittle.wrapFetchHandler(crud.list))
  * ```
  */
+// Fastify requires this plugin to return a promise, even though decoration is synchronous.
 export const createKittleFastifyPlugin: FastifyPluginAsync<
   FastifyPluginOptions
 > = async (fastify: FastifyInstance): Promise<void> => {
@@ -86,20 +91,16 @@ declare module "fastify" {
  * Creates route options for a Fastify route that uses a Fetch-based handler.
  * Sets appropriate body limit and content type parsing.
  */
-export function createFetchRouteOptions(
-  options?: {
-    bodyMaxBytes?: number
-    contentType?: string
-  }
-): RouteShorthandOptions {
+export function createFetchRouteOptions(options?: {
+  bodyMaxBytes?: number
+  contentType?: string
+}): RouteShorthandOptions {
   return {
     schema: {
       // Disable Fastify's built-in body parsing — we handle it in the Fetch bridge
       body: false,
     },
     // Set body size limit
-    ...(options?.bodyMaxBytes
-      ? { bodyLimit: options.bodyMaxBytes }
-      : {}),
+    ...(options?.bodyMaxBytes ? { bodyLimit: options.bodyMaxBytes } : {}),
   }
 }

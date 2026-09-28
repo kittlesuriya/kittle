@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { mysqlTable, text, int } from "drizzle-orm/mysql-core"
 import { MySqlDialect } from "drizzle-orm/mysql-core"
+import type { PredicateNode } from "kittle-core/domain"
 import {
   DrizzlePredicateCompiler,
   compileDrizzlePredicate,
@@ -19,7 +20,16 @@ const columnMap = {
 const dialect = new MySqlDialect()
 
 function toSql(
-  filter: { kind: "literal"; value: boolean } | { kind: string; filters?: unknown[]; filter?: unknown; field?: string; op?: string; value?: unknown }
+  filter:
+    | { kind: "literal"; value: boolean }
+    | {
+        kind: string
+        filters?: unknown[]
+        filter?: unknown
+        field?: string
+        op?: string
+        value?: unknown
+      }
 ): { sql: string; params: unknown[] } {
   const compiled = compileDrizzlePredicate(filter as never, columnMap)
   return dialect.sqlToQuery(compiled)
@@ -42,7 +52,7 @@ describe("DrizzlePredicateCompiler (MySQL)", () => {
 
   it("compiles and/or predicates", () => {
     const compiler = new DrizzlePredicateCompiler(columnMap)
-    const node = {
+    const node: PredicateNode = {
       kind: "and" as const,
       filters: [
         { kind: "condition", field: "status", op: "eq", value: "active" },
@@ -57,7 +67,7 @@ describe("DrizzlePredicateCompiler (MySQL)", () => {
 
   it("compiles or predicate", () => {
     const compiler = new DrizzlePredicateCompiler(columnMap)
-    const node = {
+    const node: PredicateNode = {
       kind: "or" as const,
       filters: [
         { kind: "condition", field: "status", op: "eq", value: "active" },
@@ -77,7 +87,9 @@ describe("DrizzlePredicateCompiler (MySQL)", () => {
       op: "includesAll" as never,
       value: ["a", "b"],
     }
-    expect(() => compiler.compile(node)).toThrow(/Unsupported predicate operator/)
+    expect(() => compiler.compile(node)).toThrow(
+      /Unsupported predicate operator/
+    )
   })
 
   it("protects against prototype field pollution", () => {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/require-await */
 import type { AnyMySqlTable } from "drizzle-orm/mysql-core"
 import type { EntityDescriptor, PersistenceProvider } from "kittle-core/ports"
 import type { FrameworkSession } from "../server"
@@ -18,13 +19,21 @@ import {
 
 /** No-op cache adapter for apps that don't use kittle's cache layer. */
 const noopCache = {
-  async get() { return undefined },
+  async get() {
+    return undefined
+  },
   async set() {},
-  async delete() { return false },
-  async has() { return false },
+  async delete() {
+    return false
+  },
+  async has() {
+    return false
+  },
   async clear() {},
   async addToTag() {},
-  async getTagKeys() { return [] },
+  async getTagKeys() {
+    return []
+  },
   async deleteTag() {},
 }
 
@@ -105,7 +114,7 @@ export async function createCrudRuntime(
   // scoped to the request. For a simple single-connection app, we return
   // the same provider regardless of session.
   const createPersistence = (_session: FrameworkSession): PersistenceProvider =>
-    interactiveProvider as unknown as PersistenceProvider
+    interactiveProvider
 
   return {
     adapterDeps,

@@ -1,7 +1,7 @@
 import { evaluatePredicate } from "./evaluatePredicate"
 import { ForbiddenError } from "../foundation/errors"
 import { resolveTieredDecision } from "../foundation/abacTierDecision"
-import { assertPolicyWritableFields } from "./fieldAccess"
+import { assertMatchedPolicyWritableFields } from "./fieldWriteInternals"
 import { toEvidence } from "./abacDecision"
 import type { NormalizedAbacPolicy, AbacPolicyBundle } from "./abacTypes"
 import { assertVerifiedAbacBundle } from "./abacBundleIntegrity"
@@ -46,11 +46,21 @@ export function evaluateWriteAccessForRecordDetailed(args: {
       policyAppliesToAction(policy, args.action)
   )
 
+  return evaluateRelevantWriteAccess(relevant, args.moduleKey, (policy) =>
+    policyMatchesRecord(policy, args.record)
+  )
+}
+
+function evaluateRelevantWriteAccess(
+  relevant: NormalizedAbacPolicy[],
+  moduleKey: string,
+  matches: (policy: NormalizedAbacPolicy) => boolean
+): WriteAccessEvaluation {
   const result = resolveTieredDecision({
     policies: relevant,
     getPriority: (p) => p.priority,
     getEffect: (p) => p.effect,
-    matches: (p) => policyMatchesRecord(p, args.record),
+    matches,
     defaultEffect: "deny",
   })
 
@@ -63,7 +73,7 @@ export function evaluateWriteAccessForRecordDetailed(args: {
         reasonCode: "ALLOW_POLICY_MATCHED",
         message: "An allow policy matched this record.",
         policyMeta: {
-          moduleKey: args.moduleKey,
+          moduleKey,
           effect: result.decidingPolicies[0]?.effect ?? "allow",
           priority: result.decidingPolicies[0]?.priority ?? 0,
         },
@@ -76,7 +86,7 @@ export function evaluateWriteAccessForRecordDetailed(args: {
         message:
           "You do not have permission to update this record with the current values.",
         policyMeta: {
-          moduleKey: args.moduleKey,
+          moduleKey,
           effect: "deny",
           priority: result.decidingPolicies[0]?.priority ?? 0,
         },
@@ -107,6 +117,7 @@ export function enforceAbacWrite(args: {
   changedFields?: string[]
 }): void {
   assertVerifiedAbacBundle(args.bundle)
+  let evaluation: WriteAccessEvaluation
   if (args.action !== "delete") {
     // Check-before-field-deny: assertPolicyWritableFields is independently
     // fail-closed on zero relevant policies, but through this path the
@@ -115,31 +126,34 @@ export function enforceAbacWrite(args: {
     // the record evaluation below produce the observable denial; the field
     // check still runs (and keeps its ABAC_FIELD_WRITE_DENIED precedence)
     // whenever at least one policy is relevant to this record.
-    const hasRelevantPolicy = args.bundle.policies.some(
+    const relevant = args.bundle.policies.filter(
       (policy) =>
         policy.moduleKey === args.bundle.moduleKey &&
-        policyAppliesToAction(policy, args.action) &&
-        policyMatchesRecord(policy, args.record)
+        policyAppliesToAction(policy, args.action)
     )
-    if (hasRelevantPolicy) {
-      assertPolicyWritableFields({
-        policies: args.bundle.policies,
-        moduleKey: args.bundle.moduleKey,
-        action: args.action,
-        record: args.record,
-        ...(args.changedFields !== undefined
-          ? { changedFields: args.changedFields }
-          : {}),
-      })
-    }
+    const matched = relevant.filter((policy) =>
+      policyMatchesRecord(policy, args.record)
+    )
+    if (matched.length > 0)
+      assertMatchedPolicyWritableFields(
+        matched,
+        args.record,
+        args.changedFields
+      )
+    const matchedSet = new Set(matched)
+    evaluation = evaluateRelevantWriteAccess(
+      relevant,
+      args.bundle.moduleKey,
+      (policy) => matchedSet.has(policy)
+    )
+  } else {
+    evaluation = evaluateWriteAccessForRecordDetailed({
+      policies: args.bundle.policies,
+      moduleKey: args.bundle.moduleKey,
+      action: args.action,
+      record: args.record,
+    })
   }
-
-  const evaluation = evaluateWriteAccessForRecordDetailed({
-    policies: args.bundle.policies,
-    moduleKey: args.bundle.moduleKey,
-    action: args.action,
-    record: args.record,
-  })
 
   if (evaluation.allowed) return
 

@@ -30,7 +30,7 @@ function createSimulation() {
   const db = {
     insert: vi.fn(() => ({
       values: vi.fn(async (values: Row) => {
-        const key = `${values.scope}:${values.key}`
+        const key = `${String(values.scope)}:${String(values.key)}`
         if (rows.has(key)) {
           const err = new Error("Duplicate entry") as Error & { code: string }
           err.code = "ER_DUP_ENTRY"

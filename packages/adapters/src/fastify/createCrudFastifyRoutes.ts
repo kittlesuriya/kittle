@@ -1,6 +1,6 @@
 import type { AnyMySqlTable } from "drizzle-orm/mysql-core"
 import type { FastifyInstance, FastifyPluginAsync } from "fastify"
-import type { ValidationSchema } from "kittle-core/ports"
+import type { EntityDescriptor, ValidationSchema } from "kittle-core/ports"
 import { defineEntity } from "kittle-core/entity"
 import type { MySqlDatabaseLike } from "../drizzle-mysql/mysqlSession"
 import type { DrizzleColumnMap } from "../drizzle-mysql/drizzlePredicateCompiler"
@@ -17,7 +17,10 @@ import type { CrudRouteMap } from "./registerCrudRoutes"
  * `context = { params: Promise<unknown> }`. This adapter bridges the gap.
  */
 function adaptDetailHandler(
-  handler: (request: Request, params: Record<string, string>) => Promise<Response>
+  handler: (
+    request: Request,
+    params: Record<string, string>
+  ) => Promise<Response>
 ) {
   return async (
     request: Request,
@@ -149,10 +152,13 @@ export function createCrudFastifyRoutes(
 ): FastifyPluginAsync {
   return async (fastify: FastifyInstance): Promise<void> => {
     // Build the kittle entity definition from the simplified config.
-    // Cast to any because our simplified entity config uses plain strings
-    // while defineEntity's generics expect keyof T & string.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const definition = defineEntity({
+    const definition = defineEntity<
+      Record<string, unknown>,
+      unknown,
+      unknown,
+      Record<string, unknown>,
+      Record<string, unknown>
+    >({
       entity: {
         name: options.entity.name,
         primaryKey: options.entity.primaryKey ?? "id",
@@ -160,7 +166,7 @@ export function createCrudFastifyRoutes(
           ? { versionField: options.entity.versionField }
           : {}),
         fields: options.entity.fields,
-      } as any,
+      },
       moduleKey: options.entity.moduleKey,
       routes: {
         list: options.routes.list !== undefined,
@@ -174,7 +180,11 @@ export function createCrudFastifyRoutes(
       cache: { enabled: false },
       tenantScoping: { mode: "none", acknowledged: true },
       ...(options.entity.versionField
-        ? { optimisticConcurrency: { versionField: options.entity.versionField } }
+        ? {
+            optimisticConcurrency: {
+              versionField: options.entity.versionField,
+            },
+          }
         : {}),
       ...(options.validation
         ? {
@@ -198,14 +208,13 @@ export function createCrudFastifyRoutes(
         ? { filterableColumns: options.filterableColumns }
         : {}),
       ...(options.listDefaults ? { listDefaults: options.listDefaults } : {}),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any)
+    })
 
     // Create the CRUD runtime
     const scopeConfig = options.scope ?? "platform"
     const runtime: CrudRuntime = await createCrudRuntime({
       db: options.db,
-      entity: definition.entity,
+      entity: definition.entity as unknown as EntityDescriptor<unknown>,
       table: options.table,
       columnMap: options.columnMap,
       resolveSession: options.resolveSession,
@@ -215,8 +224,7 @@ export function createCrudFastifyRoutes(
     })
 
     // Generate Fetch-based handlers
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handlers = CRUD(definition as any, runtime)
+    const handlers = CRUD(definition, runtime)
 
     // Register each route
     const prefix = options.prefix ?? ""
@@ -225,11 +233,7 @@ export function createCrudFastifyRoutes(
       const r = route as { method: string; path: string }
 
       const method = r.method.toLowerCase() as
-        | "get"
-        | "post"
-        | "put"
-        | "delete"
-        | "patch"
+        "get" | "post" | "put" | "delete" | "patch"
       const fullPath = `${prefix}${r.path}`
 
       // The detail handler has a different signature (request, params) vs
@@ -237,8 +241,7 @@ export function createCrudFastifyRoutes(
       if (key === "detail" && handlers.detail) {
         fastify[method](
           fullPath,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          wrapFetchHandler(adaptDetailHandler(handlers.detail as any))
+          wrapFetchHandler(adaptDetailHandler(handlers.detail))
         )
       } else {
         const handler = handlers[key as keyof typeof handlers]
