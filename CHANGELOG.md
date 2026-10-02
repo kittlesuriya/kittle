@@ -10,8 +10,8 @@ changes.
 
 Package versions are currently maintained independently:
 
-- `kittle-core` — `0.3.1`
-- `kittle-adapters` — `0.4.2`
+- `kittle-core` — `0.5.0`
+- `kittle-adapters` — `0.6.0`
 - `kittle-tanstack` — `0.1.0`
 - `testing` — private workspace package, `0.1.0`
 
@@ -37,6 +37,25 @@ Package versions are currently maintained independently:
 - Added brand-neutral UI contracts and the `withUi` HOC for reusable
   application-specific component bundles, including autocomplete, multiselect,
   switch, checkbox, and custom field renderers.
+
+## Runtime adapters package `0.6.0` — 2026-10-02
+
+### Added
+
+- Preserved adapter-owned session context through tenant-scoped persistence
+  decorators for PostgreSQL, MySQL, and D1 providers.
+- Added configurable driver-error mapping and error reporting to the framework
+  HTTP error handler and CRUD runtime.
+- Documented repository-level constraint translation and application error
+  reporting integration.
+
+## Core reference package `0.5.0` — 2026-10-02
+
+### Added
+
+- Added an optional persistence-provider decoration hook so adapters can
+  preserve opaque transaction/session context across core decorators without
+  exposing the underlying provider.
 
 ## Runtime adapters package `0.4.1` — 2026-09-24
 

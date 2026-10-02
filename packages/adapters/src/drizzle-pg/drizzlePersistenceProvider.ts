@@ -191,6 +191,12 @@ export function createDrizzlePersistenceProvider(
         }) as unknown as Repository<T, TId>
       },
 
+      onPersistenceProviderDecorated(decorated): void {
+        // Keep transaction-bound Drizzle session metadata available when core
+        // wraps this provider (for example in tenant-scoped persistence).
+        sessionByProvider.set(decorated, session)
+      },
+
       async runInTransaction<TResult>(
         work: (scoped: InteractiveTransactionProvider) => Promise<TResult>,
         options?: TransactionOptions

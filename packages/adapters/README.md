@@ -256,6 +256,16 @@ Typical responses include:
 Responses include a stable string `code` and numeric `numericCode`. Internal
 messages and details are not serialized by default.
 
+`CrudRuntime` can provide `mapDriverError` to translate known driver errors into
+framework errors, and `reportError` to connect sanitized/unknown failures to the
+application's logger or telemetry. The mapper runs only for errors that are not
+already framework errors; return a framework error for a known mapping and
+`undefined` for errors that should retain the default internal-server response.
+Do not return driver messages or constraint names to clients. PostgreSQL and
+MySQL repository adapters already classify common constraint failures; this
+hook is for errors that escape those repository paths, such as custom SQL in an
+operation.
+
 ### Opt-in business-rule messages
 
 CRUD catches errors internally, so configure exposure on its runtime rather than

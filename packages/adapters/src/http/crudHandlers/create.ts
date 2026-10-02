@@ -242,6 +242,8 @@ export function createCreateHandler<
     action: "create",
     ...shared.writeCapabilityConfig,
     ...(options.errorExposure ? { errorExposure: options.errorExposure } : {}),
+    ...(options.reportError ? { reportError: options.reportError } : {}),
+    ...(options.mapDriverError ? { mapDriverError: options.mapDriverError } : {}),
     ...(options.validation?.createBody
       ? { validation: { body: options.validation.createBody } }
       : {}),

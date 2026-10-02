@@ -13,6 +13,7 @@ import type {
   EntityDescriptor,
   InteractiveTransactionProvider,
 } from "kittle-core/ports"
+import { createTenantScopedPersistenceProvider } from "kittle-core/ports"
 import {
   createDrizzlePersistenceProvider,
   DrizzleEntityRegistry,
@@ -221,6 +222,36 @@ describe("PostgreSQL persistence provider", () => {
     expect(
       getDrizzleSession(scopedProvider as InteractiveTransactionProvider)
     ).not.toBe(getDrizzleSession(provider))
+  })
+
+  it("preserves the transaction session through tenant-scoped decorators", async () => {
+    const db = createDb()
+    db.transaction.mockImplementation(
+      async (callback: (tx: PgDatabaseLike) => Promise<unknown>) =>
+        callback(createDb() as unknown as PgDatabaseLike)
+    )
+    const provider = createProvider(db)
+    const tenantScoped = createTenantScopedPersistenceProvider(
+      provider,
+      "tenant-1"
+    )
+
+    expect(getDrizzleSession(tenantScoped)).toBe(getDrizzleSession(provider))
+    await (tenantScoped as InteractiveTransactionProvider).runInTransaction(
+      async (transactionScoped) => {
+        expect(getDrizzleSession(transactionScoped)).toBeTruthy()
+        expect(getDrizzleSession(transactionScoped)).not.toBe(
+          getDrizzleSession(provider)
+        )
+        const nestedTenantScoped = createTenantScopedPersistenceProvider(
+          transactionScoped,
+          "tenant-1"
+        )
+        expect(getDrizzleSession(nestedTenantScoped)).toBe(
+          getDrizzleSession(transactionScoped)
+        )
+      }
+    )
   })
 
   it("uses PostgreSQL returning for inserts and updates", async () => {

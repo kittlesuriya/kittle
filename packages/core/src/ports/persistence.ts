@@ -121,6 +121,13 @@ export interface PersistenceProvider {
   readonly dialect: string
   readonly capabilities: PersistenceCapabilities
 
+  /**
+   * Allows an adapter to associate opaque, provider-owned context with a
+   * framework decorator without exposing the decorated provider's delegate.
+   * The hook must not change the decorator's persistence semantics.
+   */
+  onPersistenceProviderDecorated?(decorated: PersistenceProvider): void
+
   repository<T, TId = string>(entity: EntityDescriptor<T>): Repository<T, TId>
 }
 

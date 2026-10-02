@@ -576,6 +576,10 @@ export function createDrizzlePersistenceProvider(
         TId
       >
     },
+
+    onPersistenceProviderDecorated(decorated): void {
+      sessionByProvider.set(decorated, repositoryDb)
+    },
   }
 
   if (adapter) {

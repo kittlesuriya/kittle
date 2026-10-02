@@ -470,6 +470,8 @@ export function createUpdateHandler<
     action: "update",
     ...shared.writeCapabilityConfig,
     ...(options.errorExposure ? { errorExposure: options.errorExposure } : {}),
+    ...(options.reportError ? { reportError: options.reportError } : {}),
+    ...(options.mapDriverError ? { mapDriverError: options.mapDriverError } : {}),
     resolveResourceIdentity: ({ input }) => {
       const versionField =
         options.optimisticConcurrency?.versionField ?? entity.versionField

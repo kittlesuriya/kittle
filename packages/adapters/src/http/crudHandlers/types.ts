@@ -19,7 +19,7 @@ import type {
   ScopedFrameworkValidatedContext,
 } from "../createFrameworkWriteHandler"
 import type { FilterFieldMeta } from "kittle-core/domain"
-import type { FrameworkErrorExposure } from "../handleFrameworkCoreError"
+import type { FrameworkErrorHandlerOptions } from "../handleFrameworkCoreError"
 
 export type SelectableRow = Record<string, unknown>
 export type AuditObject = Record<string, unknown>
@@ -132,7 +132,9 @@ export interface CrudOptions<
   filterFieldMeta?: Record<string, FilterFieldMeta>
   listDefaults?: ListDefaults
   optimisticConcurrency?: OptimisticConcurrencyConfig<TRow>
-  errorExposure?: FrameworkErrorExposure
+  errorExposure?: FrameworkErrorHandlerOptions["errorExposure"]
+  reportError?: FrameworkErrorHandlerOptions["reportError"]
+  mapDriverError?: FrameworkErrorHandlerOptions["mapDriverError"]
 }
 
 export const defaultListQuerySchema = z.object({

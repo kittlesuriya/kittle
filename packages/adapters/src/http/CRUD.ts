@@ -15,7 +15,10 @@ import type {
 import type { FrameworkAdapterDeps, FrameworkSession } from "../server"
 import { createCrudHandlersInternal } from "./createCrudHandlers"
 import type { CrudScopeConfig } from "./createFrameworkWriteHandler"
-import type { FrameworkErrorExposure } from "./handleFrameworkCoreError"
+import type {
+  FrameworkErrorExposure,
+  FrameworkErrorHandlerOptions,
+} from "./handleFrameworkCoreError"
 
 type SelectableRow = Record<string, unknown>
 
@@ -37,6 +40,8 @@ export interface CrudRuntime {
   ) => OutboxSink
   runtimeCapabilities?: RuntimeCapabilities
   errorExposure?: FrameworkErrorExposure
+  reportError?: FrameworkErrorHandlerOptions["reportError"]
+  mapDriverError?: FrameworkErrorHandlerOptions["mapDriverError"]
 }
 
 export function CRUD<
@@ -134,6 +139,8 @@ export function CRUD<
       cache: false,
     },
     ...(runtime.errorExposure ? { errorExposure: runtime.errorExposure } : {}),
+    ...(runtime.reportError ? { reportError: runtime.reportError } : {}),
+    ...(runtime.mapDriverError ? { mapDriverError: runtime.mapDriverError } : {}),
     validation: definition.validation,
     rateLimit: definition.rateLimit,
     crud: definition.crud,

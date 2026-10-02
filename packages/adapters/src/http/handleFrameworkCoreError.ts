@@ -30,6 +30,8 @@ export function frameworkJson<T>(data: T, init: ResponseInit = {}) {
 
 export interface FrameworkErrorHandlerOptions {
   reportError?: (error: unknown) => void
+  /** Map an unrecognized driver/runtime error to a safe framework error. */
+  mapDriverError?: (error: unknown) => FrameworkCoreError | undefined
   errorExposure?: FrameworkErrorExposure
 }
 
@@ -58,8 +60,20 @@ function defaultReportError(_error: unknown) {}
 export function createFrameworkErrorHandler(
   options: FrameworkErrorHandlerOptions = {}
 ) {
-  const { reportError = defaultReportError, errorExposure = {} } = options
-  return (error: unknown, metadata?: FrameworkResponseMetadata): Response => {
+  const {
+    reportError = defaultReportError,
+    mapDriverError,
+    errorExposure = {},
+  } = options
+  return (originalError: unknown, metadata?: FrameworkResponseMetadata): Response => {
+    let error = originalError
+    if (!(error instanceof FrameworkCoreError) && mapDriverError) {
+      try {
+        error = mapDriverError(error) ?? error
+      } catch (mappingError) {
+        reportError(mappingError)
+      }
+    }
     const finish = (response: Response): Response => {
       if (metadata?.requestId)
         response.headers.set("x-request-id", metadata.requestId)

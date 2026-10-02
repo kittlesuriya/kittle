@@ -3,6 +3,7 @@ import { ZodError } from "zod"
 import {
   BusinessRuleError,
   CapabilityError,
+  ConflictError,
   ForbiddenError,
   UnauthorizedError,
   ValidationError,
@@ -134,6 +135,43 @@ describe("framework HTTP error serialization", () => {
       numericCode: 1002,
       details: { roleId: "role-1" },
     })
+  })
+
+  it("maps driver errors to framework errors before safe HTTP serialization", async () => {
+    const driverError = Object.assign(new Error("duplicate key: secret_table"), {
+      code: "23505",
+      constraint: "secret_constraint",
+    })
+    const mapDriverError = vi.fn((error: unknown) => {
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === "23505"
+      ) {
+        return new ConflictError("A record with this value already exists")
+      }
+      return undefined
+    })
+
+    const response = createFrameworkErrorHandler({ mapDriverError })(driverError)
+    expect(response.status).toBe(409)
+    const body = await responseBody(response)
+    expect(body).toEqual({
+      error: "Conflict",
+      code: "CONFLICT",
+      numericCode: 1202,
+    })
+    expect(JSON.stringify(body)).not.toContain("secret_constraint")
+  })
+
+  it("does not map existing framework errors", async () => {
+    const mapDriverError = vi.fn(() => new ConflictError("mapped"))
+    const response = createFrameworkErrorHandler({ mapDriverError })(
+      new ValidationError("invalid")
+    )
+    expect(response.status).toBe(400)
+    expect(mapDriverError).not.toHaveBeenCalled()
   })
 
   it("sanitizes ZodError issues and never returns raw issues", async () => {

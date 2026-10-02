@@ -304,6 +304,9 @@ export function createTenantScopedPersistenceProvider(
     capabilities: base.capabilities.atomicBatch
       ? { ...base.capabilities, atomicBatchScope: "tenant-scoped" }
       : base.capabilities,
+    onPersistenceProviderDecorated(decorated): void {
+      base.onPersistenceProviderDecorated?.(decorated)
+    },
     repository<T, TId = string>(
       entity: EntityDescriptor<T>
     ): Repository<T, TId> {
@@ -562,6 +565,11 @@ export function createTenantScopedPersistenceProvider(
       return scoped
     },
   }
+
+  // Preserve adapter-owned transaction/session context across this security
+  // decorator. The adapter receives only the decorated provider reference; the
+  // core never exposes the underlying provider to callers.
+  base.onPersistenceProviderDecorated?.(scoped)
 
   const atomicBase = base as Partial<
     AtomicBatchProvider & TenantScopedAtomicBatchCommandProvider

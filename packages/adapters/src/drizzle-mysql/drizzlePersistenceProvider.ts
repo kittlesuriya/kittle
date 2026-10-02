@@ -190,6 +190,10 @@ export function createDrizzlePersistenceProvider(
         }) as unknown as Repository<T, TId>
       },
 
+      onPersistenceProviderDecorated(decorated): void {
+        sessionByProvider.set(decorated, session)
+      },
+
       async runInTransaction<TResult>(
         work: (scoped: InteractiveTransactionProvider) => Promise<TResult>,
         _options?: TransactionOptions

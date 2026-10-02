@@ -68,6 +68,8 @@ export function createListHandler<
   const { options, entity } = shared
   const frameworkErrorHandler = createFrameworkErrorHandler({
     ...(options.errorExposure ? { errorExposure: options.errorExposure } : {}),
+    ...(options.reportError ? { reportError: options.reportError } : {}),
+    ...(options.mapDriverError ? { mapDriverError: options.mapDriverError } : {}),
   })
   return async (request: Request): Promise<Response> => {
     let requestMetadata: ReturnType<typeof resolveRequestMetadata> | undefined
