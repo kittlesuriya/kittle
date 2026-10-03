@@ -16,26 +16,7 @@ import {
   createStubAdapterDeps,
   resolveScopeConfig,
 } from "../http/simpleRuntime"
-
-/** No-op cache adapter for apps that don't use kittle's cache layer. */
-const noopCache = {
-  async get() {
-    return undefined
-  },
-  async set() {},
-  async delete() {
-    return false
-  },
-  async has() {
-    return false
-  },
-  async clear() {},
-  async addToTag() {},
-  async getTagKeys() {
-    return []
-  },
-  async deleteTag() {},
-}
+import { resolveRuntimeCacheAdapter } from "../http/runtimeCache"
 
 /**
  * Options for creating a CRUD runtime backed by Drizzle MySQL.
@@ -95,6 +76,7 @@ export async function createCrudRuntime(
     options.resolveSession,
     scopeConfig
   )
+  const cacheAdapter = resolveRuntimeCacheAdapter(options)
 
   // Build a single-entity registry for the persistence provider
   const registry = new DrizzleEntityRegistry()
@@ -120,6 +102,7 @@ export async function createCrudRuntime(
     adapterDeps,
     scope: scopeConfig,
     createPersistence,
-    getCacheAdapter: async () => options.cacheAdapter ?? noopCache,
+    getCacheAdapter: async () => cacheAdapter,
+    ...(options.cacheMode ? { cacheMode: options.cacheMode } : {}),
   }
 }

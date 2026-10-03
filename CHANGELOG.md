@@ -10,10 +10,10 @@ changes.
 
 Package versions are currently maintained independently:
 
-- `kittle-core` — `0.5.0`
-- `kittle-adapters` — `0.6.0`
+- `kittle-core` — `0.6.0`
+- `kittle-adapters` — `0.7.0`
 - `kittle-tanstack` — `0.1.0`
-- `testing` — private workspace package, `0.1.0`
+- `testing` — private workspace package, `0.2.0`
 
 ## [Unreleased]
 
@@ -37,6 +37,41 @@ Package versions are currently maintained independently:
 - Added brand-neutral UI contracts and the `withUi` HOC for reusable
   application-specific component bundles, including autocomplete, multiselect,
   switch, checkbox, and custom field renderers.
+
+## Runtime adapters package `0.7.0` — 2026-10-03
+
+### Added
+
+- Added a `cacheMode` runtime option to `createSimpleRuntime` and
+  `createCrudRuntime` that selects `inMemory` (one JS process owns every read
+  and write, and a cache hit performs no database reads) or `shared` (the
+  default: shared, linearizable generation fencing across processes and
+  instances).
+- Threaded the selected mode through list, detail, and every mutation so cache
+  reads and write invalidation always agree on one coherence boundary.
+- Resolved the process-local adapter once per runtime instead of per request,
+  so an `inMemory` runtime reuses a single `InMemoryCacheAdapter` for the
+  lifetime of the process, and removed a duplicate no-op cache.
+
+### Documentation
+
+- Documented the `inMemory` / `shared` selection table, the capability each
+  mode requires, and when each mode becomes unsafe.
+
+## Core reference package `0.6.0` — 2026-10-03
+
+### Added
+
+- Added the `CacheMode` type and `CacheConfig.mode` so a deployment declares
+  `inMemory` (all readers and writers in one process) or `shared` (the default,
+  with generation state visible to every process and instance).
+- Made the correctness-critical capability gate mode-aware: `inMemory` requires
+  linearizable process-local tag generations, while `shared` keeps requiring a
+  shared coherence scope, so a process-local adapter cannot satisfy `shared`
+  and a shared adapter cannot satisfy `inMemory`.
+- Added a mode-named missing-generation error so a misconfigured deployment
+  reports `inMemory tag generation unavailable` or `shared tag generation
+  unavailable` instead of always blaming shared generation.
 
 ## Runtime adapters package `0.6.0` — 2026-10-02
 

@@ -5,8 +5,10 @@ const TAG_PREFIX = "__tag__"
 export class InMemoryCacheAdapter implements CacheAdapter {
   // Synchronous map mutations are atomic within this adapter's event loop, so
   // tag generations are linearizable, but only within a single JS process.
-  // Correctness-critical callers must compose this adapter with a shared
-  // generation store (SharedGenerationCacheAdapter) to fence across instances.
+  // It satisfies cacheMode: "inMemory". Correctness-critical callers that can
+  // run in more than one process must instead compose it with a shared
+  // generation store (SharedGenerationCacheAdapter) and use cacheMode:
+  // "shared".
   // Memory bounds: every map is pruned. `delete`/`deleteTag` remove revisions
   // and tag memberships immediately; expired values and rate-limit buckets
   // are swept by an amortized prune (no background timer to manage).

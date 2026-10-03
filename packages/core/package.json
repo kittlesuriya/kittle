@@ -1,6 +1,6 @@
 {
   "name": "kittle-core",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "TypeScript reference implementation of a portable application security and execution specification.",
   "keywords": [
     "kittle",
@@ -47,6 +47,7 @@
   },
   "scripts": {
     "build": "tsc -b tsconfig.build.json && tsx ../../scripts/verification/rewriteBuildExtensions.ts packages/core",
+    "prepublishOnly": "npm --prefix ../.. run build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --max-warnings=0",
     "test": "vitest run",

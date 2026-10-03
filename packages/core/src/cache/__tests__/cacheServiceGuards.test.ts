@@ -69,4 +69,80 @@ describe("cache service adapter-result guards", () => {
       service.getOrSet("k", async () => "v", ["tag"])
     ).rejects.toThrow()
   })
+
+  it("allows linearizable process generations only in explicit inMemory mode", () => {
+    const adapter = makeAdapter({
+      capabilities: {
+        tagGenerationConsistency: "linearizable",
+        coherenceScope: "process",
+      },
+      getTagGeneration: vi.fn(async () => "0"),
+      advanceTagGeneration: vi.fn(async () => "1"),
+    })
+    expect(
+      () => new CacheService({ adapter, correctnessCritical: true })
+    ).toThrow()
+    expect(
+      () =>
+        new CacheService({
+          adapter,
+          correctnessCritical: true,
+          mode: "inMemory",
+        })
+    ).not.toThrow()
+    expect(
+      () =>
+        new CacheService({
+          adapter,
+          correctnessCritical: true,
+          mode: "shared",
+        })
+    ).toThrow()
+  })
+
+  it("rejects eventual generations and shared adapters in inMemory mode", () => {
+    for (const capabilities of [
+      {
+        tagGenerationConsistency: "eventual" as const,
+        coherenceScope: "process" as const,
+      },
+      {
+        tagGenerationConsistency: "linearizable" as const,
+        coherenceScope: "shared" as const,
+      },
+    ]) {
+      expect(
+        () =>
+          new CacheService({
+            adapter: makeAdapter({
+              capabilities,
+              getTagGeneration: vi.fn(async () => "0"),
+              advanceTagGeneration: vi.fn(async () => "1"),
+            }),
+            correctnessCritical: true,
+            mode: "inMemory",
+          })
+      ).toThrow()
+    }
+  })
+
+  it("names the configured mode when generation fencing is unavailable", () => {
+    const adapter = makeAdapter({
+      capabilities: {
+        tagGenerationConsistency: "linearizable",
+        coherenceScope: "process",
+      },
+    })
+    expect(
+      () =>
+        new CacheService({
+          adapter,
+          correctnessCritical: true,
+          mode: "inMemory",
+        })
+    ).toThrow("inMemory tag generation unavailable")
+    expect(
+      () => new CacheService({ adapter, correctnessCritical: true })
+    ).toThrow("shared tag generation unavailable")
+  })
 })

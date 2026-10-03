@@ -289,6 +289,7 @@ export function createDeleteHandler<
         }
       : {}),
     getCacheAdapter: options.getCacheAdapter,
+    ...(options.cacheMode ? { cacheMode: options.cacheMode } : {}),
     ...(options.getRateLimitStore
       ? { getRateLimitStore: options.getRateLimitStore }
       : {}),

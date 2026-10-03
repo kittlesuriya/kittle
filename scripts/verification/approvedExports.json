@@ -1164,6 +1164,7 @@
     "CacheAdapterError",
     "CacheCapabilities",
     "CacheConfig",
+    "CacheMode",
     "CacheService",
     "CacheTelemetry",
     "MAX_CACHE_KEY_BYTES",
@@ -1174,6 +1175,7 @@
   ],
   "packages/core:./cache/cacheService": [
     "CacheConfig",
+    "CacheMode",
     "CacheService",
     "CacheTelemetry"
   ],

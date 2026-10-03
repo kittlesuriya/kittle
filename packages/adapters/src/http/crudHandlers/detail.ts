@@ -234,6 +234,7 @@ export function createDetailHandler<
         ? await new CacheService({
             adapter: await options.getCacheAdapter(),
             correctnessCritical: Boolean(abacBundle),
+            ...(options.cacheMode ? { mode: options.cacheMode } : {}),
           }).getOrSet(
             buildKey(
               options.cache.keyPrefix,

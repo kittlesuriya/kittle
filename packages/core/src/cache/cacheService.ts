@@ -2,6 +2,9 @@ import { serializeCacheKeyPart } from "./cache"
 import type { CacheAdapter } from "./cache"
 import { CacheAdapterError } from "./cache"
 
+/** The coherence boundary promised by the deployment. */
+export type CacheMode = "inMemory" | "shared"
+
 export interface CacheConfig {
   adapter?: CacheAdapter
   defaultTtlMs?: number
@@ -12,11 +15,17 @@ export interface CacheConfig {
    * verified. When enabled, the cache service requires `getTagGeneration` and
    * `advanceTagGeneration` on the adapter and throws if they are absent.
    *
-   * This flag requires the adapter to declare linearizable tag-generation
-   * consistency, a shared coherence scope (generation state visible to every
-   * process and instance), and the generation primitives.
+   * This flag requires linearizable tag-generation consistency, the generation
+   * primitives, and a coherence scope matching `mode`: `shared` requires state
+   * visible to every process and instance, `inMemory` requires state local to
+   * this process.
    */
   correctnessCritical?: boolean
+  /**
+   * Defaults to `shared`. `inMemory` is safe only when every cache reader and
+   * writer runs in this one process.
+   */
+  mode?: CacheMode
 }
 
 export interface CacheTelemetry {
@@ -38,6 +47,7 @@ export class CacheService {
   private readonly localTagGenerations = new Map<string, string>()
   private readonly telemetry: CacheTelemetry | undefined
   private readonly correctnessCritical: boolean
+  private readonly mode: CacheMode
 
   constructor(config: CacheConfig & { adapter: CacheAdapter }) {
     assertCacheAdapter(config?.adapter)
@@ -45,14 +55,16 @@ export class CacheService {
     this.defaultTtlMs = config.defaultTtlMs ?? 120_000
     this.telemetry = config.telemetry
     this.correctnessCritical = config.correctnessCritical === true
+    this.mode = config.mode ?? "shared"
     if (
       this.correctnessCritical &&
       (this.adapter.capabilities?.tagGenerationConsistency !== "linearizable" ||
-        this.adapter.capabilities?.coherenceScope !== "shared" ||
+        this.adapter.capabilities?.coherenceScope !==
+          (this.mode === "inMemory" ? "process" : "shared") ||
         !this.adapter.getTagGeneration ||
         !this.adapter.advanceTagGeneration)
     ) {
-      throw new CacheAdapterError("shared tag generation unavailable")
+      throw this.tagGenerationUnavailable()
     }
   }
 
@@ -280,8 +292,16 @@ export class CacheService {
   private requireSharedGeneration(tags: string[]): void {
     if (!this.correctnessCritical || tags.length === 0) return
     if (!this.adapter.getTagGeneration || !this.adapter.advanceTagGeneration) {
-      throw new CacheAdapterError("shared tag generation unavailable")
+      throw this.tagGenerationUnavailable()
     }
+  }
+
+  /**
+   * Names the mode that could not be satisfied, so a misconfigured
+   * single-process deployment is not told that shared generation is missing.
+   */
+  private tagGenerationUnavailable(): CacheAdapterError {
+    return new CacheAdapterError(`${this.mode} tag generation unavailable`)
   }
 
   private reportError(

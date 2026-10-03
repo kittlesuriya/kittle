@@ -105,6 +105,7 @@ export interface CrudOptions<
   policy: CapabilityCheckConfig
   cache: { enabled?: boolean; tag: string; keyPrefix: string }
   getCacheAdapter: () => Promise<CacheAdapter>
+  cacheMode?: import("kittle-core/cache").CacheMode
   getRateLimitStore?: () => Promise<
     import("kittle-core/rate-limit").RateLimitStore
   >

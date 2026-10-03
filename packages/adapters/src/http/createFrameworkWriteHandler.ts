@@ -145,6 +145,7 @@ export function createFrameworkWriteHandler<
     }
     getRateLimitStore?: () => Promise<RateLimitStore>
     getCacheAdapter?: () => Promise<CacheAdapter>
+    cacheMode?: import("kittle-core/cache").CacheMode
     runtimeCapabilities?: RuntimeCapabilities
     auditSinkFactory?: (
       session: FrameworkSession,
@@ -485,6 +486,7 @@ export function createFrameworkWriteHandler<
         await new CacheService({
           adapter: cacheAdapter,
           correctnessCritical: true,
+          ...(args.cacheMode ? { mode: args.cacheMode } : {}),
         }).invalidateTags(invalidationTags)
       }
 
@@ -583,6 +585,7 @@ export function createFrameworkWriteHandler<
             await new CacheService({
               adapter: cacheAdapter,
               correctnessCritical: true,
+              ...(args.cacheMode ? { mode: args.cacheMode } : {}),
             }).invalidateTags([...acquired.invalidations])
           }
           if (resource && args.recoverCommittedResponse) {

@@ -1,6 +1,6 @@
 {
   "name": "kittle-adapters",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Production HTTP, database, cache, and execution adapters for the application security and execution specification.",
   "keywords": [
     "kittle",
@@ -47,6 +47,7 @@
   },
   "scripts": {
     "build": "tsc -b tsconfig.build.json && tsx ../../scripts/verification/rewriteBuildExtensions.ts packages/adapters",
+    "prepublishOnly": "npm --prefix ../.. run build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --max-warnings=0",
     "test": "vitest run",
@@ -97,7 +98,7 @@
   "dependencies": {
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.12.5",
-    "kittle-core": "^0.5.0",
+    "kittle-core": "^0.6.0",
     "uuidv7": "^1.2.1",
     "zod": "^4.3.6"
   },

@@ -33,6 +33,32 @@ function createFakeGenerationStore(): {
 }
 
 describe("SharedGenerationCacheAdapter", () => {
+  it("inMemory mode caches between services without consulting a database generation store", async () => {
+    const adapter = new InMemoryCacheAdapter()
+    const first = new CacheService({
+      adapter,
+      correctnessCritical: true,
+      mode: "inMemory",
+    })
+    const second = new CacheService({
+      adapter,
+      correctnessCritical: true,
+      mode: "inMemory",
+    })
+    const resolve = vi.fn(async () => "before")
+    await expect(first.getOrSet("key", resolve, ["rows"])).resolves.toBe(
+      "before"
+    )
+    await expect(second.getOrSet("key", resolve, ["rows"])).resolves.toBe(
+      "before"
+    )
+    expect(resolve).toHaveBeenCalledTimes(1)
+    await second.invalidateTag("rows")
+    await expect(
+      first.getOrSet("key", async () => "after", ["rows"])
+    ).resolves.toBe("after")
+  })
+
   it("composes a payload adapter with a shared generation store", async () => {
     const payload = new InMemoryCacheAdapter()
     const { store } = createFakeGenerationStore()

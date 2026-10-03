@@ -190,4 +190,4 @@ export interface CacheCapabilities {
 
 // Keep CacheService available through the cache entrypoint.
 export { CacheService } from "./cacheService"
-export type { CacheConfig, CacheTelemetry } from "./cacheService"
+export type { CacheConfig, CacheMode, CacheTelemetry } from "./cacheService"

@@ -8,4 +8,4 @@ export {
 } from "./cache"
 export type { CacheAdapter, CacheCapabilities } from "./cache"
 export { CacheService } from "./cacheService"
-export type { CacheConfig, CacheTelemetry } from "./cacheService"
+export type { CacheConfig, CacheMode, CacheTelemetry } from "./cacheService"

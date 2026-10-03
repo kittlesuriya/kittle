@@ -21,6 +21,7 @@
   },
   "scripts": {
     "build": "tsc -b tsconfig.build.json && node -e \"require('node:fs').copyFileSync('src/styles.css', 'dist/styles.css')\"",
+    "prepublishOnly": "npm --prefix ../.. run build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --max-warnings=0",
     "test": "vitest run"

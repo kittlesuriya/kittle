@@ -4,7 +4,7 @@ import {
   validateEntity,
   type BrandedEntityDefinition,
 } from "kittle-core/entity"
-import type { CacheAdapter } from "kittle-core/cache"
+import type { CacheAdapter, CacheMode } from "kittle-core/cache"
 import type { RateLimitStore } from "kittle-core/rate-limit"
 import type {
   AuditSink,
@@ -27,6 +27,8 @@ export interface CrudRuntime {
   scope: CrudScopeConfig
   createPersistence: (session: FrameworkSession) => PersistenceProvider
   getCacheAdapter: () => Promise<CacheAdapter>
+  /** Shared generation fencing by default. */
+  cacheMode?: CacheMode
   getRateLimitStore?: () => Promise<
     import("kittle-core/rate-limit").RateLimitStore
   >
@@ -110,6 +112,7 @@ export function CRUD<
     policy: definition.policy,
     cache: definition.cache,
     getCacheAdapter: runtime.getCacheAdapter,
+    ...(runtime.cacheMode ? { cacheMode: runtime.cacheMode } : {}),
     ...((runtime.getRateLimitStore ??
     (
       runtime.adapterDeps as FrameworkAdapterDeps & {

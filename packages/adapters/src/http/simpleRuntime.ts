@@ -1,35 +1,12 @@
 /* eslint-disable @typescript-eslint/require-await */
 import { bindAbacSecurityDigest } from "kittle-core/domain"
-import type { CacheAdapter } from "kittle-core/cache"
+import type { CacheAdapter, CacheMode } from "kittle-core/cache"
 import type { FrameworkAdapterDeps, FrameworkScope } from "../server"
 import type { CrudRuntime } from "./CRUD"
 import type { CrudScopeConfig } from "./createFrameworkWriteHandler"
+import { resolveRuntimeCacheAdapter } from "./runtimeCache"
 
 export type { CrudRuntime } from "./CRUD"
-
-/**
- * Minimal no-op cache adapter. All reads return undefined/empty,
- * all writes are silently ignored. Suitable for apps that don't use
- * kittle's cache layer.
- */
-const noopCache: CacheAdapter = {
-  async get() {
-    return undefined
-  },
-  async set() {},
-  async delete() {
-    return false
-  },
-  async has() {
-    return false
-  },
-  async clear() {},
-  async addToTag() {},
-  async getTagKeys() {
-    return []
-  },
-  async deleteTag() {},
-}
 
 /**
  * Options for creating a simple CRUD runtime.
@@ -52,9 +29,12 @@ export interface CreateSimpleRuntimeOptions {
   scope?: CrudScopeConfig | FrameworkScope
 
   /**
-   * Custom cache adapter. Defaults to a no-op cache.
+   * Custom cache adapter. Defaults to a no-op cache, or to one shared
+   * process-local `InMemoryCacheAdapter` when `cacheMode` is `inMemory`.
    */
   cacheAdapter?: CacheAdapter
+  /** Use inMemory only when all cache readers and writers run in this JS process. */
+  cacheMode?: CacheMode
 }
 
 /**
@@ -164,6 +144,7 @@ export async function createSimpleRuntime(
     options.resolveSession,
     scopeConfig
   )
+  const cacheAdapter = resolveRuntimeCacheAdapter(options)
 
   return {
     adapterDeps,
@@ -175,6 +156,7 @@ export async function createSimpleRuntime(
           "or override createPersistence on the returned runtime."
       )
     },
-    getCacheAdapter: async () => options.cacheAdapter ?? noopCache,
+    getCacheAdapter: async () => cacheAdapter,
+    ...(options.cacheMode ? { cacheMode: options.cacheMode } : {}),
   }
 }

@@ -269,6 +269,57 @@ describe("CRUD ABAC read cache scope", () => {
     expect(persistenceCreations).toBe(2)
   })
 
+  it("serves ABAC reads from a bare process-local adapter in inMemory mode", async () => {
+    const cache = new InMemoryCacheAdapter()
+    const currentSession = { value: makeSession("actor-a") }
+    const calls = { list: 0, detail: 0 }
+    const shared = makeShared(
+      cache,
+      currentSession,
+      "policy-scope",
+      calls,
+      abacBundle,
+      { cacheMode: "inMemory" }
+    )
+    // Exercise generation fencing on every read, not just the empty-tag path.
+    shared.buildReadTags = () => ["test:tenant-1", "scope:tenant"]
+    const list = createListHandler(shared)
+    const detail = createDetailHandler(shared)
+    const id = "00000000-0000-4000-8000-000000000001"
+
+    expect((await list(new Request("https://example.test/items"))).status).toBe(
+      200
+    )
+    expect((await list(new Request("https://example.test/items"))).status).toBe(
+      200
+    )
+    expect(
+      (await detail(new Request(`https://example.test/items/${id}`), { id }))
+        .status
+    ).toBe(200)
+    expect(
+      (await detail(new Request(`https://example.test/items/${id}`), { id }))
+        .status
+    ).toBe(200)
+    expect(calls).toEqual({ list: 1, detail: 1 })
+  })
+
+  it("still rejects a process-local adapter for ABAC reads in the default shared mode", async () => {
+    const cache = new InMemoryCacheAdapter()
+    const currentSession = { value: makeSession("actor-a") }
+    const calls = { list: 0, detail: 0 }
+    const shared = makeShared(cache, currentSession, "policy-scope", calls)
+    const id = "00000000-0000-4000-8000-000000000001"
+
+    const response = await createDetailHandler(shared)(
+      new Request(`https://example.test/items/${id}`),
+      { id }
+    )
+
+    expect(response.status).toBe(500)
+    expect(calls.detail).toBe(0)
+  })
+
   it("never shares list cache entries between bundles with the same scope key but different security digests", async () => {
     const cache = createGateCompliantAdapter()
     const currentSession = { value: makeSession("actor-a") }

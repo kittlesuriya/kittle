@@ -6,9 +6,11 @@ import type { CacheAdapter } from "kittle-core/cache"
  * are owned by the adapter each engine returns, never overridden here:
  *
  *   - `memory` => InMemoryCacheAdapter with `coherenceScope: "process"`
- *     (linearizable only within a single JS process). Do NOT use it for
- *     correctness-critical cache reads across instances; compose it with a
- *     SharedGenerationCacheAdapter backed by a shared generation store.
+ *     (linearizable only within a single JS process). Use it alone under
+ *     `cacheMode: "inMemory"` when one process owns every read and write.
+ *     Otherwise do NOT use it for correctness-critical cache reads across
+ *     instances: compose it with a SharedGenerationCacheAdapter backed by a
+ *     shared generation store and use `cacheMode: "shared"`.
  *   - `kv` => KvCacheAdapter with `coherenceScope: "shared"` but eventual tag
  *     generations. Same composition rule applies for correctness-critical use.
  */

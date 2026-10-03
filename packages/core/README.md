@@ -36,21 +36,21 @@ Requirements:
 
 ## Public entrypoints
 
-| Import                                 | Contents                                                                         |
-| -------------------------------------- | -------------------------------------------------------------------------------- |
-| `kittle-core`                          | Foundation, domain, entity, execution, and operation barrel.                     |
-| `kittle-core/foundation`               | Errors, request context, canonical JSON, validation, and security foundations.   |
-| `kittle-core/foundation/errors`        | `FrameworkCoreError`, error classes, and error-code registries.                  |
-| `kittle-core/foundation/canonicalJson` | Deterministic JSON canonicalization and limits.                                  |
-| `kittle-core/domain`                   | ABAC, predicates, authorization, policy normalization, and domain errors.        |
-| `kittle-core/domain/predicate`         | `Predicate` factories and predicate capability checks.                           |
-| `kittle-core/entity`                   | `defineEntity`, entity validation, and entity brands.                            |
-| `kittle-core/entity/capabilityCheck`   | Capability configuration types and helpers.                                      |
-| `kittle-core/operation`                | Operation definitions, execution contexts, and runners.                          |
-| `kittle-core/execution`                | Job/schedule types, registries, dispatchers, and retry helpers.                  |
-| `kittle-core/ports`                    | Persistence, repository, audit, outbox, cache, idempotency, and execution ports. |
-| `kittle-core/cache`                    | Cache contracts, cache service, key construction, and cache errors.              |
-| `kittle-core/rate-limit`               | Rate-limit contracts and enforcement helpers.                                    |
+| Import                                 | Contents                                                                                         |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `kittle-core`                          | Foundation, domain, entity, execution, and operation barrel.                                     |
+| `kittle-core/foundation`               | Errors, request context, canonical JSON, validation, and security foundations.                   |
+| `kittle-core/foundation/errors`        | `FrameworkCoreError`, error classes, and error-code registries.                                  |
+| `kittle-core/foundation/canonicalJson` | Deterministic JSON canonicalization and limits.                                                  |
+| `kittle-core/domain`                   | ABAC, predicates, authorization, policy normalization, and domain errors.                        |
+| `kittle-core/domain/predicate`         | `Predicate` factories and predicate capability checks.                                           |
+| `kittle-core/entity`                   | `defineEntity`, entity validation, and entity brands.                                            |
+| `kittle-core/entity/capabilityCheck`   | Capability configuration types and helpers.                                                      |
+| `kittle-core/operation`                | Operation definitions, execution contexts, and runners.                                          |
+| `kittle-core/execution`                | Job/schedule types, registries, dispatchers, and retry helpers.                                  |
+| `kittle-core/ports`                    | Persistence, repository, audit, outbox, cache, idempotency, and execution ports.                 |
+| `kittle-core/cache`                    | Cache contracts, inMemory/shared cache modes, cache service, key construction, and cache errors. |
+| `kittle-core/rate-limit`               | Rate-limit contracts and enforcement helpers.                                                    |
 
 The package export map in `package.json` is the source of truth for supported
 subpaths. Prefer public subpaths over importing from `src`.

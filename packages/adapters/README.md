@@ -315,6 +315,30 @@ The HTTP layer provides defensive limits and normalization:
 
 ## Cache and rate limits
 
+Cache coherence is selected once per deployment with `cacheMode` on
+`createSimpleRuntime` / `createCrudRuntime`. The mode is threaded through
+list, detail, and every mutation, so reads and invalidation always agree.
+
+| Mode       | Requires                                                                              | Use when                                                               |
+| ---------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `shared`   | Default. A shared, linearizable generation source (`SharedGenerationCacheAdapter`).   | Multiple processes, instances, or workers can read and write the data. |
+| `inMemory` | Linearizable `coherenceScope: "process"` generations, such as `InMemoryCacheAdapter`. | Exactly one JS process owns every read and write.                      |
+
+```ts
+const runtime = await createSimpleRuntime({
+  resolveSession,
+  scope: "public",
+  cacheMode: "inMemory",
+})
+```
+
+In `inMemory` mode the runtime creates one `InMemoryCacheAdapter` for the
+lifetime of the process, or reuses the supplied `cacheAdapter`, and cache hits
+perform no database reads. `inMemory` becomes unsafe as soon as a second
+worker, instance, or out-of-process writer can mutate the same rows; use
+`shared` there. A process-local adapter is rejected in `shared`, and a shared
+or eventual adapter is rejected in `inMemory`.
+
 | Adapter                        | Behavior                                | Appropriate for                                |
 | ------------------------------ | --------------------------------------- | ---------------------------------------------- |
 | `InMemoryCacheAdapter`         | Process-local, linearizable             | Tests and single-instance deployments.         |
