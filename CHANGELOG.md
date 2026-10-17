@@ -12,17 +12,21 @@ Package versions are currently maintained independently:
 
 - `kittle-core` — `0.6.0`
 - `kittle-adapters` — `0.7.0`
-- `kittle-tanstack` — `0.1.0`
+- `kittle-ui` — `0.1.0`
 - `testing` — private workspace package, `0.2.0`
 
 ## [Unreleased]
 
-### Shared TanStack UI package
+## UI package `0.1.0` — 2026-10-17
 
-- Added the initial `kittle-tanstack` package for reusable DataTable,
-  SchemaForm, QueryBuilder, and Sidebar components.
-- Added public subpath exports, shared styles, typed data-source contracts, and
-  application-owned permission and customization callbacks.
+### Added
+
+- Published the initial `kittle-ui` package: reusable DataTable, SchemaForm,
+  QueryBuilder, and Sidebar components plus UI primitives, with typed runtime
+  ports so the UI stays router-, permission-, and transport-agnostic.
+- Added directory entrypoints for every area (`kittle-ui/core/*` and
+  `kittle-ui/react/*`) plus wildcard deep paths, with ESM builds and TypeScript
+  declarations for every module.
 - Added DataTable client/server pagination, search, filters, grouped columns,
   visibility persistence, selection callbacks, retry/refresh actions, and
   export hooks.
@@ -71,7 +75,7 @@ Package versions are currently maintained independently:
   and a shared adapter cannot satisfy `inMemory`.
 - Added a mode-named missing-generation error so a misconfigured deployment
   reports `inMemory tag generation unavailable` or `shared tag generation
-  unavailable` instead of always blaming shared generation.
+unavailable` instead of always blaming shared generation.
 
 ## Runtime adapters package `0.6.0` — 2026-10-02
 
@@ -171,6 +175,7 @@ Before publishing a package:
 2. Move user-visible entries from `Unreleased` into a versioned section.
 3. Run `npm run verify:release` and the package build.
 4. Verify packed contents with `npm pack --dry-run`.
-5. Publish packages in dependency order: core before adapters.
+5. Publish packages in dependency order: core before adapters;
+   `kittle-ui` is independent.
 
 [Unreleased]: https://github.com/kittlesuriya/kittle/compare/main...HEAD

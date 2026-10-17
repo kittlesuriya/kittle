@@ -25,7 +25,6 @@ const EXCLUDED_DIRECTORIES = new Set([
   ".cache",
   ".output",
   ".planning",
-  ".tanstack",
   ".vite",
   ".wrangler",
   "build",

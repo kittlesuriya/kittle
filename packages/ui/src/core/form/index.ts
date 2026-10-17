@@ -1,0 +1,22 @@
+export * from "./formLogic"
+export * from "./conditionLogic"
+export * from "./dataCleanup"
+export * from "./gridLogic"
+export * from "./schemaParser"
+export * from "./validationLogic"
+export * from "./conditionEvaluator"
+export * from "./pathUtils"
+export * from "./formHelpers"
+export * from "./gridHelpers"
+export * from "./layout"
+export * from "./validationHelpers"
+export * from "./schemaMetadata"
+export * from "./zodToFields"
+export * from "./fieldRegistry"
+export * from "./fieldMeta"
+export * from "./types"
+
+// Resolve star-export ambiguities: these names are aliases re-exported by two
+// modules (gridLogic <-> gridHelpers, schemaParser <-> zodToFields).
+export { getColSpanClass, clamp } from "./gridLogic"
+export { parseZodSchema } from "./schemaParser"

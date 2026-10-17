@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // The extracted UI source predates the repo base config. Exact optional
+    // properties would require auditing every call site in the package, so the
+    // published build keeps the source's original optional-property semantics.
+    "exactOptionalPropertyTypes": false,
+    "baseUrl": ".",
+    "types": ["vite/client"],
+    "noEmit": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}

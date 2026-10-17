@@ -20,20 +20,20 @@ The specification is designed around a few non-negotiable properties:
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | [`kittle-core`](./packages/core)         | Domain models, entities, ABAC, operations, execution contracts, predicates, errors, and ports.                                       |
 | [`kittle-adapters`](./packages/adapters) | HTTP CRUD, Drizzle persistence for PostgreSQL/D1/MySQL, cache adapters, server wiring, audit/outbox, and idempotency.                |
-| [`kittle-tanstack`](./packages/tanstack) | Reusable React/TanStack DataTable, SchemaForm, QueryBuilder, Sidebar, and shared UI contracts.                                       |
+| [`kittle-ui`](./packages/ui)             | Reusable React UI: DataTable, SchemaForm, QueryBuilder, Sidebar, feedback states, and shared contracts.                              |
 | [`testing`](./packages/testing)          | Reusable contract suites for persistence providers, repositories, predicates, ABAC, cache adapters, atomic batches, and concurrency. |
 
 For an application, install `kittle-core`, `kittle-adapters`, and optionally
-`kittle-tanstack` for shared React UI. The `testing`
-package is a private workspace package used to verify implementations and is
-not part of the public runtime installation path.
+`kittle-ui` for a shared React UI. The `testing` package is a private workspace
+package used to verify implementations and is not part of the public runtime
+installation path.
 
 ## Installation
 
 ```sh
 npm install kittle-core kittle-adapters
-# React/TanStack applications may also install:
-npm install kittle-tanstack @tanstack/react-table zod
+# React applications may also install (npm 7+ installs the peer packages):
+npm install kittle-ui
 ```
 
 The reference packages are ESM-only and require Node.js 20 or newer. Applications should use
@@ -58,7 +58,7 @@ application
     ├── kittle-adapters/server     Session, ABAC, and repository composition
     ├── kittle-adapters/drizzle-*  Database implementations
     └── kittle-adapters/cache      Cache and rate-limit implementations
-    ├── kittle-tanstack             Shared React/TanStack UI components
+    ├── kittle-ui                   Shared React UI components
     │
     └── kittle-core                Domain rules, operations, ports, execution
 ```
@@ -124,8 +124,9 @@ export const taskEntity = defineEntity<Task>({
 ```
 
 See [`kittle-core/README.md`](./packages/core/README.md) for the complete
-domain workflow and [`kittle-adapters/README.md`](./packages/adapters/README.md)
-for database and HTTP composition.
+domain workflow, [`kittle-adapters/README.md`](./packages/adapters/README.md)
+for database and HTTP composition, and [`kittle-ui/README.md`](./packages/ui/README.md)
+for the React component wiring.
 
 The portable contract is documented in [`SPECIFICATION.md`](./SPECIFICATION.md).
 Use [`CONFORMANCE.md`](./CONFORMANCE.md) to review an implementation and
@@ -192,6 +193,7 @@ Useful focused commands:
 npm run test:core
 npm run test:adapters
 npm run test:testing
+npm run test:ui
 npm run verify:hardening
 npm run verify:release
 ```
@@ -201,6 +203,7 @@ npm run verify:release
 ```text
 packages/core/       Public framework-independent package
 packages/adapters/   Public runtime and persistence adapters
+packages/ui/         Public React UI component package
 packages/testing/    Workspace-only contract test helpers
 scripts/             Release and repository verification scripts
 ```

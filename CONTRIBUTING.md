@@ -29,6 +29,7 @@ The repository is an npm workspace:
 ```text
 packages/core       framework-independent contracts and domain logic
 packages/adapters   runtime, HTTP, database, and cache implementations
+packages/ui         reusable React UI components
 packages/testing    reusable contract suites
 scripts/            verification and release tooling
 ```
@@ -46,6 +47,13 @@ for security boundaries, malformed input, concurrency, and error classification.
 Adapters must honor the contracts defined by core. Add dialect-specific tests
 where behavior differs, especially for transactions, atomic batches, SQL null
 semantics, constraint mapping, leases, and idempotency.
+
+### UI changes
+
+Keep `kittle-ui` free of application imports: bind navigation, permissions,
+formatting, and request access through the `UiRuntime` ports. Treat the
+published subpath exports and component props as public contracts, and keep
+peer dependencies limited to the React/TanStack/lucide/i18next/zod set.
 
 ### Public API changes
 
@@ -67,6 +75,7 @@ Run focused checks while developing, then run the full suite:
 npm run typecheck:core
 npm run typecheck:adapters
 npm run typecheck:testing
+npm run typecheck:ui
 npm run lint
 npm test
 npm run verify:hardening

@@ -53,10 +53,9 @@ next-env.d.ts
 .planning/
 reference
 
-# tanstack start
+# vite
 .output/
 dist/
-.tanstack/
 
 # framework build artifacts
 **/dist/

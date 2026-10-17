@@ -16,12 +16,15 @@ describe("release verification gates", () => {
         "typecheck:core",
         "typecheck:adapters",
         "typecheck:testing",
+        "typecheck:ui",
         "lint:core",
         "lint:adapters",
         "lint:testing",
+        "lint:ui",
         "test:core",
         "test:adapters",
         "test:testing",
+        "test:ui",
       ])
     )
   })

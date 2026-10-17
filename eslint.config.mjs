@@ -11,7 +11,6 @@ export default tseslint.config(
       "build/",
       "coverage/",
       ".wrangler/",
-      ".tanstack/",
       "*.tsbuildinfo",
     ],
   },

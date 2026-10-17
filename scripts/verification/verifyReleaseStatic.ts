@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs"
 import { tmpdir } from "node:os"
-import { join, resolve } from "node:path"
+import { dirname, join, relative, resolve } from "node:path"
 import { resolveExports } from "./resolveExports"
 
 const root = resolve(import.meta.dirname, "../..")
@@ -63,38 +63,86 @@ for (const [name, adapter] of Object.entries(adaptersMatrix)) {
   }
 }
 
+function walkFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name)
+    return entry.isDirectory() ? walkFiles(path) : [path]
+  })
+}
+
+/**
+ * Files under `pkgDir` matching a single-`*` export pattern such as
+ * "./dist/core/*.d.ts", together with the captured `*` segment.
+ */
+function matchExportPattern(
+  pkgDir: string,
+  pattern: string | undefined
+): { file: string; capture: string }[] {
+  if (!pattern || !pattern.includes("*")) return []
+  const normalized = pattern.replace(/^\.\//, "").replaceAll("\\", "/")
+  const star = normalized.indexOf("*")
+  const prefix = normalized.slice(0, star)
+  const suffix = normalized.slice(star + 1)
+  const dirPart = prefix.endsWith("/") ? prefix.slice(0, -1) : dirname(prefix)
+  const searchDir = join(pkgDir, dirPart)
+  if (!existsSync(searchDir)) return []
+  return walkFiles(searchDir)
+    .map((file) => relative(pkgDir, file).replaceAll("\\", "/"))
+    .filter((rel) => rel.startsWith(prefix) && rel.endsWith(suffix))
+    .map((rel) => ({
+      file: join(pkgDir, rel),
+      capture: rel.slice(prefix.length, rel.length - suffix.length),
+    }))
+}
+
 const packageManifests = [
   { name: "kittle-core", dir: "core" },
   { name: "kittle-adapters", dir: "adapters" },
+  { name: "kittle-ui", dir: "ui" },
   { name: "testing", dir: "testing" },
 ]
 for (const { name: pkg, dir } of packageManifests) {
+  const pkgDir = join(root, `packages/${dir}`)
   const manifest = JSON.parse(
-    readFileSync(join(root, `packages/${dir}/package.json`), "utf8")
+    readFileSync(join(pkgDir, "package.json"), "utf8")
   ) as {
     exports?: Record<string, { types?: string; default?: string } | string>
   }
   for (const [subpath, value] of Object.entries(manifest.exports ?? {})) {
     const declaration = typeof value === "string" ? value : value.types
     const runtime = typeof value === "string" ? value : value.default
+    if (subpath.includes("*")) {
+      const declarations = matchExportPattern(pkgDir, declaration)
+      const runtimes = matchExportPattern(pkgDir, runtime)
+      check(
+        `exports.${pkg}.${subpath}.declaration`,
+        declarations.length > 0,
+        "wildcard declaration pattern matched no built files; run build"
+      )
+      const declarationCaptures = new Set(
+        declarations.map((item) => item.capture)
+      )
+      const runtimeCaptures = new Set(runtimes.map((item) => item.capture))
+      check(
+        `exports.${pkg}.${subpath}.parity`,
+        declarationCaptures.size === runtimeCaptures.size &&
+          [...declarationCaptures].every((capture) =>
+            runtimeCaptures.has(capture)
+          ),
+        "wildcard runtime and declaration trees do not have parity"
+      )
+      continue
+    }
     check(
       `exports.${pkg}.${subpath}.declaration`,
       Boolean(declaration) &&
-        existsSync(
-          join(
-            root,
-            `packages/${dir}`,
-            String(declaration).replace(/^\.\//, "")
-          )
-        ),
+        existsSync(join(pkgDir, String(declaration).replace(/^\.\//, ""))),
       "built declaration is missing; run build"
     )
     check(
       `exports.${pkg}.${subpath}.runtime`,
       Boolean(runtime) &&
-        existsSync(
-          join(root, `packages/${dir}`, String(runtime).replace(/^\.\//, ""))
-        ),
+        existsSync(join(pkgDir, String(runtime).replace(/^\.\//, ""))),
       "built runtime is missing; run build"
     )
     check(
@@ -230,6 +278,20 @@ function packConsumerSmoke(): void {
         "@nestjs/common@^11.0.0",
         "reflect-metadata@^0.2.0",
         "rxjs@^7.1.0",
+        // kittle-ui peer dependencies, plus react types for the declaration
+        // check and i18next for the react-i18next runtime.
+        "@types/react@^19.0.0",
+        "@types/react-dom@^19.0.0",
+        "react@^19.0.0",
+        "react-dom@^19.0.0",
+        "i18next@^26.0.0",
+        "@tanstack/react-form@^1.29.0",
+        "@tanstack/react-query@^5.99.0",
+        "@tanstack/react-table@^9.2.4",
+        "lucide-react@^1.8.0",
+        "react-i18next@^17.0.4",
+        "sonner@^2.0.7",
+        "zod@^4.3.6",
         ...tarballs,
       ],
       root
@@ -240,15 +302,33 @@ function packConsumerSmoke(): void {
       `${install.stderr || install.stdout || "consumer npm install failed"}`
     )
     if (install.status === 0) {
-      const exports = packageManifests.flatMap(({ dir }) => {
+      const expandExports = (name: string, dir: string): string[] => {
         const manifest = JSON.parse(
           readFileSync(join(root, `packages/${dir}/package.json`), "utf8")
-        ) as { name: string; exports?: Record<string, unknown> }
-        return Object.keys(manifest.exports ?? {}).map(
-          (subpath) =>
-            `${manifest.name}${subpath === "." ? "" : subpath.slice(1)}`
+        ) as { exports?: Record<string, { types?: string } | string> }
+        return Object.entries(manifest.exports ?? {}).flatMap(
+          ([subpath, value]) => {
+            if (!subpath.includes("*")) {
+              return [`${name}${subpath === "." ? "" : subpath.slice(1)}`]
+            }
+            const declaration = typeof value === "string" ? value : value.types
+            return matchExportPattern(
+              join(root, `packages/${dir}`),
+              declaration
+            )
+              .map(
+                (item) =>
+                  `${name}/${subpath
+                    .replace(/^\.\//, "")
+                    .replace("*", item.capture)}`
+              )
+              .sort()
+          }
         )
-      })
+      }
+      const exports = packageManifests.flatMap(({ name, dir }) =>
+        expandExports(name, dir)
+      )
       // testing ships vitest-backed contract helpers, so it requires
       // vitest at runtime by design. Smoke-import only the runtime packages;
       // declarations are still checked for all three.
