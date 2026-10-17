@@ -22,6 +22,7 @@ import {
 } from "../ui/autocomplete"
 import { FieldArray } from "./FieldArray"
 import { DatePicker } from "./DatePicker"
+import { DateTimePicker } from "./DateTimePicker"
 import { ColorPicker } from "./ColorPicker"
 import { getCustomFieldRenderer } from "../../core/form/fieldRegistry"
 import { toDisplayString } from "../../core/format/toDisplayString"
@@ -212,12 +213,10 @@ export function FieldRenderer({
 
     case "datetime":
       return (
-        <Input
+        <DateTimePicker
           id={fieldId}
-          type="datetime-local"
-          value={(value as string) ?? ""}
-          onChange={(e) => onChange(e.target.value)}
-          onBlur={onBlur}
+          value={value as string}
+          onChange={onChange}
           disabled={disabled}
           className="h-10"
         />

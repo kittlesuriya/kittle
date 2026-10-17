@@ -178,7 +178,7 @@ export interface BaseOperationConfig<TData = unknown> {
   /**
    * Custom title for the modal (overrides auto-generated title). The function
    * form receives the row, so a sheet can name the record it is acting on —
-   * "Align Domains — CBSE 2026-27" instead of a bare action name.
+   * "Align Subject Areas — CBSE 2026-27" instead of a bare action name.
    */
   modalTitle?: string | ((data: TData) => string)
 

@@ -1,6 +1,6 @@
 {
   "name": "kittle-ui",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Reusable React UI for the application security and execution specification: data tables, schema forms, query builders, navigation, feedback, and UI primitives.",
   "keywords": [
     "kittle",
