@@ -31,6 +31,7 @@ export function SecondarySidebar({
   density = "xs",
   showHotkeys = true,
   showBadge = true,
+  classNames,
 }: SecondarySidebarProps): React.ReactElement | null {
   const { t } = useTranslation()
   if (!isOpen) return null
@@ -46,17 +47,24 @@ export function SecondarySidebar({
     <div
       className={cn(
         "absolute inset-0 bg-sidebar z-sidebar",
-        "animate-in slide-in-from-left duration-200"
+        "animate-in slide-in-from-left duration-200",
+        classNames?.secondary
       )}
       aria-label={ARIA_LABELS.secondarySidebar}
     >
       <div
-        className={`flex items-center justify-between ${headerPad} border-b border-sidebar-border`}
+        className={cn(
+          `flex items-center justify-between ${headerPad} border-b border-sidebar-border`,
+          classNames?.secondaryHeader
+        )}
       >
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 text-sm text-sidebar-foreground hover:text-sidebar-primary transition-colors"
+          className={cn(
+            "flex items-center gap-2 text-sm text-sidebar-foreground hover:text-sidebar-primary transition-colors",
+            classNames?.secondaryBackButton
+          )}
           aria-label={ARIA_LABELS.backButton}
         >
           <ArrowLeft size={16} />
@@ -67,7 +75,10 @@ export function SecondarySidebar({
         <button
           type="button"
           onClick={onClose}
-          className="p-1 rounded hover:bg-sidebar-accent transition-colors"
+          className={cn(
+            "p-1 rounded hover:bg-sidebar-accent transition-colors",
+            classNames?.secondaryCloseButton
+          )}
           aria-label={ARIA_LABELS.closeButton}
         >
           <X size={16} />
@@ -93,7 +104,8 @@ export function SecondarySidebar({
                   isActive &&
                     "bg-sidebar-primary text-sidebar-primary-foreground font-medium hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
                   item.disabled &&
-                    "opacity-50 cursor-not-allowed hover:bg-transparent"
+                    "opacity-50 cursor-not-allowed hover:bg-transparent",
+                  classNames?.menuItem
                 )}
               >
                 <div className={`flex items-center ${iconGap}`}>
@@ -110,7 +122,8 @@ export function SecondarySidebar({
                     "shrink-0",
                     isActive
                       ? "text-sidebar-primary-foreground"
-                      : "text-sidebar-foreground/80"
+                      : "text-sidebar-foreground/80",
+                    classNames?.menuDisclosureIcon
                   )}
                 />
               </button>
@@ -123,7 +136,8 @@ export function SecondarySidebar({
                 key={item.path}
                 className={cn(
                   `flex items-center ${itemPad} ${RADIUS.md}`,
-                  "text-sidebar-foreground opacity-50 cursor-not-allowed"
+                  "text-sidebar-foreground opacity-50 cursor-not-allowed",
+                  classNames?.menuItem
                 )}
                 aria-disabled="true"
                 title={`${item.title}${item.badge ? ` (${String(item.badge)})` : ""}`}
@@ -135,7 +149,9 @@ export function SecondarySidebar({
                   })}
                 </span>
                 {showBadge && item.badge ? (
-                  <span className={badgeClasses}>{item.badge}</span>
+                  <span className={cn(badgeClasses, classNames?.menuBadge)}>
+                    {item.badge}
+                  </span>
                 ) : null}
               </div>
             )
@@ -151,7 +167,8 @@ export function SecondarySidebar({
                 "text-sidebar-foreground",
                 "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors",
                 isActive &&
-                  "bg-sidebar-primary text-sidebar-primary-foreground font-medium hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground"
+                  "bg-sidebar-primary text-sidebar-primary-foreground font-medium hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
+                classNames?.menuItem
               )}
             >
               {item.icon && <item.icon size={iconSize} />}
@@ -162,10 +179,14 @@ export function SecondarySidebar({
                 fallback="truncate"
               />
               {showBadge && item.badge ? (
-                <span className={badgeClasses}>{item.badge}</span>
+                <span className={cn(badgeClasses, classNames?.menuBadge)}>
+                  {item.badge}
+                </span>
               ) : null}
               {showHotkeys && item.hotkey && !isActive && (
-                <kbd className={hotkeyClasses}>{formatHotkey(item.hotkey)}</kbd>
+                <kbd className={cn(hotkeyClasses, classNames?.menuHotkey)}>
+                  {formatHotkey(item.hotkey)}
+                </kbd>
               )}
             </Link>
           )

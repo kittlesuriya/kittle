@@ -4,6 +4,20 @@ import { CheckIcon } from "lucide-react"
 import { cn } from "../../core/cn"
 import { toDisplayString } from "../../core/format/toDisplayString"
 
+export interface AutocompleteClassNames {
+  control?: string
+  input?: string
+  trigger?: string
+  content?: string
+  list?: string
+  item?: string
+  group?: string
+  groupLabel?: string
+  empty?: string
+  itemLabel?: string
+  itemIndicator?: string
+}
+
 export interface AutocompleteItem {
   label?: string
   value?: string | number
@@ -15,6 +29,7 @@ interface AutocompleteContextValue {
   placeholder?: string
   disabled?: boolean
   items: AutocompleteItem[]
+  classNames?: AutocompleteClassNames
 }
 
 const AutocompleteContext = React.createContext<AutocompleteContextValue>({
@@ -47,6 +62,7 @@ export interface AutocompleteProps extends Omit<
   defaultValue?: AutocompleteItem | string | number | null
   items?: AutocompleteItem[]
   filter?: (item: AutocompleteItem, query: string) => boolean
+  classNames?: AutocompleteClassNames
 }
 
 export function Autocomplete({
@@ -60,10 +76,13 @@ export function Autocomplete({
   defaultValue,
   items = [],
   filter = defaultFilter,
+  classNames,
   ...props
 }: AutocompleteProps): React.ReactElement {
   return (
-    <AutocompleteContext.Provider value={{ placeholder, disabled, items }}>
+    <AutocompleteContext.Provider
+      value={{ placeholder, disabled, items, classNames }}
+    >
       <AutocompletePrimitive.Root
         open={open}
         onOpenChange={onOpenChange}
@@ -86,10 +105,11 @@ export function AutocompleteTrigger({
   id,
   ...props
 }: AutocompletePrimitive.Input.Props): React.ReactElement {
-  const { placeholder, disabled } = React.useContext(AutocompleteContext)
+  const { placeholder, disabled, classNames } =
+    React.useContext(AutocompleteContext)
   return (
     <div
-      className="relative flex items-center w-full"
+      className={cn("relative flex items-center w-full", classNames?.control)}
       data-slot="autocomplete-control"
     >
       <AutocompletePrimitive.Input
@@ -98,11 +118,17 @@ export function AutocompleteTrigger({
         disabled={disabled}
         className={cn(
           "border-input placeholder:text-muted-foreground dark:bg-input/30 dark:hover:bg-input/50 focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] aria-invalid:ring-[3px] disabled:pointer-events-none disabled:opacity-50 pr-8",
+          classNames?.input,
           className
         )}
         {...props}
       />
-      <AutocompletePrimitive.Trigger className="text-muted-foreground hover:text-foreground absolute right-2 flex size-4 items-center justify-center transition-colors disabled:pointer-events-none disabled:opacity-50" />
+      <AutocompletePrimitive.Trigger
+        className={cn(
+          "text-muted-foreground hover:text-foreground absolute right-2 flex size-4 items-center justify-center transition-colors disabled:pointer-events-none disabled:opacity-50",
+          classNames?.trigger
+        )}
+      />
     </div>
   )
 }
@@ -120,6 +146,7 @@ export function AutocompleteContent({
     AutocompletePrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
   >): React.ReactElement {
+  const { classNames } = React.useContext(AutocompleteContext)
   return (
     <AutocompletePrimitive.Portal>
       <AutocompletePrimitive.Positioner
@@ -133,6 +160,7 @@ export function AutocompleteContent({
           data-slot="autocomplete-content"
           className={cn(
             "bg-popover text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 ring-foreground/10 min-w-40 rounded-md shadow-md ring-1 duration-100 relative isolate z-critical max-h-(--available-height) w-(--anchor-width) origin-(--transform-origin) overflow-hidden",
+            classNames?.content,
             className
           )}
           {...props}
@@ -151,10 +179,13 @@ export function AutocompleteList({
 }: AutocompletePrimitive.List.Props & {
   renderItem?: (item: AutocompleteItem) => React.ReactNode
 }): React.ReactElement {
+  const { classNames: slots } = React.useContext(AutocompleteContext)
   return (
     <AutocompletePrimitive.List
+      data-slot="autocomplete-list"
       className={cn(
         "p-1 overflow-y-auto max-h-[var(--available-height,300px)] overscroll-contain flex flex-col",
+        slots?.list,
         className
       )}
       {...props}
@@ -174,10 +205,22 @@ export function AutocompleteList({
             value={item}
             disabled={isDisabled}
             data-slot="autocomplete-item"
-            className="focus:bg-accent focus:text-accent-foreground data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground relative flex w-full cursor-default items-center rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 transition-colors group"
+            className={cn(
+              "focus:bg-accent focus:text-accent-foreground data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground relative flex w-full cursor-default items-center rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 transition-colors group",
+              slots?.item
+            )}
           >
-            <span className="flex-1 flex items-center gap-2">{label}</span>
-            <CheckIcon className="size-4 absolute right-2 opacity-0 group-data-[selected]:opacity-100 transition-opacity" />
+            <span
+              className={cn("flex-1 flex items-center gap-2", slots?.itemLabel)}
+            >
+              {label}
+            </span>
+            <CheckIcon
+              className={cn(
+                "size-4 absolute right-2 opacity-0 group-data-[selected]:opacity-100 transition-opacity",
+                slots?.itemIndicator
+              )}
+            />
           </AutocompletePrimitive.Item>
         )
       }}
@@ -191,18 +234,27 @@ export function AutocompleteItem({
   value,
   ...props
 }: AutocompletePrimitive.Item.Props): React.ReactElement {
+  const { classNames: slots } = React.useContext(AutocompleteContext)
   return (
     <AutocompletePrimitive.Item
       value={value as string | number}
       data-slot="autocomplete-item"
       className={cn(
         "focus:bg-accent focus:text-accent-foreground data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground relative flex w-full cursor-default items-center rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 transition-colors group",
+        slots?.item,
         className
       )}
       {...props}
     >
-      <span className="flex-1 flex items-center gap-2">{children}</span>
-      <CheckIcon className="size-4 absolute right-2 opacity-0 group-data-[selected]:opacity-100 transition-opacity" />
+      <span className={cn("flex-1 flex items-center gap-2", slots?.itemLabel)}>
+        {children}
+      </span>
+      <CheckIcon
+        className={cn(
+          "size-4 absolute right-2 opacity-0 group-data-[selected]:opacity-100 transition-opacity",
+          slots?.itemIndicator
+        )}
+      />
     </AutocompletePrimitive.Item>
   )
 }
@@ -212,10 +264,13 @@ export function AutocompleteEmpty({
   children,
   ...props
 }: AutocompletePrimitive.Empty.Props): React.ReactElement {
+  const { classNames: slots } = React.useContext(AutocompleteContext)
   return (
     <AutocompletePrimitive.Empty
+      data-slot="autocomplete-empty"
       className={cn(
         "text-muted-foreground text-center text-sm empty:hidden empty:m-0 empty:p-0 py-6",
+        slots?.empty,
         className
       )}
       {...props}
@@ -235,13 +290,21 @@ export function AutocompleteGroup({
   children,
   ...props
 }: AutocompleteGroupProps): React.ReactElement {
+  const { classNames: slots } = React.useContext(AutocompleteContext)
   return (
     <AutocompletePrimitive.Group
-      className={cn("overflow-hidden p-1", className)}
+      data-slot="autocomplete-group"
+      className={cn("overflow-hidden p-1", slots?.group, className)}
       {...props}
     >
       {heading && (
-        <AutocompletePrimitive.GroupLabel className="text-muted-foreground px-2 py-1.5 text-xs font-medium">
+        <AutocompletePrimitive.GroupLabel
+          data-slot="autocomplete-group-label"
+          className={cn(
+            "text-muted-foreground px-2 py-1.5 text-xs font-medium",
+            slots?.groupLabel
+          )}
+        >
           {heading}
         </AutocompletePrimitive.GroupLabel>
       )}

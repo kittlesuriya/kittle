@@ -34,6 +34,7 @@ import type {
 } from "../../core/query/types"
 import { EmptyState } from "../feedback/EmptyState"
 import { ValueInput } from "./parts/ValueInput"
+import { resolveQueryBuilderFieldStyles } from "../../core/query/resolveFieldStyles"
 import {
   Select,
   SelectContent,
@@ -281,6 +282,9 @@ export function QueryBuilder({
   translationNamespace,
   embedded = false,
   headerLeft,
+  classNames,
+  partClassNames,
+  fieldStyles,
 }: QueryBuilderProps): React.ReactElement | null {
   const { t } = useTranslation()
   const fields = useMemo(() => zodToFilterFields(schema), [schema])
@@ -528,19 +532,25 @@ export function QueryBuilder({
         description={t("querybuilder.no_filters_desc", {
           defaultValue: "This dataset does not expose filterable fields yet.",
         })}
+        className={classNames?.emptyState}
+        classNames={partClassNames?.emptyState}
       />
     )
   }
 
   const content = (
     <div
-      className="space-y-4 rounded-xl bg-card shadow-md p-3 sm:p-4"
+      className={cn(
+        "space-y-4 rounded-xl bg-card shadow-md p-3 sm:p-4",
+        classNames?.container
+      )}
       onKeyDown={handlePanelKeyDown}
     >
       <div
         className={cn(
           "flex flex-col gap-2 sm:flex-row sm:items-center",
-          embedded && "sm:justify-end"
+          embedded && "sm:justify-end",
+          classNames?.toolbar
         )}
       >
         {!embedded && (
@@ -550,21 +560,26 @@ export function QueryBuilder({
               placeholder={t("common.search", { defaultValue: "Search..." })}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 h-9"
+              className={cn("pl-8 h-9", classNames?.searchInput)}
               ref={searchInputRef}
             />
           </div>
         )}
 
         {showModeToggle && (
-          <div className="inline-flex rounded-md bg-muted p-1">
+          <div
+            className={cn(
+              "inline-flex rounded-md bg-muted p-1",
+              classNames?.modeToggle
+            )}
+          >
             <Button
               type="button"
               size="sm"
               variant={activeMode === "simple" ? "secondary" : "ghost"}
               onClick={() => handleModeChange("simple")}
               disabled={disabled}
-              className="h-7 px-2.5"
+              className={cn("h-7 px-2.5", classNames?.simpleModeButton)}
             >
               {t("querybuilder.simple", { defaultValue: "Simple" })}
             </Button>
@@ -574,7 +589,7 @@ export function QueryBuilder({
               variant={activeMode === "advanced" ? "secondary" : "ghost"}
               onClick={() => handleModeChange("advanced")}
               disabled={disabled}
-              className="h-7 px-2.5"
+              className={cn("h-7 px-2.5", classNames?.advancedModeButton)}
             >
               {t("querybuilder.advanced", { defaultValue: "Advanced" })}
             </Button>
@@ -583,15 +598,35 @@ export function QueryBuilder({
       </div>
 
       {isSimpleMode ? (
-        <div className="rounded-lg bg-muted/30 p-3">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div
+          className={cn("rounded-lg bg-muted/30 p-3", classNames?.simplePanel)}
+        >
+          <div
+            className={cn(
+              "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4",
+              classNames?.simpleGrid
+            )}
+          >
             {fields.map((field) => {
               const rawValue = simpleValues[field.id]
               const fixedOperator = fixedOperators[field.id] ?? "equals"
+              const fieldStyle = resolveQueryBuilderFieldStyles(
+                classNames,
+                partClassNames,
+                fieldStyles?.[field.id]
+              )
 
               return (
-                <div key={field.id} className="space-y-2">
-                  <label className="block text-xs font-medium text-muted-foreground">
+                <div
+                  key={field.id}
+                  className={cn("space-y-2", fieldStyle.classNames.simpleField)}
+                >
+                  <label
+                    className={cn(
+                      "block text-xs font-medium text-muted-foreground",
+                      fieldStyle.classNames.simpleFieldLabel
+                    )}
+                  >
                     {translationNamespace
                       ? t(`${translationNamespace}.fields.${field.id}.label`, {
                           defaultValue: field.label,
@@ -621,13 +656,44 @@ export function QueryBuilder({
                       }}
                       disabled={disabled}
                     >
-                      <SelectTrigger className="h-9 w-full">
+                      <SelectTrigger
+                        className={cn(
+                          "h-9 w-full",
+                          fieldStyle.classNames.selectTrigger,
+                          fieldStyle.partClassNames.valueSelect?.trigger
+                        )}
+                      >
                         <SelectValue placeholder="Any" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="any">Any</SelectItem>
-                        <SelectItem value="true">True</SelectItem>
-                        <SelectItem value="false">False</SelectItem>
+                      <SelectContent
+                        className={cn(
+                          fieldStyle.partClassNames.valueSelect?.content
+                        )}
+                      >
+                        <SelectItem
+                          className={cn(
+                            fieldStyle.partClassNames.valueSelect?.item
+                          )}
+                          value="any"
+                        >
+                          Any
+                        </SelectItem>
+                        <SelectItem
+                          className={cn(
+                            fieldStyle.partClassNames.valueSelect?.item
+                          )}
+                          value="true"
+                        >
+                          True
+                        </SelectItem>
+                        <SelectItem
+                          className={cn(
+                            fieldStyle.partClassNames.valueSelect?.item
+                          )}
+                          value="false"
+                        >
+                          False
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   ) : (
@@ -639,6 +705,8 @@ export function QueryBuilder({
                         handleSimpleValueChange(field.id, next)
                       }
                       disabled={disabled}
+                      classNames={fieldStyle.classNames}
+                      partClassNames={fieldStyle.partClassNames}
                     />
                   )}
                 </div>
@@ -659,18 +727,29 @@ export function QueryBuilder({
           isRoot={true}
           disabled={disabled}
           translationNamespace={translationNamespace}
+          classNames={classNames}
+          partClassNames={partClassNames}
+          fieldStyles={fieldStyles}
         />
       )}
 
       {!embedded && (
-        <div className="flex flex-col-reverse gap-2 border-t border-border/50 pt-2 sm:flex-row sm:items-center sm:justify-end">
+        <div
+          className={cn(
+            "flex flex-col-reverse gap-2 border-t border-border/50 pt-2 sm:flex-row sm:items-center sm:justify-end",
+            classNames?.actions
+          )}
+        >
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={handleClear}
             disabled={disabled || !hasActionableFilters}
-            className="w-full text-muted-foreground sm:w-auto"
+            className={cn(
+              "w-full text-muted-foreground sm:w-auto",
+              classNames?.clearButton
+            )}
           >
             <X size={14} className="mr-1" />
             {t("common.clear", { defaultValue: "Clear" })}
@@ -680,7 +759,7 @@ export function QueryBuilder({
             size="sm"
             onClick={handleSubmit}
             disabled={disabled || !hasActionableFilters}
-            className="w-full gap-2 sm:w-auto"
+            className={cn("w-full gap-2 sm:w-auto", classNames?.submitButton)}
             title={t("common.filter", { defaultValue: "Filter" })}
           >
             <Search size={14} />
@@ -716,7 +795,13 @@ export function QueryBuilder({
         {headerLeft && <div className="flex-1">{headerLeft}</div>}
         <div className="flex items-center justify-end">
           <CollapsibleTrigger
-            render={<Button variant="outline" size="sm" className="gap-2" />}
+            render={
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn("gap-2", classNames?.filterTrigger)}
+              />
+            }
           >
             <Filter size={14} />
             {t("common.filter", { defaultValue: "Filters" })}
@@ -727,7 +812,12 @@ export function QueryBuilder({
               {formatHotkey("alt+k")}
             </kbd>
             {hasActionableFilters && (
-              <span className="h-2 w-2 rounded-full bg-primary" />
+              <span
+                className={cn(
+                  "h-2 w-2 rounded-full bg-primary",
+                  classNames?.activeFilterIndicator
+                )}
+              />
             )}
           </CollapsibleTrigger>
         </div>

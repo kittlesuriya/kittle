@@ -12,10 +12,30 @@ Package versions are currently maintained independently:
 
 - `kittle-core` — `0.6.0`
 - `kittle-adapters` — `0.7.0`
-- `kittle-ui` — `0.1.0`
+- `kittle-ui` — `0.2.0`
 - `testing` — private workspace package, `0.2.0`
 
 ## [Unreleased]
+
+## UI package `0.2.0` — 2026-10-19
+
+### Added
+
+- Typed `classNames` styling slots across QueryBuilder, SchemaForm, DataTable,
+  Sidebar, feedback states, and composite primitives, including generated
+  menus, dialogs, calendar controls, and portaled popups.
+- `partClassNames` forwarding for nested controls and feedback components,
+  without requiring a styling provider or application wrapper.
+- Per-field `fieldStyles` in QueryBuilder and SchemaForm, with wildcard array
+  paths, exact-path precedence, and isolated recursive form styling.
+- Styling examples, exported customization types, and regression coverage for
+  slot targeting, class precedence, nested forwarding, and interactions.
+
+### Compatibility
+
+- Existing styles remain the default. Existing `className`, array
+  `listClassName`, and primitive popup/backdrop overrides retain their behavior.
+- Caller-rendered fields, actions, and operation content remain caller-owned.
 
 ## UI package `0.1.0` — 2026-10-17
 

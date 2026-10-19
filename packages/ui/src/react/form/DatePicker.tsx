@@ -31,6 +31,26 @@ import { Button, buttonVariants } from "../ui/button"
 import { cn } from "../../core/cn"
 import { useUiRuntime } from "../../core/runtime"
 
+export interface DatePickerClassNames {
+  trigger?: string
+  content?: string
+  calendar?: string
+  header?: string
+  navigation?: string
+  monthButton?: string
+  yearButton?: string
+  weekdayGrid?: string
+  weekday?: string
+  dayGrid?: string
+  day?: string
+  monthGrid?: string
+  monthChoice?: string
+  yearGrid?: string
+  yearChoice?: string
+  footer?: string
+  today?: string
+  clear?: string
+}
 interface DatePickerProps {
   id?: string
   value?: string
@@ -39,6 +59,7 @@ interface DatePickerProps {
   className?: string
   fromYear?: number
   toYear?: number
+  classNames?: DatePickerClassNames
 }
 
 type ViewMode = "days" | "months" | "years"
@@ -66,6 +87,7 @@ export function DatePicker({
   onChange,
   disabled,
   className,
+  classNames,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false)
   const [viewMode, setViewMode] = React.useState<ViewMode>("days")
@@ -166,22 +188,40 @@ export function DatePicker({
             buttonVariants({ variant: "outline" }),
             "h-10 w-full justify-start text-left font-normal px-3",
             !selectedDate && "text-muted-foreground",
-            className
+            className,
+            classNames?.trigger
           )}
           disabled={disabled}
         >
           <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
           {selectedDate ? formatDate(selectedDate) : <span>Pick a date</span>}
         </PopoverTrigger>
-        <PopoverContent className="w-[300px] p-0" align="start" sideOffset={4}>
-          <div className="p-3 bg-card rounded-md border border-border">
+        <PopoverContent
+          className={cn("w-[300px] p-0", classNames?.content)}
+          align="start"
+          sideOffset={4}
+        >
+          <div
+            className={cn(
+              "p-3 bg-card rounded-md border border-border",
+              classNames?.calendar
+            )}
+          >
             {/* Header Toolbar */}
-            <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/60">
+            <div
+              className={cn(
+                "flex items-center justify-between pb-2 mb-2 border-b border-border/60",
+                classNames?.header
+              )}
+            >
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                className={cn(
+                  "h-7 w-7 p-0 text-muted-foreground hover:text-foreground",
+                  classNames?.navigation
+                )}
                 onClick={() => {
                   if (viewMode === "days") {
                     setViewDate((prev) => subMonths(prev, 1))
@@ -202,7 +242,10 @@ export function DatePicker({
                     <button
                       type="button"
                       onClick={() => setViewMode("months")}
-                      className="px-2 py-1 text-sm font-semibold text-foreground hover:bg-accent rounded-md flex items-center gap-1 transition-colors cursor-pointer"
+                      className={cn(
+                        "px-2 py-1 text-sm font-semibold text-foreground hover:bg-accent rounded-md flex items-center gap-1 transition-colors cursor-pointer",
+                        classNames?.monthButton
+                      )}
                     >
                       {format(viewDate, "MMMM")}
                       <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
@@ -213,7 +256,10 @@ export function DatePicker({
                         setYearPageStart(Math.floor(currentYear / 12) * 12)
                         setViewMode("years")
                       }}
-                      className="px-2 py-1 text-sm font-semibold text-foreground hover:bg-accent rounded-md flex items-center gap-1 transition-colors cursor-pointer"
+                      className={cn(
+                        "px-2 py-1 text-sm font-semibold text-foreground hover:bg-accent rounded-md flex items-center gap-1 transition-colors cursor-pointer",
+                        classNames?.yearButton
+                      )}
                     >
                       {currentYear}
                       <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
@@ -228,7 +274,10 @@ export function DatePicker({
                       setYearPageStart(Math.floor(currentYear / 12) * 12)
                       setViewMode("years")
                     }}
-                    className="px-2.5 py-1 text-sm font-semibold text-foreground hover:bg-accent rounded-md flex items-center gap-1 transition-colors cursor-pointer"
+                    className={cn(
+                      "px-2.5 py-1 text-sm font-semibold text-foreground hover:bg-accent rounded-md flex items-center gap-1 transition-colors cursor-pointer",
+                      classNames?.yearButton
+                    )}
                   >
                     <span>{currentYear}</span>
                     <span className="text-xs text-muted-foreground font-normal">
@@ -252,7 +301,10 @@ export function DatePicker({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                className={cn(
+                  "h-7 w-7 p-0 text-muted-foreground hover:text-foreground",
+                  classNames?.navigation
+                )}
                 onClick={() => {
                   if (viewMode === "days") {
                     setViewDate((prev) => addMonths(prev, 1))
@@ -270,18 +322,28 @@ export function DatePicker({
             {/* View 1: Days Grid */}
             {viewMode === "days" && (
               <div>
-                <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground mb-1">
+                <div
+                  className={cn(
+                    "grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground mb-1",
+                    classNames?.weekdayGrid
+                  )}
+                >
                   {WEEKDAYS.map((wd) => (
                     <div
                       key={wd}
-                      className="h-6 flex items-center justify-center font-normal text-[0.75rem]"
+                      className={cn(
+                        "h-6 flex items-center justify-center font-normal text-[0.75rem]",
+                        classNames?.weekday
+                      )}
                     >
                       {wd}
                     </div>
                   ))}
                 </div>
 
-                <div className="grid grid-cols-7 gap-1">
+                <div
+                  className={cn("grid grid-cols-7 gap-1", classNames?.dayGrid)}
+                >
                   {calendarDays.map((day, idx) => {
                     const isCurrentMonth = isSameMonth(day, viewDate)
                     const isSelected =
@@ -303,7 +365,8 @@ export function DatePicker({
                             !isSelected &&
                             "border border-primary text-primary font-bold",
                           isSelected &&
-                            "bg-primary text-primary-foreground font-semibold hover:bg-primary/90 shadow-xs"
+                            "bg-primary text-primary-foreground font-semibold hover:bg-primary/90 shadow-xs",
+                          classNames?.day
                         )}
                       >
                         {format(day, "d")}
@@ -316,7 +379,12 @@ export function DatePicker({
 
             {/* View 2: Months Grid (3x4) */}
             {viewMode === "months" && (
-              <div className="grid grid-cols-3 gap-2 py-2">
+              <div
+                className={cn(
+                  "grid grid-cols-3 gap-2 py-2",
+                  classNames?.monthGrid
+                )}
+              >
                 {MONTHS_SHORT.map((monthName, idx) => {
                   const isCurrentSelectedMonth =
                     selectedDate &&
@@ -335,7 +403,8 @@ export function DatePicker({
                           ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                           : isViewingMonth
                             ? "border border-primary text-primary bg-primary/5 font-semibold"
-                            : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                            : "text-foreground hover:bg-accent hover:text-accent-foreground",
+                        classNames?.monthChoice
                       )}
                     >
                       {monthName}
@@ -347,7 +416,12 @@ export function DatePicker({
 
             {/* View 3: Years Grid (3x4) */}
             {viewMode === "years" && (
-              <div className="grid grid-cols-3 gap-2 py-2">
+              <div
+                className={cn(
+                  "grid grid-cols-3 gap-2 py-2",
+                  classNames?.yearGrid
+                )}
+              >
                 {yearsList.map((yr) => {
                   const isCurrentSelectedYear =
                     selectedDate && getYear(selectedDate) === yr
@@ -364,7 +438,8 @@ export function DatePicker({
                           ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                           : isViewingYear
                             ? "border border-primary text-primary bg-primary/5 font-semibold"
-                            : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                            : "text-foreground hover:bg-accent hover:text-accent-foreground",
+                        classNames?.yearChoice
                       )}
                     >
                       {yr}
@@ -376,13 +451,21 @@ export function DatePicker({
           </div>
 
           {/* Quick Footer Action Bar */}
-          <div className="flex items-center justify-between p-2 border-t border-border bg-card">
+          <div
+            className={cn(
+              "flex items-center justify-between p-2 border-t border-border bg-card",
+              classNames?.footer
+            )}
+          >
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={handleToday}
-              className="text-xs h-7 text-primary hover:text-primary hover:bg-primary/10"
+              className={cn(
+                "text-xs h-7 text-primary hover:text-primary hover:bg-primary/10",
+                classNames?.today
+              )}
             >
               Today
             </Button>
@@ -392,7 +475,10 @@ export function DatePicker({
                 variant="ghost"
                 size="sm"
                 onClick={handleClear}
-                className="text-xs h-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                className={cn(
+                  "text-xs h-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10",
+                  classNames?.clear
+                )}
               >
                 Clear
               </Button>

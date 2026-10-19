@@ -15,6 +15,7 @@ export * from "./zodToFields"
 export * from "./fieldRegistry"
 export * from "./fieldMeta"
 export * from "./types"
+export * from "./fieldStyles"
 
 // Resolve star-export ambiguities: these names are aliases re-exported by two
 // modules (gridLogic <-> gridHelpers, schemaParser <-> zodToFields).

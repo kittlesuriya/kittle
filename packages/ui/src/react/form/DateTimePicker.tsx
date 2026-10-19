@@ -244,22 +244,30 @@ interface TimePickerProps {
   onChange?: (date: Date | undefined) => void
   /** Smallest unit shown. Defaults to "second". */
   granularity?: Granularity
+  classNames?: DateTimePickerClassNames
 }
 
 function TimePicker({
   date,
   onChange,
   granularity = "second",
+  classNames,
 }: TimePickerProps) {
   const hourRef = useRef<HTMLInputElement>(null)
   const minuteRef = useRef<HTMLInputElement>(null)
   const secondRef = useRef<HTMLInputElement>(null)
 
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div
+      className={cn(
+        "flex items-center justify-center gap-2",
+        classNames?.timePanel
+      )}
+    >
       <Clock className="h-4 w-4 text-muted-foreground" />
       <TimePickerInput
         picker="hours"
+        className={classNames?.timeInput}
         date={date}
         onDateChange={onChange}
         ref={hourRef}
@@ -268,6 +276,7 @@ function TimePicker({
       <span className="text-muted-foreground">:</span>
       <TimePickerInput
         picker="minutes"
+        className={classNames?.timeInput}
         date={date}
         onDateChange={onChange}
         ref={minuteRef}
@@ -279,6 +288,7 @@ function TimePicker({
           <span className="text-muted-foreground">:</span>
           <TimePickerInput
             picker="seconds"
+            className={classNames?.timeInput}
             date={date}
             onDateChange={onChange}
             ref={secondRef}
@@ -294,6 +304,28 @@ function TimePicker({
 // DateTimePicker
 // ---------------------------------------------------------------------------
 
+export interface DateTimePickerClassNames {
+  trigger?: string
+  content?: string
+  calendar?: string
+  header?: string
+  navigation?: string
+  monthSelectTrigger?: string
+  monthSelectContent?: string
+  monthSelectItem?: string
+  yearSelectTrigger?: string
+  yearSelectContent?: string
+  yearSelectItem?: string
+  weekdayGrid?: string
+  weekday?: string
+  dayGrid?: string
+  day?: string
+  timePanel?: string
+  timeInput?: string
+  footer?: string
+  now?: string
+  clear?: string
+}
 interface DateTimePickerProps {
   id?: string
   /** Wall-clock value in "yyyy-MM-ddTHH:mm[:ss]" form; "" when empty. */
@@ -303,6 +335,7 @@ interface DateTimePickerProps {
   className?: string
   /** Smallest unit shown and stored. Defaults to "second". */
   granularity?: Granularity
+  classNames?: DateTimePickerClassNames
 }
 
 const MONTHS = Array.from({ length: 12 }, (_, i) =>
@@ -329,6 +362,7 @@ export function DateTimePicker({
   disabled,
   className,
   granularity = "second",
+  classNames,
 }: DateTimePickerProps) {
   const [isOpen, setIsOpen] = React.useState(false)
   const { dateFnsPattern } = useUiRuntime().formatDate.useTenantDateFormatter()
@@ -426,7 +460,8 @@ export function DateTimePicker({
             buttonVariants({ variant: "outline" }),
             "h-10 w-full justify-start text-left font-normal px-3",
             !selectedDate && "text-muted-foreground",
-            className
+            className,
+            classNames?.trigger
           )}
           disabled={disabled}
         >
@@ -442,15 +477,32 @@ export function DateTimePicker({
             <span>Pick date &amp; time</span>
           )}
         </PopoverTrigger>
-        <PopoverContent className="w-[320px] p-0" align="start" sideOffset={4}>
-          <div className="p-3 bg-card rounded-md border border-border">
+        <PopoverContent
+          className={cn("w-[320px] p-0", classNames?.content)}
+          align="start"
+          sideOffset={4}
+        >
+          <div
+            className={cn(
+              "p-3 bg-card rounded-md border border-border",
+              classNames?.calendar
+            )}
+          >
             {/* Header Toolbar */}
-            <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/60">
+            <div
+              className={cn(
+                "flex items-center justify-between pb-2 mb-2 border-b border-border/60",
+                classNames?.header
+              )}
+            >
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                className={cn(
+                  "h-7 w-7 p-0 text-muted-foreground hover:text-foreground",
+                  classNames?.navigation
+                )}
                 onClick={() => setViewDate((prev) => subMonths(prev, 1))}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -464,12 +516,21 @@ export function DateTimePicker({
                     setViewDate((prev) => setDateMonth(prev, Number(v)))
                   }}
                 >
-                  <SelectTrigger className="w-fit gap-1 border-none p-0 font-semibold text-foreground focus:bg-accent">
+                  <SelectTrigger
+                    className={cn(
+                      "w-fit gap-1 border-none p-0 font-semibold text-foreground focus:bg-accent",
+                      classNames?.monthSelectTrigger
+                    )}
+                  >
                     <SelectValue>{MONTHS[currentMonth]}</SelectValue>
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className={classNames?.monthSelectContent}>
                     {MONTHS.map((monthName, idx) => (
-                      <SelectItem key={monthName} value={String(idx)}>
+                      <SelectItem
+                        key={monthName}
+                        value={String(idx)}
+                        className={classNames?.monthSelectItem}
+                      >
                         {monthName}
                       </SelectItem>
                     ))}
@@ -483,12 +544,26 @@ export function DateTimePicker({
                     setViewDate((prev) => setDateYear(prev, Number(v)))
                   }}
                 >
-                  <SelectTrigger className="w-fit gap-1 border-none p-0 font-semibold text-foreground focus:bg-accent">
+                  <SelectTrigger
+                    className={cn(
+                      "w-fit gap-1 border-none p-0 font-semibold text-foreground focus:bg-accent",
+                      classNames?.yearSelectTrigger
+                    )}
+                  >
                     <SelectValue>{currentYear}</SelectValue>
                   </SelectTrigger>
-                  <SelectContent className="max-h-[260px]">
+                  <SelectContent
+                    className={cn(
+                      "max-h-[260px]",
+                      classNames?.yearSelectContent
+                    )}
+                  >
                     {yearsList.map((yr) => (
-                      <SelectItem key={yr} value={String(yr)}>
+                      <SelectItem
+                        key={yr}
+                        value={String(yr)}
+                        className={classNames?.yearSelectItem}
+                      >
                         {yr}
                       </SelectItem>
                     ))}
@@ -500,7 +575,10 @@ export function DateTimePicker({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                className={cn(
+                  "h-7 w-7 p-0 text-muted-foreground hover:text-foreground",
+                  classNames?.navigation
+                )}
                 onClick={() => setViewDate((prev) => addMonths(prev, 1))}
               >
                 <ChevronRight className="h-4 w-4" />
@@ -509,18 +587,28 @@ export function DateTimePicker({
 
             {/* Days Grid */}
             <div>
-              <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground mb-1">
+              <div
+                className={cn(
+                  "grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground mb-1",
+                  classNames?.weekdayGrid
+                )}
+              >
                 {WEEKDAYS.map((wd) => (
                   <div
                     key={wd}
-                    className="h-6 flex items-center justify-center font-normal text-[0.75rem]"
+                    className={cn(
+                      "h-6 flex items-center justify-center font-normal text-[0.75rem]",
+                      classNames?.weekday
+                    )}
                   >
                     {wd}
                   </div>
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-1">
+              <div
+                className={cn("grid grid-cols-7 gap-1", classNames?.dayGrid)}
+              >
                 {calendarDays.map((day, idx) => {
                   const isCurrentMonth = isSameMonth(day, viewDate)
                   const isSelected =
@@ -542,7 +630,8 @@ export function DateTimePicker({
                           !isSelected &&
                           "border border-primary text-primary font-bold",
                         isSelected &&
-                          "bg-primary text-primary-foreground font-semibold hover:bg-primary/90 shadow-xs"
+                          "bg-primary text-primary-foreground font-semibold hover:bg-primary/90 shadow-xs",
+                        classNames?.day
                       )}
                     >
                       {format(day, "d")}
@@ -558,18 +647,27 @@ export function DateTimePicker({
                 date={timeSource}
                 onChange={handleTimeChange}
                 granularity={granularity}
+                classNames={classNames}
               />
             </div>
           </div>
 
           {/* Quick Footer Action Bar */}
-          <div className="flex items-center justify-between p-2 border-t border-border bg-card">
+          <div
+            className={cn(
+              "flex items-center justify-between p-2 border-t border-border bg-card",
+              classNames?.footer
+            )}
+          >
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={handleNow}
-              className="text-xs h-7 text-primary hover:text-primary hover:bg-primary/10"
+              className={cn(
+                "text-xs h-7 text-primary hover:text-primary hover:bg-primary/10",
+                classNames?.now
+              )}
             >
               Now
             </Button>
@@ -579,7 +677,10 @@ export function DateTimePicker({
                 variant="ghost"
                 size="sm"
                 onClick={handleClear}
-                className="text-xs h-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                className={cn(
+                  "text-xs h-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10",
+                  classNames?.clear
+                )}
               >
                 Clear
               </Button>

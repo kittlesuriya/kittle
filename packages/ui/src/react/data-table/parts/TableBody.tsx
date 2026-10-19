@@ -2,22 +2,27 @@
 
 import { flexRender, type RowData } from "@tanstack/react-table"
 import type { TableBodyProps, ColumnMeta } from "../../../core/table/types"
+import { cn } from "../../../core/cn"
 
 /**
  * TableBody component for rendering table rows
  */
 export function TableBody<TData extends RowData>({
   table,
+  classNames,
 }: TableBodyProps<TData>): React.ReactElement {
   const rows = table.getRowModel().rows
 
   if (!rows.length) {
     return (
-      <tbody>
+      <tbody className={cn(classNames?.body)}>
         <tr>
           <td
             colSpan={table.getAllLeafColumns().length || 1}
-            className="py-10 text-center text-muted-foreground"
+            className={cn(
+              "py-10 text-center text-muted-foreground",
+              classNames?.cell
+            )}
           >
             No data available
           </td>
@@ -27,11 +32,14 @@ export function TableBody<TData extends RowData>({
   }
 
   return (
-    <tbody className="divide-y divide-border">
+    <tbody className={cn("divide-y divide-border", classNames?.body)}>
       {rows.map((row) => (
         <tr
           key={row.id}
-          className="table-row-virtualized hover:bg-accent/50 transition-colors duration-150"
+          className={cn(
+            "table-row-virtualized hover:bg-accent/50 transition-colors duration-150",
+            classNames?.row
+          )}
         >
           {row.getVisibleCells().map((cell) => {
             const meta = cell.column.columnDef.meta as ColumnMeta | undefined
@@ -57,7 +65,10 @@ export function TableBody<TData extends RowData>({
               <td
                 key={cell.id}
                 style={widthStyle}
-                className={`px-3 py-1 ${isWrap ? "whitespace-normal" : "whitespace-nowrap"} text-sm text-foreground ${tdClass}`}
+                className={cn(
+                  `px-3 py-1 ${isWrap ? "whitespace-normal" : "whitespace-nowrap"} text-sm text-foreground ${tdClass}`,
+                  classNames?.cell
+                )}
               >
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
               </td>

@@ -36,6 +36,7 @@ import type {
   SelectFieldConfig,
   FieldValue,
 } from "../../core/form/types"
+import { cn } from "../../core/cn"
 
 /**
  * Check if options are grouped
@@ -85,6 +86,12 @@ export function FieldRenderer({
   isSubmitted,
   translationNamespace,
   formValues,
+  classNames,
+  partClassNames,
+  fieldPath,
+  fieldStyles,
+  baseClassNames,
+  basePartClassNames,
 }: FieldRendererProps & {
   translationNamespace?: string
 }): React.ReactElement | null {
@@ -126,6 +133,12 @@ export function FieldRenderer({
           compactItems={arrayConfig.compactItems}
           help={arrayConfig.help}
           idPrefix={id}
+          classNames={classNames}
+          partClassNames={partClassNames}
+          fieldPath={fieldPath}
+          fieldStyles={fieldStyles}
+          baseClassNames={baseClassNames}
+          basePartClassNames={basePartClassNames}
         />
       )
     }
@@ -141,7 +154,7 @@ export function FieldRenderer({
           onBlur={onBlur}
           placeholder={cfg.placeholder ?? ""}
           disabled={disabled}
-          className="h-10"
+          className={cn("h-10", classNames?.control)}
         />
       )
 
@@ -154,7 +167,8 @@ export function FieldRenderer({
           onBlur={onBlur}
           placeholder={cfg.placeholder ?? ""}
           disabled={disabled}
-          className="h-10"
+          className={cn("h-10", classNames?.control)}
+          classNames={partClassNames?.password}
         />
       )
 
@@ -168,7 +182,7 @@ export function FieldRenderer({
           placeholder={cfg.placeholder ?? ""}
           disabled={disabled}
           rows={4}
-          className="resize-none"
+          className={cn("resize-none", classNames?.control)}
         />
       )
 
@@ -183,7 +197,7 @@ export function FieldRenderer({
           placeholder={cfg.placeholder ?? ""}
           disabled={disabled}
           inputMode="numeric"
-          className="h-10"
+          className={cn("h-10", classNames?.control)}
         />
       )
 
@@ -194,7 +208,8 @@ export function FieldRenderer({
           value={value as string}
           onChange={onChange}
           disabled={disabled}
-          className="h-10"
+          className={cn("h-10", classNames?.control)}
+          classNames={partClassNames?.datePicker}
         />
       )
 
@@ -207,7 +222,7 @@ export function FieldRenderer({
           onChange={(e) => onChange(e.target.value)}
           onBlur={onBlur}
           disabled={disabled}
-          className="h-10"
+          className={cn("h-10", classNames?.control)}
         />
       )
 
@@ -218,7 +233,8 @@ export function FieldRenderer({
           value={value as string}
           onChange={onChange}
           disabled={disabled}
-          className="h-10"
+          className={cn("h-10", classNames?.control)}
+          classNames={partClassNames?.dateTimePicker}
         />
       )
 
@@ -235,14 +251,25 @@ export function FieldRenderer({
           }
           disabled={disabled}
         >
-          <SelectTrigger id={fieldId} className="h-10 w-full">
+          <SelectTrigger
+            id={fieldId}
+            className={cn(
+              "h-10 w-full",
+              classNames?.control,
+              partClassNames?.select?.trigger
+            )}
+          >
             <SelectValue placeholder={cfg.placeholder ?? "Select an option"}>
               {value ? getLabelForValue(value, flatOptions) : null}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className={partClassNames?.select?.content}>
             {flatOptions.map((o) => (
-              <SelectItem key={String(o.value)} value={String(o.value)}>
+              <SelectItem
+                key={String(o.value)}
+                value={String(o.value)}
+                className={partClassNames?.select?.item}
+              >
                 {o.label}
               </SelectItem>
             ))}
@@ -256,7 +283,7 @@ export function FieldRenderer({
           value={value ?? ""}
           onValueChange={(v: string) => onChange(v)}
           disabled={disabled}
-          className="space-y-2"
+          className={cn("space-y-2", classNames?.control)}
         >
           {flatOptions.map((o) => {
             const safeValue = String(o.value).replace(/[^a-zA-Z0-9-_]/g, "_")
@@ -284,6 +311,7 @@ export function FieldRenderer({
             checked={Boolean(value)}
             onCheckedChange={(v) => onChange(Boolean(v))}
             disabled={disabled}
+            className={classNames?.control}
           />
           <Label
             htmlFor={fieldId}
@@ -301,6 +329,7 @@ export function FieldRenderer({
           checked={Boolean(value)}
           onCheckedChange={(v) => onChange(Boolean(v))}
           disabled={disabled}
+          className={classNames?.control}
         />
       )
 
@@ -319,6 +348,8 @@ export function FieldRenderer({
           maxCount={msCfg.maxCount ?? 3}
           disabled={disabled}
           getDescendantValues={msCfg.getDescendantValues}
+          className={classNames?.control}
+          classNames={partClassNames?.multiSelect}
         />
       )
     }
@@ -338,6 +369,10 @@ export function FieldRenderer({
           }}
           placeholder={cfg.placeholder ?? "Search..."}
           disabled={disabled}
+          classNames={{
+            ...partClassNames?.autocomplete,
+            input: cn(classNames?.control, partClassNames?.autocomplete?.input),
+          }}
         >
           <AutocompleteTrigger id={fieldId} onBlur={onBlur} />
           <AutocompleteContent>
@@ -357,6 +392,8 @@ export function FieldRenderer({
           value={value as string}
           onChange={onChange}
           disabled={disabled}
+          className={classNames?.control}
+          classNames={partClassNames?.colorPicker}
         />
       )
 

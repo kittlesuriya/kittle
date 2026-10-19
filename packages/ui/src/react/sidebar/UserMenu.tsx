@@ -16,6 +16,7 @@ import {
 } from "../ui/dropdown-menu"
 import { useUiRuntime } from "../../core/runtime"
 import { cn } from "../../core/cn"
+import type { UserMenuProps } from "../../core/menu/types"
 
 function getInitials(name?: string): string {
   if (!name) return ""
@@ -45,16 +46,8 @@ export function UserMenu({
   onLogout,
   subtitle,
   badgeLabel,
-}: {
-  name?: string
-  email?: string
-  avatarUrl?: string
-  onLogout?: () => void
-  /** Second line under the name. Falls back to `email` when omitted. */
-  subtitle?: string
-  /** Overrides the default "Signed in" badge label (e.g. "Verified Customer"). */
-  badgeLabel?: string
-}) {
+  classNames,
+}: UserMenuProps) {
   const { t, i18n } = useTranslation()
   const { theme, setTheme } = useTheme()
   const { normalizeLocale, persistLocale } = useUiRuntime().locale
@@ -79,7 +72,10 @@ export function UserMenu({
         aria-label={
           name ? `Open account menu for ${name}` : "Open account menu"
         }
-        className="group inline-flex min-w-0 cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className={cn(
+          "group inline-flex min-w-0 cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          classNames?.userMenuTrigger
+        )}
       >
         <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-primary-foreground shadow-sm ring-2 ring-background ring-offset-1 ring-offset-border">
           {avatarUrl ? (
@@ -110,9 +106,17 @@ export function UserMenu({
         />
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-72 p-0 ring-0">
+      <DropdownMenuContent
+        align="end"
+        className={cn("w-72 p-0 ring-0", classNames?.userMenuContent)}
+      >
         {/* User Profile */}
-        <div className="flex items-center gap-3 px-4 py-3">
+        <div
+          className={cn(
+            "flex items-center gap-3 px-4 py-3",
+            classNames?.userMenuProfile
+          )}
+        >
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground overflow-hidden">
             {avatarUrl ? (
               <img
@@ -146,7 +150,7 @@ export function UserMenu({
         <DropdownMenuSeparator />
 
         {/* Language */}
-        <div className="px-4 py-3">
+        <div className={cn("px-4 py-3", classNames?.userMenuLanguageSection)}>
           <p className="text-xs font-medium text-muted-foreground mb-1">
             {t("sidebar.language", { defaultValue: "Language" })}
           </p>
@@ -165,7 +169,8 @@ export function UserMenu({
                   "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer",
                   currentLocale === lang.code
                     ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80",
+                  classNames?.userMenuLanguageOption
                 )}
               >
                 {lang.label}
@@ -187,7 +192,7 @@ export function UserMenu({
         <DropdownMenuSeparator />
 
         {/* Appearance */}
-        <div className="px-4 py-3">
+        <div className={cn("px-4 py-3", classNames?.userMenuAppearanceSection)}>
           <p className="text-xs font-medium text-muted-foreground mb-1">
             {t("sidebar.appearance", { defaultValue: "Appearance" })}
           </p>
@@ -206,7 +211,8 @@ export function UserMenu({
                   "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer",
                   currentTheme === value
                     ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80",
+                  classNames?.userMenuAppearanceOption
                 )}
               >
                 <Icon size={12} />
@@ -222,7 +228,10 @@ export function UserMenu({
         <button
           type="button"
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-destructive/5 transition-colors cursor-pointer"
+          className={cn(
+            "w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-destructive/5 transition-colors cursor-pointer",
+            classNames?.userMenuLogoutButton
+          )}
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
             <LogOut size={14} />

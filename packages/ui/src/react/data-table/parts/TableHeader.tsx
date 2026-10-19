@@ -30,6 +30,7 @@ import type {
   ColumnMeta,
 } from "../../../core/table/types"
 import type { DataTableFeatures } from "../../../core/table/features"
+import { cn } from "../../../core/cn"
 
 /**
  * Extended column meta type
@@ -62,6 +63,7 @@ interface HeaderCellProps<TData extends RowData> {
   isDropTarget: boolean
   dropSide: ColumnDropPosition
   isDraggingSource: boolean
+  className?: string
 }
 
 /** Left half of the target => insert before, right half => insert after. */
@@ -82,6 +84,7 @@ function HeaderCell<TData extends RowData>({
   isDropTarget,
   dropSide,
   isDraggingSource,
+  className,
 }: HeaderCellProps<TData>) {
   const { attributes, listeners, setNodeRef, isDragging } = useSortable({
     id: header.column.id,
@@ -141,9 +144,12 @@ function HeaderCell<TData extends RowData>({
       ref={setNodeRef}
       colSpan={header.colSpan}
       style={widthStyle}
-      className={`relative px-3 py-3.5 text-xs font-semibold uppercase tracking-wide text-table-heading ${thClass} ${
-        dragging ? "opacity-60" : ""
-      }`}
+      className={cn(
+        `relative px-3 py-3.5 text-xs font-semibold uppercase tracking-wide text-table-heading ${thClass} ${
+          dragging ? "opacity-60" : ""
+        }`,
+        className
+      )}
     >
       <div className={`flex items-center gap-1.5 w-full ${justifyClass}`}>
         {showHandle && (
@@ -214,6 +220,7 @@ function HeaderCell<TData extends RowData>({
 export function TableHeader<TData extends RowData>({
   table,
   onColumnReorder,
+  classNames,
 }: TableHeaderProps<TData>): React.ReactElement {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<DropTargetState>({
@@ -296,7 +303,12 @@ export function TableHeader<TData extends RowData>({
         container: typeof document === "undefined" ? undefined : document.body,
       }}
     >
-      <thead className="bg-secondary/10 border-b border-border dark:bg-muted dark:border-0">
+      <thead
+        className={cn(
+          "bg-secondary/10 border-b border-border dark:bg-muted dark:border-0",
+          classNames?.header
+        )}
+      >
         {table.getHeaderGroups().map((headerGroup) => {
           const hasContent = headerGroup.headers.some((header) => {
             const meta = header.column.columnDef.meta as
@@ -324,7 +336,7 @@ export function TableHeader<TData extends RowData>({
             .map((header) => header.column.id)
 
           return (
-            <tr key={headerGroup.id}>
+            <tr key={headerGroup.id} className={cn(classNames?.headerRow)}>
               <SortableContext items={sortableIds}>
                 {headerGroup.headers.map(
                   (header: Header<DataTableFeatures, TData, unknown>) => {
@@ -333,7 +345,7 @@ export function TableHeader<TData extends RowData>({
                         <th
                           key={header.id}
                           colSpan={header.colSpan}
-                          className="px-3 py-3"
+                          className={cn("px-3 py-3", classNames?.headerCell)}
                         />
                       )
                     }
@@ -357,6 +369,7 @@ export function TableHeader<TData extends RowData>({
                         }
                         dropSide={dropTarget.side}
                         isDraggingSource={activeId === header.column.id}
+                        className={classNames?.headerCell}
                       />
                     )
                   }

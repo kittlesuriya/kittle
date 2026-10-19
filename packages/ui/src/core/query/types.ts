@@ -1,4 +1,6 @@
 import type { z } from "zod"
+import type { MultiSelectClassNames } from "../../react/ui/multi-select"
+import type { EmptyStateClassNames } from "../../react/feedback/EmptyState"
 
 // =============================================================================
 // Operator Types
@@ -120,6 +122,87 @@ export interface QueryBuilderProps {
   translationNamespace?: string
   embedded?: boolean
   headerLeft?: React.ReactNode
+  classNames?: QueryBuilderClassNames
+  partClassNames?: QueryBuilderPartClassNames
+  fieldStyles?: Record<string, QueryBuilderFieldStyles>
+}
+
+/** Class overrides for stable QueryBuilder styling slots. */
+export type QueryBuilderClassNames = Partial<
+  Record<
+    | "container"
+    | "toolbar"
+    | "searchInput"
+    | "modeToggle"
+    | "simplePanel"
+    | "simpleGrid"
+    | "simpleField"
+    | "simpleFieldLabel"
+    | "rangeSeparator"
+    | "emptyState"
+    | "group"
+    | "groupHeader"
+    | "groupContent"
+    | "groupActions"
+    | "condition"
+    | "fieldSelectTrigger"
+    | "operatorSelectTrigger"
+    | "valueWrapper"
+    | "valueInput"
+    | "rangeWrapper"
+    | "rangeInput"
+    | "selectTrigger"
+    | "multiSelect"
+    | "actions"
+    | "clearButton"
+    | "submitButton"
+    | "filterTrigger"
+    | "activeFilterIndicator"
+    | "simpleModeButton"
+    | "advancedModeButton"
+    | "groupLogicToggle"
+    | "groupLogicDescription"
+    | "addConditionButton"
+    | "addGroupButton"
+    | "removeGroupButton"
+    | "removeConditionButton"
+    | "groupEmpty",
+    string
+  >
+>
+
+export type QueryBuilderPartClassNames = {
+  fieldSelect?: { trigger?: string; content?: string; item?: string }
+  operatorSelect?: { trigger?: string; content?: string; item?: string }
+  valueSelect?: { trigger?: string; content?: string; item?: string }
+  multiSelect?: MultiSelectClassNames
+  emptyState?: EmptyStateClassNames
+}
+
+export type QueryBuilderFieldClassNames = Partial<
+  Pick<
+    QueryBuilderClassNames,
+    | "condition"
+    | "simpleField"
+    | "simpleFieldLabel"
+    | "fieldSelectTrigger"
+    | "operatorSelectTrigger"
+    | "valueWrapper"
+    | "valueInput"
+    | "rangeWrapper"
+    | "rangeInput"
+    | "selectTrigger"
+    | "multiSelect"
+    | "rangeSeparator"
+  >
+>
+export type QueryBuilderFieldPartClassNames = Pick<
+  QueryBuilderPartClassNames,
+  "fieldSelect" | "operatorSelect" | "valueSelect" | "multiSelect"
+>
+export interface QueryBuilderFieldStyles {
+  classNames?: QueryBuilderFieldClassNames
+  partClassNames?: QueryBuilderFieldPartClassNames
 }
 
 /**
@@ -138,6 +221,9 @@ export interface QueryGroupProps {
   disabled?: boolean
   translationNamespace?: string
   depth?: number
+  classNames?: QueryBuilderClassNames
+  partClassNames?: QueryBuilderPartClassNames
+  fieldStyles?: Record<string, QueryBuilderFieldStyles>
 }
 
 /**
@@ -151,6 +237,9 @@ export interface QueryConditionProps {
   disabled?: boolean
   showDragHandle?: boolean
   translationNamespace?: string
+  classNames?: QueryBuilderClassNames
+  partClassNames?: QueryBuilderPartClassNames
+  fieldStyles?: Record<string, QueryBuilderFieldStyles>
 }
 
 /**
@@ -162,6 +251,8 @@ export interface ValueInputProps {
   value: FilterValue
   onChange: (value: FilterValue) => void
   disabled?: boolean
+  classNames?: QueryBuilderClassNames
+  partClassNames?: QueryBuilderPartClassNames
 }
 
 // =============================================================================

@@ -41,6 +41,7 @@ export function MenuSection({
   showHotkeys,
   density = "xs",
   onOpenSecondary,
+  classNames,
 }: MenuSectionProps): React.ReactElement {
   const { t } = useTranslation()
   const itemPad = ITEM_PAD[density]
@@ -51,10 +52,13 @@ export function MenuSection({
   const dropdownItem = DROPDOWN_ITEM[density]
   const dropdownActiveRail = DROPDOWN_ACTIVE_RAIL[density]
   return (
-    <div className={sectionGap}>
+    <div className={cn(sectionGap, classNames?.menuSection)}>
       {!collapsed && title && (
         <div
-          className={`${sectionHeading} font-semibold text-sidebar-foreground/80 uppercase tracking-wider`}
+          className={cn(
+            `${sectionHeading} font-semibold text-sidebar-foreground/80 uppercase tracking-wider`,
+            classNames?.menuSectionHeading
+          )}
         >
           {t(`sidebar.sections.${title.toLowerCase()}`, {
             defaultValue: title,
@@ -90,7 +94,8 @@ export function MenuSection({
                     className={cn(
                       menuItemBaseClasses.default,
                       menuItemBaseClasses.collapsed,
-                      "w-full opacity-50 cursor-not-allowed"
+                      "w-full opacity-50 cursor-not-allowed",
+                      classNames?.menuItem
                     )}
                     title={`${item.title}${item.badge ? ` (${String(item.badge)})` : ""}`}
                     aria-disabled="true"
@@ -110,7 +115,8 @@ export function MenuSection({
                     menuItemBaseClasses.default,
                     menuItemBaseClasses.collapsed,
                     isActive && menuItemBaseClasses.active,
-                    "w-full"
+                    "w-full",
+                    classNames?.menuItem
                   )}
                   title={item.title}
                   onKeyDown={keyNavigate(item.path)}
@@ -130,7 +136,8 @@ export function MenuSection({
                     menuItemBaseClasses.default,
                     menuItemBaseClasses.expanded,
                     itemPad,
-                    "w-full opacity-50 cursor-not-allowed"
+                    "w-full opacity-50 cursor-not-allowed",
+                    classNames?.menuItem
                   )}
                   aria-disabled="true"
                   title={`${item.title}${item.badge ? ` (${String(item.badge)})` : ""}`}
@@ -143,7 +150,9 @@ export function MenuSection({
                     })}
                   </span>
                   {showBadge && item.badge && (
-                    <span className={badgeClasses}>{item.badge}</span>
+                    <span className={cn(badgeClasses, classNames?.menuBadge)}>
+                      {item.badge}
+                    </span>
                   )}
                 </div>
               )
@@ -159,7 +168,8 @@ export function MenuSection({
                   menuItemBaseClasses.default,
                   menuItemBaseClasses.expanded,
                   itemPad,
-                  isActive && menuItemBaseClasses.active
+                  isActive && menuItemBaseClasses.active,
+                  classNames?.menuItem
                 )}
                 onKeyDown={keyNavigate(item.path)}
                 {...ariaProps}
@@ -172,10 +182,12 @@ export function MenuSection({
                   fallback="truncate"
                 />
                 {showBadge && item.badge && (
-                  <span className={badgeClasses}>{item.badge}</span>
+                  <span className={cn(badgeClasses, classNames?.menuBadge)}>
+                    {item.badge}
+                  </span>
                 )}
                 {showHotkeys && item.hotkey && !isActive && (
-                  <kbd className={hotkeyClasses}>
+                  <kbd className={cn(hotkeyClasses, classNames?.menuHotkey)}>
                     {formatHotkey(item.hotkey)}
                   </kbd>
                 )}
@@ -197,7 +209,8 @@ export function MenuSection({
                     menuItemBaseClasses.default,
                     menuItemBaseClasses.collapsed,
                     isActive && menuItemBaseClasses.active,
-                    "w-full"
+                    "w-full",
+                    classNames?.menuItem
                   )}
                   title={item.title}
                   {...ariaProps}
@@ -218,7 +231,8 @@ export function MenuSection({
                   menuItemBaseClasses.expanded,
                   itemPad,
                   isActive && menuItemBaseClasses.active,
-                  "w-full"
+                  "w-full",
+                  classNames?.menuItem
                 )}
                 {...ariaProps}
               >
@@ -234,7 +248,8 @@ export function MenuSection({
                     "shrink-0",
                     isActive
                       ? "text-sidebar-primary-foreground"
-                      : "text-sidebar-foreground/80"
+                      : "text-sidebar-foreground/80",
+                    classNames?.menuDisclosureIcon
                   )}
                 />
               </button>
@@ -253,7 +268,8 @@ export function MenuSection({
                   menuItemBaseClasses.default,
                   menuItemBaseClasses.collapsed,
                   isActive && menuItemBaseClasses.active,
-                  "w-full"
+                  "w-full",
+                  classNames?.menuItem
                 )}
                 title={item.title}
                 {...ariaProps}
@@ -276,7 +292,8 @@ export function MenuSection({
                   menuItemBaseClasses.expanded,
                   itemPad,
                   isActive && menuItemBaseClasses.active,
-                  "w-full"
+                  "w-full",
+                  classNames?.menuItem
                 )}
                 {...ariaProps}
               >
@@ -293,14 +310,18 @@ export function MenuSection({
                     isActive
                       ? "text-sidebar-primary-foreground"
                       : "text-sidebar-foreground/80",
-                    isOpen && "rotate-180"
+                    isOpen && "rotate-180",
+                    classNames?.menuDisclosureIcon
                   )}
                 />
               </button>
 
               {isOpen && item.children && (
                 <div
-                  className={`${dropdownContainer} border-l border-sidebar-border`}
+                  className={cn(
+                    `${dropdownContainer} border-l border-sidebar-border`,
+                    classNames?.menuDropdown
+                  )}
                 >
                   {item.children.map((child) => {
                     const childActive = pathname === child.path
@@ -311,7 +332,8 @@ export function MenuSection({
                           key={child.id || child.path}
                           className={cn(
                             `${dropdownItem} ${RADIUS.md}`,
-                            "text-sidebar-foreground opacity-50 cursor-not-allowed"
+                            "text-sidebar-foreground opacity-50 cursor-not-allowed",
+                            classNames?.menuItem
                           )}
                           aria-disabled="true"
                           title={`${child.title}${child.badge ? ` (${String(child.badge)})` : ""}`}
@@ -341,7 +363,8 @@ export function MenuSection({
                           "text-sidebar-foreground",
                           "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors",
                           childActive &&
-                            "bg-sidebar-primary text-sidebar-primary-foreground font-medium hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground"
+                            "bg-sidebar-primary text-sidebar-primary-foreground font-medium hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
+                          classNames?.menuItem
                         )}
                       >
                         {childActive && (
@@ -349,7 +372,8 @@ export function MenuSection({
                             aria-hidden="true"
                             className={cn(
                               "absolute top-0 bottom-0 w-[2px] rounded-full bg-sidebar-primary",
-                              dropdownActiveRail
+                              dropdownActiveRail,
+                              classNames?.menuActiveIndicator
                             )}
                           />
                         )}
@@ -361,10 +385,19 @@ export function MenuSection({
                           fallback="truncate"
                         />
                         {showBadge && child.badge && (
-                          <span className={badgeClasses}>{child.badge}</span>
+                          <span
+                            className={cn(badgeClasses, classNames?.menuBadge)}
+                          >
+                            {child.badge}
+                          </span>
                         )}
                         {showHotkeys && child.hotkey && !childActive && (
-                          <kbd className={hotkeyClasses}>
+                          <kbd
+                            className={cn(
+                              hotkeyClasses,
+                              classNames?.menuHotkey
+                            )}
+                          >
                             {formatHotkey(child.hotkey)}
                           </kbd>
                         )}

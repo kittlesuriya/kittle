@@ -3,9 +3,12 @@
 import type { ReactTable, Row, RowData } from "@tanstack/react-table"
 import type { DataTableFeatures } from "../../../core/table/features"
 import type { ColumnMeta } from "../../../core/table/types"
+import type { DataTableClassNames } from "../../../core/table/types"
+import { cn } from "../../../core/cn"
 
 interface TableFooterProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData>
+  classNames?: Pick<DataTableClassNames, "footer" | "footerCell">
 }
 
 export function sumValues(values: unknown[]): string {
@@ -22,6 +25,7 @@ export function sumValues(values: unknown[]): string {
 
 export function TableFooter<TData extends RowData>({
   table,
+  classNames,
 }: TableFooterProps<TData>): React.ReactElement | null {
   /* Sum over the currently visible page rows only (table.getRowModel().rows).
      When client-side paginated (manualPagination === false, for example local data views),
@@ -40,7 +44,7 @@ export function TableFooter<TData extends RowData>({
   if (!hasAggregate) return null
 
   return (
-    <tfoot className="bg-muted/50 font-medium">
+    <tfoot className={cn("bg-muted/50 font-medium", classNames?.footer)}>
       <tr className="border-t-2 border-border">
         {visibleCols.map((col) => {
           const meta = col.columnDef.meta as ColumnMeta | undefined
@@ -79,7 +83,10 @@ export function TableFooter<TData extends RowData>({
             <td
               key={col.id}
               style={widthStyle}
-              className={`px-3 py-3 whitespace-nowrap text-sm font-semibold ${tdClass}`}
+              className={cn(
+                `px-3 py-3 whitespace-nowrap text-sm font-semibold ${tdClass}`,
+                classNames?.footerCell
+              )}
             >
               {content ?? ""}
             </td>

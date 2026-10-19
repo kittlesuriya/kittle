@@ -8,7 +8,15 @@ import {
 } from "./input-group"
 import { cn } from "../../core/cn"
 
-interface PasswordInputProps {
+export interface PasswordInputClassNames {
+  root?: string
+  input?: string
+  addon?: string
+  toggle?: string
+  icon?: string
+}
+
+export interface PasswordInputProps {
   id?: string
   name?: string
   value?: string
@@ -18,6 +26,7 @@ interface PasswordInputProps {
   autoComplete?: string
   autoFocus?: boolean
   className?: string
+  classNames?: PasswordInputClassNames
   "aria-invalid"?: boolean | string
   "aria-describedby"?: string
   onChange?: (value: string) => void
@@ -34,6 +43,7 @@ export function PasswordInput({
   autoComplete,
   autoFocus,
   className,
+  classNames,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
   onChange,
@@ -42,7 +52,10 @@ export function PasswordInput({
   const [visible, setVisible] = useState(false)
 
   return (
-    <InputGroup className={cn(className)} data-disabled={disabled}>
+    <InputGroup
+      className={cn(className, classNames?.root)}
+      data-disabled={disabled}
+    >
       <InputGroupInput
         id={id}
         name={name}
@@ -57,16 +70,22 @@ export function PasswordInput({
         autoFocus={autoFocus}
         aria-invalid={ariaInvalid as unknown as boolean | undefined}
         aria-describedby={ariaDescribedBy}
+        className={cn(classNames?.input)}
       />
-      <InputGroupAddon align="inline-end">
+      <InputGroupAddon align="inline-end" className={cn(classNames?.addon)}>
         <InputGroupButton
           type="button"
           size="icon-xs"
           aria-label={visible ? "Hide password" : "Show password"}
           onClick={() => setVisible((prev) => !prev)}
           disabled={disabled}
+          className={cn(classNames?.toggle)}
         >
-          {visible ? <EyeOff /> : <Eye />}
+          {visible ? (
+            <EyeOff className={cn(classNames?.icon)} />
+          ) : (
+            <Eye className={cn(classNames?.icon)} />
+          )}
         </InputGroupButton>
       </InputGroupAddon>
     </InputGroup>

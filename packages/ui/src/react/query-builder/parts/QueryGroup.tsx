@@ -21,6 +21,9 @@ export function QueryGroup({
   disabled,
   translationNamespace,
   depth = 0,
+  classNames,
+  partClassNames,
+  fieldStyles,
 }: QueryGroupProps): React.ReactElement {
   const { t } = useTranslation()
   const maxDepth = 2
@@ -31,10 +34,16 @@ export function QueryGroup({
         "rounded-lg",
         isRoot ? "bg-muted/30" : "bg-muted/50",
         depth === 1 && "ml-2 border-l-4 border-l-primary/30 sm:ml-6",
-        depth === 2 && "ml-2 border-l-4 border-l-secondary/50 sm:ml-6"
+        depth === 2 && "ml-2 border-l-4 border-l-secondary/50 sm:ml-6",
+        classNames?.group
       )}
     >
-      <div className="flex flex-wrap items-center gap-2 rounded-t-lg border-b border-border/50 bg-muted/50 px-3 py-2 sm:gap-3 sm:px-4">
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-2 rounded-t-lg border-b border-border/50 bg-muted/50 px-3 py-2 sm:gap-3 sm:px-4",
+          classNames?.groupHeader
+        )}
+      >
         <Button
           type="button"
           variant="outline"
@@ -45,7 +54,8 @@ export function QueryGroup({
             "h-7 px-3 font-medium text-xs",
             group.logic === "AND"
               ? "bg-primary/10 text-primary border-primary/30"
-              : "bg-secondary text-secondary-foreground border-secondary"
+              : "bg-secondary text-secondary-foreground border-secondary",
+            classNames?.groupLogicToggle
           )}
         >
           {group.logic === "AND"
@@ -53,7 +63,12 @@ export function QueryGroup({
             : t("querybuilder.or", { defaultValue: "OR" })}
         </Button>
 
-        <span className="min-w-[10rem] flex-1 text-xs text-muted-foreground sm:text-sm">
+        <span
+          className={cn(
+            "min-w-[10rem] flex-1 text-xs text-muted-foreground sm:text-sm",
+            classNames?.groupLogicDescription
+          )}
+        >
           {group.logic === "AND"
             ? t("querybuilder.match_all", {
                 defaultValue: "Match all conditions",
@@ -72,16 +87,24 @@ export function QueryGroup({
             size="icon"
             onClick={() => onRemoveGroup(group.id)}
             disabled={disabled}
-            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+            className={cn(
+              "h-7 w-7 text-muted-foreground hover:text-destructive",
+              classNames?.removeGroupButton
+            )}
           >
             <Trash2 size={14} />
           </Button>
         )}
       </div>
 
-      <div className="space-y-2 p-2.5 sm:p-3">
+      <div className={cn("space-y-2 p-2.5 sm:p-3", classNames?.groupContent)}>
         {group.conditions.length === 0 ? (
-          <div className="text-center py-4 text-sm text-muted-foreground">
+          <div
+            className={cn(
+              "text-center py-4 text-sm text-muted-foreground",
+              classNames?.groupEmpty
+            )}
+          >
             {t("querybuilder.no_conditions", {
               defaultValue: "No conditions. Add one below.",
             })}
@@ -104,6 +127,9 @@ export function QueryGroup({
                   disabled={disabled}
                   translationNamespace={translationNamespace}
                   depth={depth + 1}
+                  classNames={classNames}
+                  partClassNames={partClassNames}
+                  fieldStyles={fieldStyles}
                 />
               )
             }
@@ -117,20 +143,31 @@ export function QueryGroup({
                 onRemove={() => onRemoveCondition(item.id)}
                 disabled={disabled}
                 translationNamespace={translationNamespace}
+                classNames={classNames}
+                partClassNames={partClassNames}
+                fieldStyles={fieldStyles}
               />
             )
           })
         )}
       </div>
 
-      <div className="flex flex-col items-stretch gap-2 rounded-b-lg border-t border-border/50 bg-muted/30 px-3 py-2 sm:flex-row sm:items-center sm:px-4">
+      <div
+        className={cn(
+          "flex flex-col items-stretch gap-2 rounded-b-lg border-t border-border/50 bg-muted/30 px-3 py-2 sm:flex-row sm:items-center sm:px-4",
+          classNames?.groupActions
+        )}
+      >
         <Button
           type="button"
           variant="ghost"
           size="sm"
           onClick={() => onAddCondition(group.id)}
           disabled={disabled}
-          className="h-8 w-full text-primary hover:bg-primary/10 hover:text-primary sm:w-auto"
+          className={cn(
+            "h-8 w-full text-primary hover:bg-primary/10 hover:text-primary sm:w-auto",
+            classNames?.addConditionButton
+          )}
         >
           <Plus size={14} className="mr-1" />
           {t("querybuilder.add_condition", { defaultValue: "Add condition" })}
@@ -145,7 +182,10 @@ export function QueryGroup({
               onAddGroup(group.id, group.logic === "AND" ? "OR" : "AND")
             }
             disabled={disabled}
-            className="h-8 w-full text-muted-foreground hover:text-foreground sm:w-auto"
+            className={cn(
+              "h-8 w-full text-muted-foreground hover:text-foreground sm:w-auto",
+              classNames?.addGroupButton
+            )}
           >
             <FolderPlus size={14} className="mr-1" />
             {t("querybuilder.add_group", { defaultValue: "Add group" })}

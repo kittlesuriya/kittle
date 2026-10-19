@@ -43,6 +43,7 @@ import { BookOpen } from "lucide-react"
 import { toDisplayString } from "../../core/format/toDisplayString"
 import { useTranslation } from "react-i18next"
 import type { ValidationResult } from "../../core/table/validateOperation"
+import { cn } from "../../core/cn"
 
 import type {
   DataTableProps,
@@ -103,6 +104,9 @@ export function DataTable<TData extends RowWithId>({
   granularPermissions,
   translationNamespace,
   topContent,
+  className,
+  classNames,
+  partClassNames,
 }: DataTableProps<TData>): React.ReactElement {
   const { t } = useTranslation()
   const runtime = useUiRuntime()
@@ -179,6 +183,8 @@ export function DataTable<TData extends RowWithId>({
             meta: {
               ...(col.meta ?? {}),
               aggregate: col.aggregate,
+              // Preserve legacy column metadata; explicit classNames overrides
+              // are applied after it in TableHeader/TableBody.
               thClass: col.headerClassName ?? col.meta?.thClass ?? "",
               tdClass:
                 col.cellClassName ?? col.className ?? col.meta?.tdClass ?? "",
@@ -501,6 +507,8 @@ export function DataTable<TData extends RowWithId>({
                 row={row}
                 operations={resolvedOperations}
                 onOperationClick={handleOperationClick}
+                className={classNames?.operationAction}
+                classNames={classNames}
               />
             ),
           }
@@ -508,7 +516,12 @@ export function DataTable<TData extends RowWithId>({
         return col
       }),
     })) as ColumnDef<DataTableFeatures, TData>[]
-  }, [normalizedColumnGroups, resolvedOperations, handleOperationClick])
+  }, [
+    normalizedColumnGroups,
+    resolvedOperations,
+    handleOperationClick,
+    classNames,
+  ])
 
   // React Table instance
   const table = useTable({
@@ -622,6 +635,11 @@ export function DataTable<TData extends RowWithId>({
   if (error) {
     return (
       <TableErrorState
+        className={cn("", className, classNames?.root, classNames?.error)}
+        classNames={partClassNames?.errorMessage}
+        iconClassName={classNames?.errorIcon}
+        contentClassName={classNames?.errorContent}
+        retryClassName={classNames?.errorRetry}
         onRetry={() => {
           try {
             window.localStorage.removeItem(storageKey)
@@ -646,6 +664,8 @@ export function DataTable<TData extends RowWithId>({
   if (isLoading) {
     return (
       <TableLoadingState
+        className={cn("", className, classNames?.root, classNames?.loading)}
+        classNames={classNames}
         title={title}
         columnCount={leafColumnIds.length + (resolvedOperations ? 1 : 0)}
         showFilters={Boolean(filterConfig?.schema)}
@@ -655,13 +675,22 @@ export function DataTable<TData extends RowWithId>({
 
   return (
     <>
-      <div className="bg-background rounded-lg flex flex-col flex-1 min-h-0">
+      <div
+        className={cn(
+          "bg-background rounded-lg flex flex-col flex-1 min-h-0",
+          className,
+          classNames?.root
+        )}
+      >
         {/* QueryBuilder filters & Top Content */}
         {filterConfig?.schema ? (
-          <div className="py-1">
+          <div className={cn("py-1", classNames?.filters)}>
             <QueryBuilder
               schema={filterConfig.schema}
               ui={filterConfig.queryBuilderUi}
+              classNames={filterConfig.queryBuilderClassNames}
+              partClassNames={filterConfig.queryBuilderPartClassNames}
+              fieldStyles={filterConfig.queryBuilderFieldStyles}
               headerLeft={
                 topContent ? topContent({ rows, rowCount, table }) : undefined
               }
@@ -676,12 +705,29 @@ export function DataTable<TData extends RowWithId>({
             />
           </div>
         ) : topContent ? (
-          <div className="py-2">{topContent({ rows, rowCount, table })}</div>
+          <div className={cn("py-2", classNames?.filters)}>
+            {topContent({ rows, rowCount, table })}
+          </div>
         ) : null}
 
-        <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm dark:overflow-visible dark:border-0 dark:bg-transparent dark:shadow-lg">
-          <div className="px-3.5 sm:px-6 py-3 sm:py-4 bg-secondary/5 border-b border-border flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 flex-none dark:rounded-t-lg dark:border-0 dark:bg-muted">
-            <h2 className="text-lg sm:text-2xl font-semibold text-table-heading flex items-center flex-wrap gap-2">
+        <div
+          className={cn(
+            "overflow-hidden rounded-lg border border-border bg-card shadow-sm dark:overflow-visible dark:border-0 dark:bg-transparent dark:shadow-lg",
+            classNames?.card
+          )}
+        >
+          <div
+            className={cn(
+              "px-3.5 sm:px-6 py-3 sm:py-4 bg-secondary/5 border-b border-border flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 flex-none dark:rounded-t-lg dark:border-0 dark:bg-muted",
+              classNames?.cardHeader
+            )}
+          >
+            <h2
+              className={cn(
+                "text-lg sm:text-2xl font-semibold text-table-heading flex items-center flex-wrap gap-2",
+                classNames?.title
+              )}
+            >
               <span>
                 {translationNamespace
                   ? t(`${translationNamespace}.manage`, {
@@ -693,7 +739,12 @@ export function DataTable<TData extends RowWithId>({
                     })}
               </span>
               {rowCount > 0 && (
-                <Badge className="bg-secondary text-secondary-foreground font-normal text-xs">
+                <Badge
+                  className={cn(
+                    "bg-secondary text-secondary-foreground font-normal text-xs",
+                    classNames?.titleBadge
+                  )}
+                >
                   {rowCount} {t("common.items", { defaultValue: "items" })}
                 </Badge>
               )}
@@ -702,7 +753,10 @@ export function DataTable<TData extends RowWithId>({
                 title="Documentation"
                 aria-label="Documentation"
                 onClick={() => docs.open(activeDocModuleKey, scope)}
-                className="cursor-pointer p-1.5 rounded-md bg-primary/20 text-primary-ink hover:bg-primary/30 transition-colors dark:rounded-2xl dark:bg-accent dark:text-primary dark:hover:bg-accent"
+                className={cn(
+                  "cursor-pointer p-1.5 rounded-md bg-primary/20 text-primary-ink hover:bg-primary/30 transition-colors dark:rounded-2xl dark:bg-accent dark:text-primary dark:hover:bg-accent",
+                  classNames?.documentationButton
+                )}
               >
                 <BookOpen size={18} />
               </button>
@@ -727,14 +781,19 @@ export function DataTable<TData extends RowWithId>({
               onExport={handleExport}
               isExporting={isExporting}
               translationNamespace={translationNamespace}
+              classNames={classNames}
             />
           </div>
 
-          <div className="overflow-auto flex-1">
-            <table aria-label={title} className="w-full border-collapse">
+          <div className={cn("overflow-auto flex-1", classNames?.scrollArea)}>
+            <table
+              aria-label={title}
+              className={cn("w-full border-collapse", classNames?.table)}
+            >
               <TableHeader
                 table={table}
                 onColumnReorder={handleColumnReorder}
+                classNames={classNames}
               />
               {rows.length === 0 ? (
                 <TableEmptyState
@@ -745,25 +804,34 @@ export function DataTable<TData extends RowWithId>({
                   }
                   addButtonLabel={resolvedOperations?.add?.label}
                   translationNamespace={translationNamespace}
+                  className={classNames?.empty}
+                  classNames={partClassNames?.emptyState}
                 />
               ) : (
                 <>
                   <TableBody
                     key={`${rows[0]?.id ?? "empty"}-${rows.length}-${pagination.pageSize}-${JSON.stringify(columnVisibility)}-${JSON.stringify(columnOrder)}`}
                     table={table}
+                    classNames={classNames}
                   />
-                  <TableFooter table={table} />
+                  <TableFooter table={table} classNames={classNames} />
                 </>
               )}
             </table>
           </div>
 
           {showPagination && (
-            <div className="px-6 border-t border-border flex-none bg-card py-2 dark:rounded-b-lg">
+            <div
+              className={cn(
+                "px-6 border-t border-border flex-none bg-card py-2 dark:rounded-b-lg",
+                classNames?.paginationContainer
+              )}
+            >
               <TablePagination
                 table={table}
                 showPagination={showPagination}
                 translationNamespace={translationNamespace}
+                classNames={classNames}
               />
             </div>
           )}
@@ -782,6 +850,10 @@ export function DataTable<TData extends RowWithId>({
         displayMode={modalDisplayMode}
         width={currentOperation?.width}
         analyticsMeta={operationAnalyticsMeta}
+        className={classNames?.operationModal}
+        classNames={classNames}
+        dialogClassNames={partClassNames?.operationDialog}
+        sheetClassNames={partClassNames?.operationSheet}
       />
     </>
   )

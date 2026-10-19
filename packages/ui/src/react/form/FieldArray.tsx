@@ -11,6 +11,10 @@ import { colSpanClass } from "../../core/form/gridHelpers"
 import { toDisplayString } from "../../core/format/toDisplayString"
 import { getItemId, ensureLocalIds } from "../../core/form/formHelpers"
 import { useTranslation } from "react-i18next"
+import {
+  mergeFieldStyles,
+  resolveFieldStyles,
+} from "../../core/form/fieldStyles"
 import type {
   FieldArrayProps,
   ArrayItemWithLocalId,
@@ -48,11 +52,19 @@ export function FieldArray({
   compactItems = false,
   help,
   idPrefix,
+  classNames,
+  partClassNames,
+  fieldPath,
+  fieldStyles,
+  baseClassNames,
+  basePartClassNames,
 }: FieldArrayProps): React.ReactElement {
   const { t } = useTranslation()
   // Item input id base. Prefixed per form instance when provided so sibling
   // forms sharing an array name cannot emit duplicate ids.
   const itemIdBase = idPrefix ?? name
+  const inheritedClassNames = baseClassNames ?? classNames
+  const inheritedPartClassNames = basePartClassNames ?? partClassNames
   // Ensure all items have IDs
   const items = useMemo(
     () => ensureLocalIds(Array.isArray(value) ? value : []),
@@ -232,16 +244,28 @@ export function FieldArray({
   }
 
   return (
-    <div className="space-y-3" data-testid={`field-array-${name}`}>
-      <div className="flex items-center justify-between">
+    <div
+      className={cn("space-y-3", classNames?.array)}
+      data-testid={`field-array-${name}`}
+    >
+      <div
+        className={cn(
+          "flex items-center justify-between",
+          classNames?.arrayHeader
+        )}
+      >
         <div className="flex items-center gap-1">
-          <Label className="text-sm font-medium">{label}</Label>
+          <Label className={cn("text-sm font-medium", classNames?.arrayLabel)}>
+            {label}
+          </Label>
           {help?.description ? (
             <FieldHelp
               title={help.title ?? label}
               description={help.description}
               bullets={help.bullets}
               example={help.example}
+              className={classNames?.arrayHelp}
+              classNames={partClassNames?.help}
             />
           ) : null}
         </div>
@@ -253,6 +277,7 @@ export function FieldArray({
             onClick={addItem}
             disabled={disabled}
             data-testid={`add-${name}-item`}
+            className={classNames?.arrayAddButton}
           >
             <Plus className="h-4 w-4 mr-1" />
             {t("common.add", { defaultValue: "Add" })} {singularLabel ?? label}
@@ -261,7 +286,12 @@ export function FieldArray({
       </div>
 
       {items.length === 0 && (
-        <div className="text-sm text-muted-foreground italic">
+        <div
+          className={cn(
+            "text-sm text-muted-foreground italic",
+            classNames?.arrayEmpty
+          )}
+        >
           {emptyMessage ??
             t("common.no_items", {
               defaultValue:
@@ -272,7 +302,11 @@ export function FieldArray({
       )}
 
       <div
-        className={cn(compactItems ? "space-y-2" : "space-y-3", listClassName)}
+        className={cn(
+          compactItems ? "space-y-2" : "space-y-3",
+          classNames?.arrayList,
+          listClassName
+        )}
       >
         {items.map((item, index) => {
           const visibleFields = [...itemFields].filter((field) => !field.hidden)
@@ -283,22 +317,54 @@ export function FieldArray({
             return (
               <Card
                 key={getItemId(item)}
-                className="p-2"
+                className={cn(
+                  "p-2",
+                  classNames?.arrayItem,
+                  classNames?.arrayCompactItem
+                )}
                 data-testid={`${name}-item-${index}`}
               >
-                <div className="flex items-center gap-3">
-                  <h4 className="min-w-0 flex-1 truncate text-sm font-medium">
+                <div
+                  className={cn(
+                    "flex items-center gap-3",
+                    classNames?.arrayCompactContent
+                  )}
+                >
+                  <h4
+                    className={cn(
+                      "min-w-0 flex-1 truncate text-sm font-medium",
+                      classNames?.arrayItemHeader
+                    )}
+                  >
                     {itemHeader
                       ? itemHeader(item, index)
                       : `${singularLabel ?? label} #${index + 1}`}
                   </h4>
                   {visibleFields.map((field: FieldConfig) => {
+                    const path = `${fieldPath ?? name}.${index}.${field.name}`
+                    const styles = mergeFieldStyles(
+                      {
+                        classNames: inheritedClassNames ?? {},
+                        partClassNames: inheritedPartClassNames,
+                      },
+                      ...resolveFieldStyles(fieldStyles, path)
+                    )
+                    const nestedClassNames = {
+                      ...(inheritedClassNames ?? {}),
+                      ...(styles.classNames ?? {}),
+                    }
                     const fieldErrors = getItemErrors(index, field.name)
                     return (
-                      <div key={field.name} className="w-44 shrink-0">
+                      <div
+                        key={field.name}
+                        className={cn(
+                          "w-44 shrink-0",
+                          styles.classNames?.field
+                        )}
+                      >
                         <Label
                           htmlFor={`${itemIdBase}.${index}.${field.name}`}
-                          className="sr-only"
+                          className={cn("sr-only", styles.classNames?.label)}
                         >
                           {field.label}
                           {field.required && (
@@ -316,8 +382,20 @@ export function FieldArray({
                           }}
                           disabled={disabled || field.disabled}
                           overrideOptions={getFilteredOptions(field, item)}
+                          classNames={nestedClassNames}
+                          partClassNames={styles.partClassNames}
+                          fieldPath={path}
+                          fieldStyles={fieldStyles}
+                          baseClassNames={inheritedClassNames ?? {}}
+                          basePartClassNames={inheritedPartClassNames ?? {}}
                         />
-                        {fieldErrors && <FieldErrors errors={fieldErrors} />}
+                        {fieldErrors && (
+                          <FieldErrors
+                            errors={fieldErrors}
+                            className={styles.classNames?.errors}
+                            rowClassName={styles.classNames?.errorRow}
+                          />
+                        )}
                       </div>
                     )
                   })}
@@ -329,6 +407,7 @@ export function FieldArray({
                       onClick={() => removeItem(index)}
                       disabled={disabled}
                       data-testid={`remove-${name}-item-${index}`}
+                      className={classNames?.arrayRemoveButton}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -340,11 +419,16 @@ export function FieldArray({
           return (
             <Card
               key={getItemId(item)}
-              className="p-4"
+              className={cn("p-4", classNames?.arrayItem)}
               data-testid={`${name}-item-${index}`}
             >
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-medium">
+                <h4
+                  className={cn(
+                    "text-sm font-medium",
+                    classNames?.arrayItemHeader
+                  )}
+                >
                   {itemHeader
                     ? itemHeader(item, index)
                     : `${singularLabel ?? label} #${index + 1}`}
@@ -357,17 +441,32 @@ export function FieldArray({
                     onClick={() => removeItem(index)}
                     disabled={disabled}
                     data-testid={`remove-${name}-item-${index}`}
+                    className={classNames?.arrayRemoveButton}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
               </div>
 
-              <div className="grid grid-cols-12 gap-4">
+              <div
+                className={cn("grid grid-cols-12 gap-4", classNames?.arrayGrid)}
+              >
                 {[...itemFields]
                   .filter((field) => !field.hidden)
                   .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
                   .map((field: FieldConfig) => {
+                    const path = `${fieldPath ?? name}.${index}.${field.name}`
+                    const styles = mergeFieldStyles(
+                      {
+                        classNames: inheritedClassNames ?? {},
+                        partClassNames: inheritedPartClassNames,
+                      },
+                      ...resolveFieldStyles(fieldStyles, path)
+                    )
+                    const nestedClassNames = {
+                      ...(inheritedClassNames ?? {}),
+                      ...(styles.classNames ?? {}),
+                    }
                     const span = field.colSpan ?? 12
                     const colClass = colSpanClass(span)
                     const fieldErrors = getItemErrors(index, field.name)
@@ -375,11 +474,14 @@ export function FieldArray({
                     return (
                       <div
                         key={field.name}
-                        className={`col-span-12 ${colClass} space-y-1.5`}
+                        className={cn(
+                          `col-span-12 ${colClass} space-y-1.5`,
+                          styles.classNames?.field
+                        )}
                       >
                         <Label
                           htmlFor={`${itemIdBase}.${index}.${field.name}`}
-                          className="text-sm"
+                          className={cn("text-sm", styles.classNames?.label)}
                         >
                           {field.label}
                           {field.required && (
@@ -397,8 +499,20 @@ export function FieldArray({
                           }}
                           disabled={disabled || field.disabled}
                           overrideOptions={getFilteredOptions(field, item)}
+                          classNames={nestedClassNames}
+                          partClassNames={styles.partClassNames}
+                          fieldPath={path}
+                          fieldStyles={fieldStyles}
+                          baseClassNames={inheritedClassNames ?? {}}
+                          basePartClassNames={inheritedPartClassNames ?? {}}
                         />
-                        {fieldErrors && <FieldErrors errors={fieldErrors} />}
+                        {fieldErrors && (
+                          <FieldErrors
+                            errors={fieldErrors}
+                            className={styles.classNames?.errors}
+                            rowClassName={styles.classNames?.errorRow}
+                          />
+                        )}
                       </div>
                     )
                   })}
@@ -408,7 +522,11 @@ export function FieldArray({
         })}
       </div>
 
-      <FieldErrors errors={arrayErrors} />
+      <FieldErrors
+        errors={arrayErrors}
+        className={cn(classNames?.errors, classNames?.arrayErrors)}
+        rowClassName={classNames?.errorRow}
+      />
     </div>
   )
 }

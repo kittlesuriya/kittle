@@ -59,6 +59,8 @@ export function Sidebar({
   headerCenter,
   headerActions,
   user,
+  className,
+  classNames,
 }: SidebarProps): React.ReactElement {
   const { t } = useTranslation()
   const resolvedTitle =
@@ -508,7 +510,12 @@ export function Sidebar({
   }
 
   return (
-    <div className="fixed inset-0 flex overflow-hidden bg-background">
+    <div
+      className={cn(
+        "fixed inset-0 flex overflow-hidden bg-background",
+        className
+      )}
+    >
       {mobileOpen && (
         <button
           type="button"
@@ -531,7 +538,8 @@ export function Sidebar({
           // Desktop is in-flow (relative), so the base sidebar level is fine there.
           mobileOpen ? "z-modal" : "z-sidebar",
           "transform",
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          classNames?.drawer
         )}
       >
         <SidebarHeader
@@ -540,6 +548,7 @@ export function Sidebar({
           title={resolvedTitle}
           subtitle={subtitle}
           homeLink={homeLink}
+          classNames={classNames}
         />
 
         {showSearch && !collapsed && (
@@ -548,12 +557,16 @@ export function Sidebar({
             value={search}
             onChange={setSearch}
             className={searchPad}
+            classNames={classNames}
           />
         )}
 
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
           <nav
-            className={`app-scrollbar min-h-0 flex-1 overflow-y-auto ${navContainer}`}
+            className={cn(
+              `app-scrollbar min-h-0 flex-1 overflow-y-auto ${navContainer}`,
+              classNames?.nav
+            )}
           >
             {sections.map((section, idx) => {
               const start = sections
@@ -579,6 +592,7 @@ export function Sidebar({
                   showHotkeys={showHotkeys}
                   density={density}
                   onOpenSecondary={useSecondary ? openSecondary : undefined}
+                  classNames={classNames}
                 />
               )
             })}
@@ -602,6 +616,7 @@ export function Sidebar({
                   density={density}
                   showHotkeys={showHotkeys}
                   showBadge={showBadge}
+                  classNames={classNames}
                 />
               </div>
             </div>
@@ -622,18 +637,24 @@ export function Sidebar({
               onClose={flyoutClose}
               showHotkeys={showHotkeys}
               showBadge={showBadge}
+              classNames={classNames}
             />
           )}
 
         {!effectiveCollapsed && showOrganizationSwitcher && (
           <div className="border-t border-sidebar-border bg-sidebar p-3 mt-auto">
-            <OrganizationSwitcher />
+            <OrganizationSwitcher classNames={classNames} />
           </div>
         )}
       </nav>
 
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        <header className="z-sticky flex min-h-16 items-center justify-between gap-2 border-b border-border/70 bg-card/95 px-3 py-2 shadow-sm backdrop-blur sm:px-6">
+        <header
+          className={cn(
+            "z-sticky flex min-h-16 items-center justify-between gap-2 border-b border-border/70 bg-card/95 px-3 py-2 shadow-sm backdrop-blur sm:px-6",
+            classNames?.topbar
+          )}
+        >
           <button
             type="button"
             onClick={toggleMobile}
@@ -668,7 +689,8 @@ export function Sidebar({
                 "hidden md:flex items-center justify-center text-primary",
                 "transition-all duration-200",
                 "hover:bg-primary hover:text-primary-foreground",
-                "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                classNames?.collapseButton
               )}
               aria-label={
                 collapsed
@@ -709,11 +731,17 @@ export function Sidebar({
               email={user?.email}
               avatarUrl={user?.avatarUrl}
               onLogout={onLogout}
+              classNames={classNames}
             />
           </div>
         </header>
 
-        <main className="app-scrollbar flex-1 min-h-0 p-3 bg-background overflow-y-auto flex flex-col">
+        <main
+          className={cn(
+            "app-scrollbar flex-1 min-h-0 p-3 bg-background overflow-y-auto flex flex-col",
+            classNames?.main
+          )}
+        >
           {children}
         </main>
       </div>

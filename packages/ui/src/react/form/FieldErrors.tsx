@@ -1,5 +1,6 @@
 import { CircleAlert } from "lucide-react"
 import type { FieldErrorsProps } from "../../core/form/types"
+import { cn } from "../../core/cn"
 
 /**
  * Display field validation errors, each prefixed with a danger-colored
@@ -8,15 +9,20 @@ import type { FieldErrorsProps } from "../../core/form/types"
 export function FieldErrors({
   errors,
   testId,
+  className,
+  rowClassName,
 }: FieldErrorsProps): React.ReactElement | null {
   if (!errors.length) return null
 
   return (
-    <div className="mt-1 space-y-1" data-testid={testId}>
+    <div className={cn("mt-1 space-y-1", className)} data-testid={testId}>
       {errors.map((error, index) => (
         <p
           key={`${error}-${index}`}
-          className="flex items-start gap-1.5 text-sm text-destructive"
+          className={cn(
+            "flex items-start gap-1.5 text-sm text-destructive",
+            rowClassName
+          )}
         >
           <CircleAlert
             aria-hidden="true"

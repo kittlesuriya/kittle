@@ -8,7 +8,9 @@ import {
   SelectValue,
 } from "../../ui/select"
 import { useTranslation } from "react-i18next"
+import { cn } from "../../../core/cn"
 import { ValueInput } from "./ValueInput"
+import { resolveQueryBuilderFieldStyles } from "../../../core/query/resolveFieldStyles"
 import {
   getDefaultValueForType,
   operatorNeedsRange,
@@ -30,10 +32,19 @@ export function QueryCondition({
   disabled,
   showDragHandle = false,
   translationNamespace,
+  classNames,
+  partClassNames,
+  fieldStyles,
 }: QueryConditionProps): React.ReactElement {
   const { t } = useTranslation()
   const selectedField = fields.find((f) => f.id === condition.field)
   const operators = selectedField?.operators ?? []
+  const { classNames: fieldClassNames, partClassNames: fieldPartClassNames } =
+    resolveQueryBuilderFieldStyles(
+      classNames,
+      partClassNames,
+      fieldStyles?.[condition.field]
+    )
 
   const handleFieldChange = (fieldId: string | null) => {
     if (!fieldId) return
@@ -87,7 +98,12 @@ export function QueryCondition({
   }
 
   return (
-    <div className="flex flex-col gap-2 px-2.5 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:px-3">
+    <div
+      className={cn(
+        "flex flex-col gap-2 px-2.5 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:px-3",
+        fieldClassNames.condition
+      )}
+    >
       {showDragHandle && (
         <div className="cursor-grab text-muted-foreground hover:text-foreground">
           <GripVertical size={16} />
@@ -99,7 +115,13 @@ export function QueryCondition({
         onValueChange={handleFieldChange}
         disabled={disabled}
       >
-        <SelectTrigger className="h-9 w-full sm:w-[180px]">
+        <SelectTrigger
+          className={cn(
+            "h-9 w-full sm:w-[180px]",
+            fieldClassNames.fieldSelectTrigger,
+            fieldPartClassNames.fieldSelect?.trigger
+          )}
+        >
           <SelectValue
             placeholder={t("querybuilder.select_field", {
               defaultValue: "Select field...",
@@ -112,9 +134,13 @@ export function QueryCondition({
               : selectedField?.label}
           </SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className={fieldPartClassNames.fieldSelect?.content}>
           {fields.map((field) => (
-            <SelectItem key={field.id} value={field.id}>
+            <SelectItem
+              className={fieldPartClassNames.fieldSelect?.item}
+              key={field.id}
+              value={field.id}
+            >
               {translationNamespace
                 ? t(`${translationNamespace}.fields.${field.id}.label`, {
                     defaultValue: field.label,
@@ -130,7 +156,13 @@ export function QueryCondition({
         onValueChange={handleOperatorChange}
         disabled={disabled || !condition.field}
       >
-        <SelectTrigger className="h-9 w-full sm:w-[140px]">
+        <SelectTrigger
+          className={cn(
+            "h-9 w-full sm:w-[140px]",
+            fieldClassNames.operatorSelectTrigger,
+            fieldPartClassNames.operatorSelect?.trigger
+          )}
+        >
           <SelectValue
             placeholder={t("querybuilder.operator", {
               defaultValue: "Operator",
@@ -145,9 +177,13 @@ export function QueryCondition({
               : null}
           </SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className={fieldPartClassNames.operatorSelect?.content}>
           {operators.map((op) => (
-            <SelectItem key={op.value} value={op.value}>
+            <SelectItem
+              className={fieldPartClassNames.operatorSelect?.item}
+              key={op.value}
+              value={op.value}
+            >
               {t(`querybuilder.operators.${op.value}`, {
                 defaultValue: op.label,
               })}
@@ -156,7 +192,12 @@ export function QueryCondition({
         </SelectContent>
       </Select>
 
-      <div className="w-full sm:min-w-[150px] sm:flex-1">
+      <div
+        className={cn(
+          "w-full sm:min-w-[150px] sm:flex-1",
+          fieldClassNames.valueWrapper
+        )}
+      >
         {condition.field && selectedField && (
           <ValueInput
             field={selectedField}
@@ -164,6 +205,8 @@ export function QueryCondition({
             value={condition.value}
             onChange={handleValueChange}
             disabled={disabled || !condition.field}
+            classNames={fieldClassNames}
+            partClassNames={fieldPartClassNames}
           />
         )}
       </div>
@@ -174,7 +217,10 @@ export function QueryCondition({
         size="icon"
         onClick={() => onRemove(condition.id)}
         disabled={disabled}
-        className="h-9 w-9 self-end text-muted-foreground hover:text-destructive sm:self-auto"
+        className={cn(
+          "h-9 w-9 self-end text-muted-foreground hover:text-destructive sm:self-auto",
+          classNames?.removeConditionButton
+        )}
       >
         <Trash2 size={16} />
       </Button>

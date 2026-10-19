@@ -1,10 +1,18 @@
 import { Input } from "../ui/input"
+import { cn } from "../../core/cn"
 
+export interface ColorPickerClassNames {
+  root?: string
+  swatch?: string
+  input?: string
+}
 interface ColorPickerProps {
   value?: string
   onChange?: (value: string) => void
   disabled?: boolean
   id?: string
+  className?: string
+  classNames?: ColorPickerClassNames
 }
 
 export function ColorPicker({
@@ -12,13 +20,18 @@ export function ColorPicker({
   onChange,
   disabled,
   id,
+  className,
+  classNames,
 }: ColorPickerProps) {
   const hex = value || "#6B7280"
 
   return (
-    <div className="flex items-center gap-3">
+    <div className={cn("flex items-center gap-3", className, classNames?.root)}>
       <div
-        className="h-9 w-9 rounded-md border border-input shrink-0"
+        className={cn(
+          "h-9 w-9 rounded-md border border-input shrink-0",
+          classNames?.swatch
+        )}
         style={{ backgroundColor: hex }}
       />
       <Input
@@ -27,7 +40,7 @@ export function ColorPicker({
         value={hex}
         onChange={(e) => onChange?.(e.target.value)}
         disabled={disabled}
-        className="h-10 w-full cursor-pointer"
+        className={cn("h-10 w-full cursor-pointer", classNames?.input)}
       />
     </div>
   )

@@ -42,6 +42,35 @@ export interface MultiSelectGroup {
 
 export type MultiSelectValue = Array<MultiSelectOption["value"]>
 
+export interface MultiSelectClassNames {
+  trigger?: string
+  selectedValues?: string
+  controls?: string
+  popover?: string
+  search?: string
+  list?: string
+  option?: string
+  chip?: string
+  chipRemove?: string
+  overflow?: string
+  placeholder?: string
+  clearButton?: string
+  chevron?: string
+  searchWrapper?: string
+  searchIcon?: string
+  searchClearButton?: string
+  selectionActions?: string
+  selectAllButton?: string
+  clearSelectionButton?: string
+  empty?: string
+  group?: string
+  groupLabel?: string
+  optionIcon?: string
+  optionLabel?: string
+  indicator?: string
+  partialIndicator?: string
+}
+
 export interface MultiSelectHandle {
   reset: () => void
   getSelectedValues: () => MultiSelectValue
@@ -64,6 +93,7 @@ export interface MultiSelectProps extends Omit<
   disabled?: boolean
   className?: string
   popoverClassName?: string
+  classNames?: MultiSelectClassNames
   hideSelectAll?: boolean
   searchable?: boolean
   emptyIndicator?: string
@@ -103,6 +133,7 @@ export const MultiSelect = React.forwardRef<
       disabled = false,
       className,
       popoverClassName,
+      classNames,
       hideSelectAll = false,
       searchable = true,
       emptyIndicator = "No options found.",
@@ -344,16 +375,27 @@ export const MultiSelect = React.forwardRef<
           className={cn(
             "border-input data-[placeholder]:text-muted-foreground dark:bg-input/30 dark:hover:bg-input/50 focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 gap-1.5 rounded-md border bg-transparent min-h-8 h-auto py-0 pr-2.5 pl-2.5 text-sm shadow-xs transition-[color,box-shadow] focus-visible:ring-[3px] aria-invalid:ring-[3px] flex items-center justify-between outline-none disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer",
             autoSize ? "w-auto" : "w-full",
-            className
+            className,
+            classNames?.trigger
           )}
           style={{
             minWidth: minWidth ?? "auto",
             maxWidth: maxWidth ?? "100%",
           }}
         >
-          <div className="flex flex-1 flex-wrap items-center gap-1 min-w-0 pr-1 text-left py-1">
+          <div
+            className={cn(
+              "flex flex-1 flex-wrap items-center gap-1 min-w-0 pr-1 text-left py-1",
+              classNames?.selectedValues
+            )}
+          >
             {selectedValues.length === 0 ? (
-              <span className="text-muted-foreground text-sm truncate">
+              <span
+                className={cn(
+                  "text-muted-foreground text-sm truncate",
+                  classNames?.placeholder
+                )}
+              >
                 {placeholder}
               </span>
             ) : singleSelect ? (
@@ -370,7 +412,10 @@ export const MultiSelect = React.forwardRef<
                     <Badge
                       key={String(val)}
                       variant="default"
-                      className="text-xs px-2 py-0.5 font-normal flex items-center gap-1.5 max-w-[160px] truncate bg-primary text-primary-foreground border-transparent"
+                      className={cn(
+                        "text-xs px-2 py-0.5 font-normal flex items-center gap-1.5 max-w-[160px] truncate bg-primary text-primary-foreground border-transparent",
+                        classNames?.chip
+                      )}
                     >
                       {IconComp && (
                         <IconComp
@@ -391,7 +436,10 @@ export const MultiSelect = React.forwardRef<
                             e.preventDefault()
                             handleRemoveValue(val)
                           }}
-                          className="inline-flex size-3.5 items-center justify-center rounded-full text-primary-foreground/75 hover:text-primary-foreground hover:bg-primary-foreground/20 active:scale-95 cursor-pointer transition-colors -mr-0.5"
+                          className={cn(
+                            "inline-flex size-3.5 items-center justify-center rounded-full text-primary-foreground/75 hover:text-primary-foreground hover:bg-primary-foreground/20 active:scale-95 cursor-pointer transition-colors -mr-0.5",
+                            classNames?.chipRemove
+                          )}
                         >
                           <XIcon className="size-2.5 stroke-[2.5]" />
                         </span>
@@ -402,7 +450,10 @@ export const MultiSelect = React.forwardRef<
                 {selectedValues.length > maxCount && (
                   <Badge
                     variant="outline"
-                    className="text-xs px-1.5 py-0.5 font-normal"
+                    className={cn(
+                      "text-xs px-1.5 py-0.5 font-normal",
+                      classNames?.overflow
+                    )}
                   >
                     +{selectedValues.length - maxCount} more
                   </Badge>
@@ -411,7 +462,12 @@ export const MultiSelect = React.forwardRef<
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0 text-muted-foreground">
+          <div
+            className={cn(
+              "flex items-center gap-1.5 shrink-0 text-muted-foreground",
+              classNames?.controls
+            )}
+          >
             {selectedValues.length > 0 && !disabled && (
               <span
                 role="button"
@@ -422,13 +478,18 @@ export const MultiSelect = React.forwardRef<
                   e.preventDefault()
                   handleClearAll()
                 }}
-                className="hover:text-foreground hover:bg-muted p-0.5 rounded-sm cursor-pointer transition-colors inline-flex items-center justify-center"
+                className={cn(
+                  "hover:text-foreground hover:bg-muted p-0.5 rounded-sm cursor-pointer transition-colors inline-flex items-center justify-center",
+                  classNames?.clearButton
+                )}
                 title="Clear all"
               >
                 <XIcon className="size-3.5" />
               </span>
             )}
-            <ChevronDownIcon className="size-4 pointer-events-none" />
+            <ChevronDownIcon
+              className={cn("size-4 pointer-events-none", classNames?.chevron)}
+            />
           </div>
         </ComboboxPrimitive.Trigger>
 
@@ -443,25 +504,42 @@ export const MultiSelect = React.forwardRef<
               data-slot="combobox-popup"
               className={cn(
                 "bg-popover text-popover-foreground ring-foreground/10 min-w-[200px] w-(--anchor-width) max-w-(--available-width) rounded-md p-1 shadow-md ring-1 duration-100 z-critical isolate overflow-hidden outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-                popoverClassName
+                popoverClassName,
+                classNames?.popover
               )}
             >
               {searchable && (
-                <div className="p-1 pb-1.5 border-b border-border/60">
+                <div
+                  className={cn(
+                    "p-1 pb-1.5 border-b border-border/60",
+                    classNames?.searchWrapper
+                  )}
+                >
                   <div className="flex items-center gap-2 px-2.5 h-8 rounded-md bg-input/30 border border-input/30">
-                    <SearchIcon className="size-4 text-muted-foreground shrink-0" />
+                    <SearchIcon
+                      className={cn(
+                        "size-4 text-muted-foreground shrink-0",
+                        classNames?.searchIcon
+                      )}
+                    />
                     <ComboboxPrimitive.Input
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder={searchPlaceholder}
-                      className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                      className={cn(
+                        "w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground",
+                        classNames?.search
+                      )}
                     />
                     {searchQuery && (
                       <button
                         type="button"
                         tabIndex={-1}
                         onClick={() => setSearchQuery("")}
-                        className="text-muted-foreground hover:text-foreground cursor-pointer"
+                        className={cn(
+                          "text-muted-foreground hover:text-foreground cursor-pointer",
+                          classNames?.searchClearButton
+                        )}
                       >
                         <XIcon className="size-3.5" />
                       </button>
@@ -471,11 +549,19 @@ export const MultiSelect = React.forwardRef<
               )}
 
               {!hideSelectAll && !searchQuery && !singleSelect && (
-                <div className="flex items-center justify-between px-2 py-1 text-xs text-muted-foreground border-b border-border/40">
+                <div
+                  className={cn(
+                    "flex items-center justify-between px-2 py-1 text-xs text-muted-foreground border-b border-border/40",
+                    classNames?.selectionActions
+                  )}
+                >
                   <button
                     type="button"
                     onClick={handleToggleAll}
-                    className="hover:text-foreground font-medium cursor-pointer"
+                    className={cn(
+                      "hover:text-foreground font-medium cursor-pointer",
+                      classNames?.selectAllButton
+                    )}
                   >
                     {isAllSelected ? "Deselect all" : "Select all"}
                   </button>
@@ -483,7 +569,10 @@ export const MultiSelect = React.forwardRef<
                     <button
                       type="button"
                       onClick={handleClearAll}
-                      className="hover:text-destructive cursor-pointer"
+                      className={cn(
+                        "hover:text-destructive cursor-pointer",
+                        classNames?.clearSelectionButton
+                      )}
                     >
                       Clear
                     </button>
@@ -491,15 +580,33 @@ export const MultiSelect = React.forwardRef<
                 </div>
               )}
 
-              <ComboboxPrimitive.List className="max-h-60 overflow-y-auto p-1 space-y-0.5 outline-none">
+              <ComboboxPrimitive.List
+                className={cn(
+                  "max-h-60 overflow-y-auto p-1 space-y-0.5 outline-none",
+                  classNames?.list
+                )}
+              >
                 {!hasAnyOptions ? (
-                  <div className="py-6 text-center text-sm text-muted-foreground">
+                  <div
+                    className={cn(
+                      "py-6 text-center text-sm text-muted-foreground",
+                      classNames?.empty
+                    )}
+                  >
                     {emptyIndicator}
                   </div>
                 ) : isGroupedOptions(filteredOptionsOrGroups) ? (
                   filteredOptionsOrGroups.map((group) => (
-                    <ComboboxPrimitive.Group key={group.heading}>
-                      <ComboboxPrimitive.GroupLabel className="px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                    <ComboboxPrimitive.Group
+                      key={group.heading}
+                      className={classNames?.group}
+                    >
+                      <ComboboxPrimitive.GroupLabel
+                        className={cn(
+                          "px-2.5 py-1 text-xs font-semibold text-muted-foreground",
+                          classNames?.groupLabel
+                        )}
+                      >
                         {group.heading}
                       </ComboboxPrimitive.GroupLabel>
                       {group.options.map((option) => (
@@ -507,6 +614,7 @@ export const MultiSelect = React.forwardRef<
                           key={String(option.value)}
                           option={option}
                           partial={partialValues.has(String(option.value))}
+                          classNames={classNames}
                         />
                       ))}
                     </ComboboxPrimitive.Group>
@@ -517,6 +625,7 @@ export const MultiSelect = React.forwardRef<
                       key={String(option.value)}
                       option={option}
                       partial={partialValues.has(String(option.value))}
+                      classNames={classNames}
                     />
                   ))
                 )}
@@ -539,16 +648,21 @@ MultiSelect.displayName = "MultiSelect"
 const OptionItem = React.memo(function OptionItem({
   option,
   partial = false,
+  classNames,
 }: {
   option: MultiSelectOption
   partial?: boolean
+  classNames?: MultiSelectClassNames
 }) {
   const IconComp = option.icon
   return (
     <ComboboxPrimitive.Item
       value={option.value}
       disabled={option.disabled}
-      className="group focus:bg-accent focus:text-accent-foreground data-highlighted:bg-accent data-highlighted:text-accent-foreground data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary data-[selected=true]:font-medium gap-2 rounded-sm py-1.5 pr-8 pl-2.5 text-sm relative flex w-full cursor-pointer items-center outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+      className={cn(
+        "group focus:bg-accent focus:text-accent-foreground data-highlighted:bg-accent data-highlighted:text-accent-foreground data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary data-[selected=true]:font-medium gap-2 rounded-sm py-1.5 pr-8 pl-2.5 text-sm relative flex w-full cursor-pointer items-center outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        classNames?.option
+      )}
       style={
         option.depth
           ? { paddingLeft: `${10 + option.depth * 14}px` }
@@ -557,7 +671,10 @@ const OptionItem = React.memo(function OptionItem({
     >
       {IconComp && (
         <IconComp
-          className="h-4 w-4 shrink-0 text-muted-foreground"
+          className={cn(
+            "h-4 w-4 shrink-0 text-muted-foreground",
+            classNames?.optionIcon
+          )}
           aria-hidden="true"
         />
       )}
@@ -571,11 +688,14 @@ const OptionItem = React.memo(function OptionItem({
         label={option.label}
         fallback="truncate"
         mode="lazy"
-        className="text-sm"
+        className={cn("text-sm", classNames?.optionLabel)}
       />
       {partial && (
         <span
-          className="pointer-events-none absolute right-2 flex size-4 items-center justify-center text-primary"
+          className={cn(
+            "pointer-events-none absolute right-2 flex size-4 items-center justify-center text-primary",
+            classNames?.partialIndicator
+          )}
           aria-hidden="true"
         >
           <MinusIcon className="size-4 stroke-[2.5]" />
@@ -583,7 +703,12 @@ const OptionItem = React.memo(function OptionItem({
       )}
       <ComboboxPrimitive.ItemIndicator
         render={
-          <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center text-primary" />
+          <span
+            className={cn(
+              "pointer-events-none absolute right-2 flex size-4 items-center justify-center text-primary",
+              classNames?.indicator
+            )}
+          />
         }
       >
         <CheckIcon className="size-4 stroke-[2.5]" />

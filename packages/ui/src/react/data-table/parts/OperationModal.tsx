@@ -28,6 +28,7 @@ import {
   type OperationAnalyticsMeta,
 } from "../../../core/table/operationAnalytics"
 import { useModalDepth } from "../../ui/modal"
+import { cn } from "../../../core/cn"
 
 /**
  * Width classes for sheet/dialog sizing
@@ -57,6 +58,10 @@ interface OperationModalProps<TData> {
   displayMode?: DisplayMode
   width?: WidthSize
   analyticsMeta?: OperationAnalyticsMeta | null
+  className?: string
+  dialogClassNames?: import("../../ui/dialog").DialogContentClassNames
+  sheetClassNames?: import("../../ui/sheet").SheetContentClassNames
+  classNames?: import("../../../core/table/types").DataTableClassNames
 }
 
 const DEFAULT_DISPLAY_MODE: DisplayMode = "sheet"
@@ -74,6 +79,10 @@ export function OperationModal<TData>({
   displayMode = DEFAULT_DISPLAY_MODE,
   width,
   analyticsMeta,
+  className,
+  dialogClassNames,
+  sheetClassNames,
+  classNames,
 }: OperationModalProps<TData>): React.ReactElement | null {
   const titleId = useId()
 
@@ -133,7 +142,8 @@ export function OperationModal<TData>({
     <Dialog open={open} onOpenChange={handleRootOpenChange}>
       <DialogContent
         aria-labelledby={titleId}
-        className={`max-w-2xl ${widthClass}`}
+        className={cn(`max-w-2xl ${widthClass}`, className)}
+        classNames={dialogClassNames}
       >
         {children}
       </DialogContent>
@@ -146,7 +156,11 @@ export function OperationModal<TData>({
         side="right"
         showCloseButton
         aria-labelledby={titleId}
-        className={`w-full! ${widthClass} overflow-y-auto overflow-x-hidden p-0`}
+        className={cn(
+          `w-full! ${widthClass} overflow-y-auto overflow-x-hidden p-0`,
+          className
+        )}
+        classNames={sheetClassNames}
       >
         {children}
       </SheetContent>
@@ -157,36 +171,56 @@ export function OperationModal<TData>({
     !operation.confirmation?.message && Boolean(descriptionText)
 
   const dialogHeader = (
-    <DialogHeader className="flex flex-row items-center gap-4 space-y-0 text-left">
+    <DialogHeader
+      className={cn(
+        "flex flex-row items-center gap-4 space-y-0 text-left",
+        classNames?.operationModalHeader
+      )}
+    >
       {icon && (
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
           {icon}
         </div>
       )}
       <div className="flex-1">
-        <DialogTitle id={titleId} className="text-lg font-bold">
+        <DialogTitle
+          id={titleId}
+          className={cn("text-lg font-bold", classNames?.operationModalTitle)}
+        >
           {titleText}
         </DialogTitle>
         {showDescription && (
-          <DialogDescription>{descriptionText}</DialogDescription>
+          <DialogDescription className={classNames?.operationModalDescription}>
+            {descriptionText}
+          </DialogDescription>
         )}
       </div>
     </DialogHeader>
   )
 
   const sheetHeader = (
-    <SheetHeader className="flex flex-row items-center gap-4 space-y-0 text-left border-b pb-6 px-6 pt-6 shrink-0">
+    <SheetHeader
+      className={cn(
+        "flex flex-row items-center gap-4 space-y-0 text-left border-b pb-6 px-6 pt-6 shrink-0",
+        classNames?.operationModalHeader
+      )}
+    >
       {icon && (
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
           {icon}
         </div>
       )}
       <div className="flex-1">
-        <SheetTitle id={titleId} className="text-2xl font-bold">
+        <SheetTitle
+          id={titleId}
+          className={cn("text-2xl font-bold", classNames?.operationModalTitle)}
+        >
           {titleText}
         </SheetTitle>
         {showDescription && (
-          <SheetDescription>{descriptionText}</SheetDescription>
+          <SheetDescription className={classNames?.operationModalDescription}>
+            {descriptionText}
+          </SheetDescription>
         )}
       </div>
     </SheetHeader>
@@ -201,16 +235,32 @@ export function OperationModal<TData>({
   const confirmationBody = (confirmText: string, cancelText: string) => (
     <>
       {isSheetMode ? sheetHeader : dialogHeader}
-      <div className="px-6 py-6 text-sm text-muted-foreground">
+      <div
+        className={cn(
+          "px-6 py-6 text-sm text-muted-foreground",
+          classNames?.operationModalBody
+        )}
+      >
         <p>{confirmationMessage}</p>
       </div>
       {isSheetMode ? (
-        <SheetFooter className="flex justify-end gap-2 px-6 py-4">
-          <Button variant="secondary" type="button" onClick={handleClose}>
+        <SheetFooter
+          className={cn(
+            "flex justify-end gap-2 px-6 py-4",
+            classNames?.operationModalFooter
+          )}
+        >
+          <Button
+            className={classNames?.operationCancel}
+            variant="secondary"
+            type="button"
+            onClick={handleClose}
+          >
             {cancelText}
           </Button>
           <Button
             variant="destructive"
+            className={classNames?.operationConfirm}
             type="button"
             onClick={() => onExecute(rowData ?? undefined)}
             disabled={isLoading}
@@ -219,10 +269,14 @@ export function OperationModal<TData>({
           </Button>
         </SheetFooter>
       ) : (
-        <DialogFooter>
+        <DialogFooter className={classNames?.operationModalFooter}>
           <DialogClose
             render={
-              <Button type="button" variant="secondary">
+              <Button
+                type="button"
+                variant="secondary"
+                className={classNames?.operationCancel}
+              >
                 {cancelText}
               </Button>
             }
@@ -230,6 +284,7 @@ export function OperationModal<TData>({
           <Button
             type="button"
             variant="destructive"
+            className={classNames?.operationConfirm}
             onClick={() => onExecute(rowData ?? undefined)}
             disabled={isLoading}
           >
@@ -245,11 +300,12 @@ export function OperationModal<TData>({
       <>
         {isSheetMode ? sheetHeader : dialogHeader}
         <div
-          className={
+          className={cn(
             isSheetMode
               ? "flex-1 overflow-y-auto overflow-x-hidden px-6 py-6"
-              : "p-6"
-          }
+              : "p-6",
+            classNames?.operationModalBody
+          )}
         >
           <OperationComponent
             data={modalType === "add" ? undefined : (rowData ?? undefined)}

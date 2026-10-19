@@ -6,11 +6,15 @@ import {
   DropdownMenuItem,
 } from "../../ui/dropdown-menu"
 import { MoreVertical } from "lucide-react"
-import type { OperationsConfig } from "../../../core/table/types"
+import type {
+  DataTableClassNames,
+  OperationsConfig,
+} from "../../../core/table/types"
 import type { DataTableFeatures } from "../../../core/table/features"
 import { MarqueeText } from "../../ui/marquee-text"
 import { getOperationColorClass, getOperationIcon } from "../operationIcons"
 import { sortRowOperations } from "../../../core/table/rowOperationOrder"
+import { cn } from "../../../core/cn"
 
 interface RowWithId {
   id: string | number
@@ -21,12 +25,16 @@ interface RowActionsProps<TData extends RowWithId> {
   row: Row<DataTableFeatures, TData>
   operations?: OperationsConfig<TData>
   onOperationClick: (operationType: string, rowData: TData) => void
+  className?: string
+  classNames?: Pick<DataTableClassNames, "operationTrigger" | "operationMenu">
 }
 
 export function RowActions<TData extends RowWithId>({
   row,
   operations,
   onOperationClick,
+  className,
+  classNames,
 }: RowActionsProps<TData>): React.ReactElement | null {
   const data = row.original
 
@@ -51,7 +59,10 @@ export function RowActions<TData extends RowWithId>({
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="Row actions"
-        className="cursor-pointer p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md"
+        className={cn(
+          "cursor-pointer p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md",
+          classNames?.operationTrigger
+        )}
       >
         <MoreVertical size={18} />
       </DropdownMenuTrigger>
@@ -59,7 +70,7 @@ export function RowActions<TData extends RowWithId>({
       <DropdownMenuContent
         aria-label="Row actions"
         align="end"
-        className="min-w-48 max-w-72"
+        className={cn("min-w-48 max-w-72", classNames?.operationMenu)}
         style={{ minWidth: 192, maxWidth: 288 }}
       >
         {rowLevelOperations.map(([key, operation]) => {
@@ -75,7 +86,10 @@ export function RowActions<TData extends RowWithId>({
             <DropdownMenuItem
               key={key}
               onClick={() => onOperationClick(key, data)}
-              className={`flex items-center gap-2 cursor-pointer group ${colorClass}`}
+              className={cn(
+                `flex items-center gap-2 cursor-pointer group ${colorClass}`,
+                className
+              )}
             >
               {Icon && <span className="shrink-0 text-inherit">{Icon}</span>}
               <MarqueeText label={label} />

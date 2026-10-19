@@ -1,4 +1,5 @@
 import { Input } from "../../ui/input"
+import { cn } from "../../../core/cn"
 import {
   Select,
   SelectContent,
@@ -27,6 +28,8 @@ export function ValueInput({
   value,
   onChange,
   disabled,
+  classNames,
+  partClassNames,
 }: ValueInputProps): React.ReactElement | null {
   if (!operatorNeedsValue(operator)) {
     return null
@@ -77,24 +80,41 @@ export function ValueInput({
             : "text"
 
     return (
-      <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+      <div
+        className={cn(
+          "flex w-full flex-col gap-2 sm:flex-row sm:items-center",
+          classNames?.rangeWrapper
+        )}
+      >
         <Input
           type={inputType}
           value={rangeValue.from}
           onChange={(e) =>
             handleRangeChange({ ...rangeValue, from: e.target.value })
           }
-          className="h-8 w-full"
+          className={cn(
+            "h-8 w-full",
+            classNames?.rangeInput,
+            classNames?.valueInput
+          )}
           disabled={disabled}
         />
-        <span className="text-muted-foreground">to</span>
+        <span
+          className={cn("text-muted-foreground", classNames?.rangeSeparator)}
+        >
+          to
+        </span>
         <Input
           type={inputType}
           value={rangeValue.to}
           onChange={(e) =>
             handleRangeChange({ ...rangeValue, to: e.target.value })
           }
-          className="h-8 w-full"
+          className={cn(
+            "h-8 w-full",
+            classNames?.rangeInput,
+            classNames?.valueInput
+          )}
           disabled={disabled}
         />
       </div>
@@ -109,7 +129,13 @@ export function ValueInput({
         onValueChange={onChange}
         disabled={disabled}
       >
-        <SelectTrigger className="h-8 w-full sm:min-w-[120px]">
+        <SelectTrigger
+          className={cn(
+            "h-8 w-full sm:min-w-[120px]",
+            classNames?.selectTrigger,
+            partClassNames?.valueSelect?.trigger
+          )}
+        >
           <SelectValue placeholder="Select...">
             {
               field.options.find(
@@ -118,9 +144,13 @@ export function ValueInput({
             }
           </SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className={partClassNames?.valueSelect?.content}>
           {field.options.map((opt) => (
-            <SelectItem key={String(opt.value)} value={String(opt.value)}>
+            <SelectItem
+              className={partClassNames?.valueSelect?.item}
+              key={String(opt.value)}
+              value={String(opt.value)}
+            >
               {opt.label}
             </SelectItem>
           ))}
@@ -139,7 +169,12 @@ export function ValueInput({
         placeholder="Select options..."
         maxCount={2}
         disabled={disabled}
-        className="w-full sm:min-w-[200px]"
+        className={cn(
+          "w-full sm:min-w-[200px]",
+          classNames?.multiSelect,
+          partClassNames?.multiSelect?.trigger
+        )}
+        classNames={partClassNames?.multiSelect}
       />
     )
   }
@@ -152,7 +187,7 @@ export function ValueInput({
         value={toDisplayString(value)}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Value..."
-        className="h-8 w-full sm:min-w-[100px]"
+        className={cn("h-8 w-full sm:min-w-[100px]", classNames?.valueInput)}
         disabled={disabled}
       />
     )
@@ -160,34 +195,12 @@ export function ValueInput({
 
   // Date field
   if (field.type === "date") {
-    if (isRange) {
-      const rangeValue = (value as { from?: string; to?: string }) ?? {}
-      return (
-        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
-          <Input
-            type="date"
-            value={rangeValue.from ?? ""}
-            onChange={(e) => onChange({ ...rangeValue, from: e.target.value })}
-            className="h-8 w-full"
-            disabled={disabled}
-          />
-          <span className="text-muted-foreground">to</span>
-          <Input
-            type="date"
-            value={rangeValue.to ?? ""}
-            onChange={(e) => onChange({ ...rangeValue, to: e.target.value })}
-            className="h-8 w-full"
-            disabled={disabled}
-          />
-        </div>
-      )
-    }
     return (
       <Input
         type="date"
         value={toDisplayString(value)}
         onChange={(e) => onChange(e.target.value)}
-        className="h-8 w-full"
+        className={cn("h-8 w-full", classNames?.valueInput)}
         disabled={disabled}
       />
     )
@@ -200,7 +213,7 @@ export function ValueInput({
         type="time"
         value={toDisplayString(value)}
         onChange={(e) => onChange(e.target.value)}
-        className="h-8 w-full"
+        className={cn("h-8 w-full", classNames?.valueInput)}
         disabled={disabled}
       />
     )
@@ -213,7 +226,7 @@ export function ValueInput({
       value={toDisplayString(value)}
       onChange={(e) => onChange(e.target.value)}
       placeholder="Value..."
-      className="h-8 w-full sm:min-w-[120px]"
+      className={cn("h-8 w-full sm:min-w-[120px]", classNames?.valueInput)}
       disabled={disabled}
     />
   )

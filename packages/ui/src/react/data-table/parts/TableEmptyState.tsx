@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next"
 import type { TableEmptyStateProps } from "../../../core/table/types"
 import { EmptyState } from "../../feedback/EmptyState"
+import { cn } from "../../../core/cn"
 
 /**
  * TableEmptyState component displayed when no data is available
@@ -11,6 +12,8 @@ export function TableEmptyState({
   hasFilters,
   onAddClick,
   addButtonLabel,
+  className,
+  classNames,
 }: TableEmptyStateProps): React.ReactElement {
   const { t } = useTranslation()
   const title = hasFilters
@@ -32,12 +35,16 @@ export function TableEmptyState({
       <tr>
         <td
           colSpan={colSpan}
-          className="p-0 bg-card border-b rounded-b-lg overflow-hidden"
+          className={cn(
+            "p-0 bg-card border-b rounded-b-lg overflow-hidden",
+            className
+          )}
         >
           <EmptyState
             title={title}
             description={description}
             variant={hasFilters ? "search" : "default"}
+            classNames={classNames}
             action={
               onAddClick
                 ? {

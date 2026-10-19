@@ -9,13 +9,16 @@ import type { SidebarSearchProps } from "../../core/menu/types"
  * SidebarSearch component
  */
 export const SidebarSearch = forwardRef<HTMLInputElement, SidebarSearchProps>(
-  ({ value, onChange, className }, ref) => {
+  ({ value, onChange, className, classNames }, ref) => {
     const { t } = useTranslation()
     return (
-      <div className={cn("px-3 pb-3", className)}>
+      <div className={cn("px-3 pb-3", className, classNames?.search)}>
         <div className="relative">
           <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-sidebar-foreground/80 pointer-events-none"
+            className={cn(
+              "absolute left-3 top-1/2 -translate-y-1/2 text-sidebar-foreground/80 pointer-events-none",
+              classNames?.searchIcon
+            )}
             size={16}
           />
           <input
@@ -34,14 +37,18 @@ export const SidebarSearch = forwardRef<HTMLInputElement, SidebarSearchProps>(
               "text-sidebar-accent-foreground placeholder:text-sidebar-accent-foreground/80",
               "focus:outline-none focus:ring-2 focus:ring-sidebar-ring focus:ring-offset-0",
               "focus:bg-sidebar-accent focus:border-sidebar-border",
-              "transition-all duration-200"
+              "transition-all duration-200",
+              classNames?.searchInput
             )}
           />
           {value && (
             <button
               type="button"
               onClick={() => onChange("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
+              className={cn(
+                "absolute right-3 top-1/2 -translate-y-1/2 text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors",
+                classNames?.searchClearButton
+              )}
               aria-label={ARIA_LABELS.clearSearch}
             >
               <X size={14} />

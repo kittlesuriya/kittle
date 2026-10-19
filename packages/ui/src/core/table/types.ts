@@ -11,7 +11,16 @@ import type {
 } from "@tanstack/react-table"
 import type { z } from "zod"
 import type { GranularPermissions } from "./granularPermissions"
-import type { QueryBuilderProps } from "../query/types"
+import type {
+  QueryBuilderProps,
+  QueryBuilderClassNames,
+  QueryBuilderPartClassNames,
+  QueryBuilderFieldStyles,
+} from "../query/types"
+import type { EmptyStateClassNames } from "../../react/feedback/EmptyState"
+import type { InlineErrorClassNames } from "../../react/feedback/InlineError"
+import type { DialogContentClassNames } from "../../react/ui/dialog"
+import type { SheetContentClassNames } from "../../react/ui/sheet"
 import type { DataTableFeatures } from "./features"
 
 /**
@@ -86,6 +95,85 @@ export interface FilterConfig {
   schema?: z.ZodObject<z.ZodRawShape>
   initialValues?: FilterState
   queryBuilderUi?: QueryBuilderProps["ui"]
+  queryBuilderClassNames?: QueryBuilderClassNames
+  queryBuilderPartClassNames?: QueryBuilderPartClassNames
+  queryBuilderFieldStyles?: Record<string, QueryBuilderFieldStyles>
+}
+
+/** Public customization hooks for the DataTable's structural elements. */
+export interface DataTableClassNames {
+  root?: string
+  card?: string
+  cardHeader?: string
+  title?: string
+  titleBadge?: string
+  documentationButton?: string
+  filters?: string
+  scrollArea?: string
+  table?: string
+  toolbar?: string
+  toolbarButtons?: string
+  refreshButton?: string
+  addButton?: string
+  header?: string
+  headerRow?: string
+  headerCell?: string
+  body?: string
+  row?: string
+  cell?: string
+  footer?: string
+  footerCell?: string
+  pagination?: string
+  paginationContainer?: string
+  loading?: string
+  error?: string
+  empty?: string
+  operationModal?: string
+  operationAction?: string
+  columnMenuButton?: string
+  columnMenuContent?: string
+  columnMenuItem?: string
+  columnMenuLabel?: string
+  exportButton?: string
+  exportMenuContent?: string
+  exportMenuItem?: string
+  paginationPageSize?: string
+  paginationLabel?: string
+  paginationSelect?: string
+  paginationNavigation?: string
+  paginationButton?: string
+  paginationPageIndicator?: string
+  paginationSelectorContent?: string
+  paginationSelectorItem?: string
+  loadingCard?: string
+  loadingHeader?: string
+  loadingContent?: string
+  loadingToolbar?: string
+  loadingTable?: string
+  loadingTableHeader?: string
+  loadingTableBody?: string
+  loadingRow?: string
+  loadingCell?: string
+  loadingFooter?: string
+  errorIcon?: string
+  errorContent?: string
+  errorRetry?: string
+  operationTrigger?: string
+  operationMenu?: string
+  operationModalHeader?: string
+  operationModalTitle?: string
+  operationModalDescription?: string
+  operationModalBody?: string
+  operationModalFooter?: string
+  operationConfirm?: string
+  operationCancel?: string
+}
+
+export interface DataTablePartClassNames {
+  emptyState?: EmptyStateClassNames
+  errorMessage?: InlineErrorClassNames
+  operationDialog?: DialogContentClassNames
+  operationSheet?: SheetContentClassNames
 }
 
 // =============================================================================
@@ -273,6 +361,7 @@ export type ColumnDropPosition = "before" | "after"
 
 export interface TableHeaderProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData>
+  classNames?: Pick<DataTableClassNames, "header" | "headerRow" | "headerCell">
   onColumnReorder?: (
     sourceId: string,
     targetId: string,
@@ -282,12 +371,25 @@ export interface TableHeaderProps<TData extends RowData> {
 
 export interface TableBodyProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData>
+  classNames?: Pick<DataTableClassNames, "body" | "row" | "cell">
 }
 
 export interface TablePaginationProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData>
   showPagination?: boolean
   translationNamespace?: string
+  classNames?: Pick<
+    DataTableClassNames,
+    | "pagination"
+    | "paginationPageSize"
+    | "paginationLabel"
+    | "paginationSelect"
+    | "paginationNavigation"
+    | "paginationButton"
+    | "paginationPageIndicator"
+    | "paginationSelectorContent"
+    | "paginationSelectorItem"
+  >
 }
 
 export interface TableToolbarProps<TData extends RowData> {
@@ -302,6 +404,20 @@ export interface TableToolbarProps<TData extends RowData> {
   onExport?: (exportType: string) => Promise<void>
   isExporting?: string | null
   translationNamespace?: string
+  classNames?: Pick<
+    DataTableClassNames,
+    | "toolbar"
+    | "toolbarButtons"
+    | "refreshButton"
+    | "addButton"
+    | "columnMenuButton"
+    | "columnMenuContent"
+    | "columnMenuItem"
+    | "columnMenuLabel"
+    | "exportButton"
+    | "exportMenuContent"
+    | "exportMenuItem"
+  >
 }
 
 export interface TableEmptyStateProps {
@@ -311,11 +427,18 @@ export interface TableEmptyStateProps {
   onAddClick?: () => void
   addButtonLabel?: string
   translationNamespace?: string
+  className?: string
+  classNames?: EmptyStateClassNames
 }
 
 export interface TableErrorStateProps {
   onRetry?: () => void
   message?: string
+  className?: string
+  classNames?: InlineErrorClassNames
+  iconClassName?: string
+  contentClassName?: string
+  retryClassName?: string
 }
 
 // =============================================================================
@@ -366,6 +489,9 @@ export interface ExportsConfig<TData extends RowData> {
 // =============================================================================
 
 export interface DataTableProps<TData extends RowWithId> {
+  className?: string
+  classNames?: DataTableClassNames
+  partClassNames?: DataTablePartClassNames
   tag: string
   title: string
   subject?: string

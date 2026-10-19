@@ -55,6 +55,53 @@ export type DrawerBreakpoint = "sm" | "md" | "lg" | "xl"
  */
 export type SidebarDensity = "xs" | "sm" | "md" | "lg"
 
+/** Stable styling hooks for the sidebar and its independently usable parts. */
+export interface SidebarClassNames {
+  drawer?: string
+  nav?: string
+  topbar?: string
+  main?: string
+  collapseButton?: string
+  header?: string
+  search?: string
+  searchInput?: string
+  searchIcon?: string
+  searchClearButton?: string
+  menuSection?: string
+  menuItem?: string
+  menuDropdown?: string
+  menuBadge?: string
+  menuHotkey?: string
+  menuActiveIndicator?: string
+  menuDisclosureIcon?: string
+  menuSectionHeading?: string
+  headerLink?: string
+  /** Generated initial/logo placeholder only; a supplied logo remains caller-owned. */
+  headerLogo?: string
+  headerTitle?: string
+  headerSubtitle?: string
+  secondary?: string
+  secondaryHeader?: string
+  secondaryBackButton?: string
+  secondaryCloseButton?: string
+  flyout?: string
+  flyoutHeader?: string
+  flyoutBackButton?: string
+  userMenuTrigger?: string
+  userMenuContent?: string
+  userMenuProfile?: string
+  userMenuLanguageSection?: string
+  userMenuLanguageOption?: string
+  userMenuAppearanceSection?: string
+  userMenuAppearanceOption?: string
+  userMenuLogoutButton?: string
+  organizationSwitcher?: string
+  organizationSwitcherIcon?: string
+  organizationSwitcherLabel?: string
+  organizationSwitcherDescription?: string
+  organizationSwitcherChevron?: string
+}
+
 /**
  * Animation direction
  */
@@ -113,6 +160,20 @@ export interface SidebarProps {
     email?: string
     avatarUrl?: string
   }
+  className?: string
+  classNames?: SidebarClassNames
+}
+
+export interface UserMenuProps {
+  name?: string
+  email?: string
+  avatarUrl?: string
+  onLogout?: () => void
+  /** Second line under the name. Falls back to `email` when omitted. */
+  subtitle?: string
+  /** Overrides the default "Signed in" badge label (e.g. "Verified Customer"). */
+  badgeLabel?: string
+  classNames?: SidebarClassNames
 }
 
 /**
@@ -124,6 +185,7 @@ export interface SidebarHeaderProps {
   title: string
   subtitle?: string
   homeLink: string
+  classNames?: SidebarClassNames
 }
 
 /**
@@ -133,6 +195,7 @@ export interface SidebarSearchProps {
   value: string
   onChange: (value: string) => void
   className?: string
+  classNames?: SidebarClassNames
 }
 
 /**
@@ -154,6 +217,7 @@ export interface MenuSectionProps {
   showHotkeys: boolean
   density?: SidebarDensity
   onOpenSecondary?: (item: MenuItem) => void
+  classNames?: SidebarClassNames
 }
 
 /**
@@ -174,6 +238,7 @@ export interface SecondarySidebarProps {
   density?: SidebarDensity
   showHotkeys?: boolean
   showBadge?: boolean
+  classNames?: SidebarClassNames
 }
 
 /**
@@ -189,6 +254,7 @@ export interface FlyoutMenuProps {
   onClose: () => void
   showHotkeys?: boolean
   showBadge?: boolean
+  classNames?: SidebarClassNames
 }
 
 /**
@@ -196,6 +262,7 @@ export interface FlyoutMenuProps {
  */
 export interface OrganizationSwitcherProps {
   className?: string
+  classNames?: SidebarClassNames
 }
 
 // =============================================================================

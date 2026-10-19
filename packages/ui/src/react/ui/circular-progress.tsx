@@ -15,6 +15,15 @@ export interface CircularProgressProps {
   /** Content centered inside the ring (percent label, icon, thumbnail). */
   children?: React.ReactNode
   className?: string
+  classNames?: CircularProgressClassNames
+}
+
+export interface CircularProgressClassNames {
+  root?: string
+  svg?: string
+  track?: string
+  indicator?: string
+  content?: string
 }
 
 /**
@@ -30,6 +39,7 @@ export function CircularProgress({
   error = false,
   children,
   className,
+  classNames,
 }: CircularProgressProps): React.ReactElement {
   const clamped = Math.min(100, Math.max(0, percent))
   const radius = (size - strokeWidth) / 2
@@ -40,7 +50,8 @@ export function CircularProgress({
     <div
       className={cn(
         "relative inline-flex items-center justify-center",
-        indeterminate && "animate-spin"
+        indeterminate && "animate-spin",
+        classNames?.root
       )}
       style={{ width: size, height: size }}
     >
@@ -48,7 +59,7 @@ export function CircularProgress({
         width={size}
         height={size}
         viewBox={`0 0 ${size} ${size}`}
-        className={cn("absolute inset-0", className)}
+        className={cn("absolute inset-0", className, classNames?.svg)}
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
@@ -60,7 +71,7 @@ export function CircularProgress({
           r={radius}
           fill="none"
           strokeWidth={strokeWidth}
-          className="stroke-muted"
+          className={cn("stroke-muted", classNames?.track)}
         />
         <circle
           cx={size / 2}
@@ -78,14 +89,16 @@ export function CircularProgress({
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
           className={cn(
             "transition-[stroke-dashoffset] duration-200",
-            error ? "stroke-destructive" : "stroke-primary"
+            error ? "stroke-destructive" : "stroke-primary",
+            classNames?.indicator
           )}
         />
       </svg>
       {children ? (
         <div
           className={cn(
-            indeterminate && "animate-[spin_1s_linear_infinite_reverse]"
+            indeterminate && "animate-[spin_1s_linear_infinite_reverse]",
+            classNames?.content
           )}
         >
           {children}

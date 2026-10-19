@@ -5,6 +5,13 @@ import { cn } from "../../core/cn"
 import { Button } from "./button"
 import { XIcon } from "lucide-react"
 
+export interface DialogContentClassNames {
+  overlay?: string
+  content?: string
+  close?: string
+  closeIcon?: string
+}
+
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
 }
@@ -58,6 +65,7 @@ function DialogOverlay({
 function DialogContent({
   className,
   overlayClassName,
+  classNames,
   onOverlayClick,
   children,
   showCloseButton = true,
@@ -66,16 +74,21 @@ function DialogContent({
   showCloseButton?: boolean
   /** Optional extra classes for the dim/blur backdrop (defaults preserved). */
   overlayClassName?: string
+  classNames?: DialogContentClassNames
   onOverlayClick?: React.MouseEventHandler<HTMLDivElement>
 }) {
   return (
     <DialogPortal>
-      <DialogOverlay className={overlayClassName} onClick={onOverlayClick} />
+      <DialogOverlay
+        className={cn(overlayClassName, classNames?.overlay)}
+        onClick={onOverlayClick}
+      />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
           "bg-background data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 ring-foreground/10 grid max-w-[calc(100%-2rem)] gap-6 rounded-xl p-6 text-sm ring-1 duration-100 sm:max-w-md fixed top-1/2 left-1/2 z-critical w-full -translate-x-1/2 -translate-y-1/2 outline-none shadow-2xl",
-          className
+          className,
+          classNames?.content
         )}
         {...props}
         // Stop propagation so parent sheets/dialogs don't close
@@ -89,12 +102,12 @@ function DialogContent({
             render={
               <Button
                 variant="ghost"
-                className="absolute top-4 right-4"
+                className={cn("absolute top-4 right-4", classNames?.close)}
                 size="icon-sm"
               />
             }
           >
-            <XIcon />
+            <XIcon className={classNames?.closeIcon} />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
         )}

@@ -23,6 +23,7 @@ import type { TableToolbarProps, ColumnMeta } from "../../../core/table/types"
 import type { ReactNode } from "react"
 import { formatHotkey } from "../../../core/menu/hotKeys"
 import { hotkeyClasses } from "../../../core/menu/constants"
+import { cn } from "../../../core/cn"
 
 interface ExtendedColumnMeta extends ColumnMeta {
   label?: string
@@ -54,21 +55,35 @@ export function TableToolbar<TData extends RowData>({
   onExport,
   isExporting,
   translationNamespace,
+  classNames,
 }: TableToolbarProps<TData>): React.ReactElement {
   const { t } = useTranslation()
   const hasExports = exports && Object.keys(exports).length > 0
 
   return (
-    <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+    <div
+      className={cn(
+        "flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto",
+        classNames?.toolbar
+      )}
+    >
       {/* Utilities Group (Columns, Export, Refresh) */}
-      <div className="flex items-center gap-1.5 sm:gap-2">
+      <div
+        className={cn(
+          "flex items-center gap-1.5 sm:gap-2",
+          classNames?.toolbarButtons
+        )}
+      >
         {showColumnMenu && (
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
                 <Button
                   variant="outline"
-                  className="size-9 p-0 sm:h-9 sm:w-auto sm:px-3 gap-1.5 cursor-pointer"
+                  className={cn(
+                    "size-9 p-0 sm:h-9 sm:w-auto sm:px-3 gap-1.5 cursor-pointer",
+                    classNames?.columnMenuButton
+                  )}
                   title={t("common.columns", { defaultValue: "Columns" })}
                 />
               }
@@ -83,7 +98,10 @@ export function TableToolbar<TData extends RowData>({
             <DropdownMenuContent
               align="start"
               aria-label={t("common.columns", { defaultValue: "Columns" })}
-              className="w-56 p-2 max-h-64 overflow-y-auto"
+              className={cn(
+                "w-56 p-2 max-h-64 overflow-y-auto",
+                classNames?.columnMenuContent
+              )}
             >
               {table
                 .getAllLeafColumns()
@@ -113,11 +131,14 @@ export function TableToolbar<TData extends RowData>({
                   return (
                     <div
                       key={`${col.id}-${String(isVisible)}`}
-                      className="px-2 py-1.5"
+                      className={cn("px-2 py-1.5", classNames?.columnMenuItem)}
                     >
                       <label
                         htmlFor={checkboxId}
-                        className="flex items-center space-x-2 text-sm cursor-pointer capitalize"
+                        className={cn(
+                          "flex items-center space-x-2 text-sm cursor-pointer capitalize",
+                          classNames?.columnMenuLabel
+                        )}
                       >
                         <Checkbox
                           id={checkboxId}
@@ -142,7 +163,10 @@ export function TableToolbar<TData extends RowData>({
               render={
                 <Button
                   variant="outline"
-                  className="size-9 p-0 sm:h-9 sm:w-auto sm:px-3 gap-1.5 cursor-pointer"
+                  className={cn(
+                    "size-9 p-0 sm:h-9 sm:w-auto sm:px-3 gap-1.5 cursor-pointer",
+                    classNames?.exportButton
+                  )}
                   title={t("common.export", { defaultValue: "Export" })}
                 />
               }
@@ -161,7 +185,7 @@ export function TableToolbar<TData extends RowData>({
             <DropdownMenuContent
               align="start"
               aria-label={t("common.export", { defaultValue: "Export" })}
-              className="w-48"
+              className={cn("w-48", classNames?.exportMenuContent)}
             >
               {Object.entries(exports).map(([key, config]) => {
                 if (!config) return null
@@ -172,7 +196,7 @@ export function TableToolbar<TData extends RowData>({
                     key={key}
                     onClick={() => onExport?.(key)}
                     disabled={Boolean(isExporting)}
-                    className="cursor-pointer"
+                    className={cn("cursor-pointer", classNames?.exportMenuItem)}
                   >
                     {Icon}
                     <span className="ml-2">{label}</span>
@@ -187,7 +211,10 @@ export function TableToolbar<TData extends RowData>({
           type="button"
           variant="outline"
           onClick={onRefresh}
-          className="size-9 p-0 sm:h-9 sm:w-auto sm:px-3 gap-1.5 cursor-pointer"
+          className={cn(
+            "size-9 p-0 sm:h-9 sm:w-auto sm:px-3 gap-1.5 cursor-pointer",
+            classNames?.refreshButton
+          )}
           title={t("common.refresh", { defaultValue: "Refresh" })}
         >
           <RefreshCw size={15} />
@@ -202,7 +229,10 @@ export function TableToolbar<TData extends RowData>({
         <Button
           type="button"
           onClick={onAdd}
-          className="cursor-pointer size-9 p-0 sm:h-9 sm:w-auto sm:px-3 gap-1.5 shrink-0"
+          className={cn(
+            "cursor-pointer size-9 p-0 sm:h-9 sm:w-auto sm:px-3 gap-1.5 shrink-0",
+            classNames?.addButton
+          )}
           title={`${addButtonText} (${formatHotkey("alt+n")})`}
         >
           <Plus size={16} />

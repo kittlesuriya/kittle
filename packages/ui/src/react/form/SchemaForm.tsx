@@ -44,6 +44,10 @@ import { useFormGuard } from "./hooks/useFormGuard"
 import { useUiRuntime } from "../../core/runtime"
 import { formatHotkey, isAltEnterSubmit } from "../../core/menu/hotKeys"
 import { hotkeyClasses } from "../../core/menu/constants"
+import {
+  mergeFieldStyles,
+  resolveFieldStyles,
+} from "../../core/form/fieldStyles"
 
 import type {
   SchemaFormProps,
@@ -149,9 +153,11 @@ function groupSpanClass(cfg: FieldConfig, columns: number): string {
 function FormSectionView({
   section,
   renderField,
+  classNames,
 }: {
   section: ResolvedFormSection
   renderField: (cfg: FieldConfig, spanClass: string) => React.ReactNode
+  classNames?: import("../../core/form/types").SchemaFormClassNames
 }) {
   // Sections start open: a form field hidden behind a collapsed heading is a
   // validation error the user cannot see or fix.
@@ -159,11 +165,11 @@ function FormSectionView({
   const headingId = `${section.id}-heading`
 
   const body = (
-    <div className="space-y-4">
+    <div className={cn("space-y-4", classNames?.sectionBody)}>
       {section.groups.map((group) => (
-        <div key={group.id} className="space-y-3">
+        <div key={group.id} className={cn("space-y-3", classNames?.group)}>
           {group.title ? (
-            <div className="space-y-1">
+            <div className={cn("space-y-1", classNames?.groupHeading)}>
               <h3 className="font-medium">{group.title}</h3>
               {group.description ? (
                 <p className="text-sm text-muted-foreground">
@@ -172,7 +178,12 @@ function FormSectionView({
               ) : null}
             </div>
           ) : null}
-          <div className="grid grid-cols-12 gap-x-4 gap-y-5">
+          <div
+            className={cn(
+              "grid grid-cols-12 gap-x-4 gap-y-5",
+              classNames?.grid
+            )}
+          >
             {group.fields.map((cfg) =>
               renderField(cfg, groupSpanClass(cfg, group.columns))
             )}
@@ -180,7 +191,9 @@ function FormSectionView({
         </div>
       ))}
       {section.fields.length > 0 ? (
-        <div className="grid grid-cols-12 gap-x-4 gap-y-5">
+        <div
+          className={cn("grid grid-cols-12 gap-x-4 gap-y-5", classNames?.grid)}
+        >
           {section.fields.map((cfg) => renderField(cfg, flatSpanClass(cfg)))}
         </div>
       ) : null}
@@ -199,7 +212,10 @@ function FormSectionView({
       render={
         <button
           type="button"
-          className="flex w-full items-center justify-between gap-2 text-left"
+          className={cn(
+            "flex w-full items-center justify-between gap-2 text-left",
+            classNames?.sectionHeading
+          )}
         />
       }
     >
@@ -215,7 +231,10 @@ function FormSectionView({
       />
     </CollapsibleTrigger>
   ) : (
-    <h2 id={headingId} className="text-base font-semibold">
+    <h2
+      id={headingId}
+      className={cn("text-base font-semibold", classNames?.sectionHeading)}
+    >
       {section.title}
     </h2>
   )
@@ -230,7 +249,10 @@ function FormSectionView({
   if (section.collapsible) {
     return (
       <Collapsible open={open} onOpenChange={setOpen}>
-        <section aria-labelledby={headingId} className="space-y-3">
+        <section
+          aria-labelledby={headingId}
+          className={cn("space-y-3", classNames?.section)}
+        >
           {headingBlock}
           <CollapsibleContent>{body}</CollapsibleContent>
         </section>
@@ -239,7 +261,10 @@ function FormSectionView({
   }
 
   return (
-    <section aria-labelledby={headingId} className="space-y-3">
+    <section
+      aria-labelledby={headingId}
+      className={cn("space-y-3", classNames?.section)}
+    >
       {headingBlock}
       {body}
     </section>
@@ -272,6 +297,9 @@ export function SchemaForm<T extends z.ZodTypeAny>({
   translationNamespace,
   fieldSlots,
   layout,
+  classNames,
+  partClassNames,
+  fieldStyles,
 }: SchemaFormProps<T>): React.ReactElement {
   const { t } = useTranslation()
   const runtime = useUiRuntime()
@@ -454,6 +482,14 @@ export function SchemaForm<T extends z.ZodTypeAny>({
           return null
         }
         const isRequired = Boolean(cfg.required)
+        const fieldClassNames = mergeFieldStyles(
+          { classNames: classNames ?? {}, partClassNames },
+          ...resolveFieldStyles(fieldStyles, cfg.name)
+        )
+        const resolvedClassNames = {
+          ...(classNames ?? {}),
+          ...(fieldClassNames.classNames ?? {}),
+        }
         const fieldValue = field.state.value as FieldValue
 
         return (
@@ -575,12 +611,15 @@ export function SchemaForm<T extends z.ZodTypeAny>({
                 })
 
                 return (
-                  <div className={spanClass}>
+                  <div className={cn(spanClass, resolvedClassNames.field)}>
                     <div className="flex items-center justify-between py-2">
                       <div className="flex items-center gap-1">
                         <Label
                           htmlFor={fieldIdFor(cfg.name)}
-                          className="text-sm font-medium flex items-center gap-1 cursor-pointer"
+                          className={cn(
+                            "text-sm font-medium flex items-center gap-1 cursor-pointer",
+                            resolvedClassNames.label
+                          )}
                         >
                           {translationNamespace
                             ? t(
@@ -598,6 +637,7 @@ export function SchemaForm<T extends z.ZodTypeAny>({
                             description={fieldHelp.description}
                             bullets={fieldHelp.bullets}
                             example={fieldHelp.example}
+                            classNames={fieldClassNames.partClassNames?.help}
                           />
                         ) : null}
                       </div>
@@ -617,12 +657,20 @@ export function SchemaForm<T extends z.ZodTypeAny>({
                           disabledFields.includes(cfg.name)
                         }
                         formValues={values}
+                        classNames={resolvedClassNames}
+                        partClassNames={fieldClassNames.partClassNames}
+                        fieldPath={cfg.name}
+                        fieldStyles={fieldStyles}
+                        baseClassNames={classNames ?? {}}
+                        basePartClassNames={partClassNames ?? {}}
                       />
                     </div>
                     {showErrors && (
                       <FieldErrors
                         errors={allErrors}
                         testId={`error-${cfg.name}`}
+                        className={resolvedClassNames.errors}
+                        rowClassName={resolvedClassNames.errorRow}
                       />
                     )}
 
@@ -641,7 +689,13 @@ export function SchemaForm<T extends z.ZodTypeAny>({
               // Self-labeling components render without the default label row
               if (isSelfLabelingFieldType(cfg.type)) {
                 return (
-                  <div className={`${spanClass} space-y-1.5`}>
+                  <div
+                    className={cn(
+                      spanClass,
+                      "space-y-1.5",
+                      resolvedClassNames.field
+                    )}
+                  >
                     <FieldRenderer
                       cfg={cfg}
                       id={fieldIdFor(cfg.name)}
@@ -661,6 +715,12 @@ export function SchemaForm<T extends z.ZodTypeAny>({
                       isSubmitted={isSubmitted}
                       disabled={isFormDisabled || cfg.disabled}
                       formValues={values}
+                      classNames={resolvedClassNames}
+                      partClassNames={fieldClassNames.partClassNames}
+                      fieldPath={cfg.name}
+                      fieldStyles={fieldStyles}
+                      baseClassNames={classNames ?? {}}
+                      basePartClassNames={partClassNames ?? {}}
                     />
 
                     {fieldSlots?.[cfg.name]?.({
@@ -689,13 +749,22 @@ export function SchemaForm<T extends z.ZodTypeAny>({
               const labelId = `${fieldIdFor(cfg.name)}-label`
 
               return (
-                <div className={`${spanClass} space-y-1.5 min-w-0`}>
+                <div
+                  className={cn(
+                    spanClass,
+                    "space-y-1.5 min-w-0",
+                    resolvedClassNames.field
+                  )}
+                >
                   <div className="flex items-center gap-1">
                     <Label
                       {...(useLabelledBy
                         ? { id: labelId }
                         : { htmlFor: fieldIdFor(cfg.name) })}
-                      className="text-sm font-medium flex items-center gap-1"
+                      className={cn(
+                        "text-sm font-medium flex items-center gap-1",
+                        resolvedClassNames.label
+                      )}
                     >
                       {translationNamespace
                         ? t(
@@ -713,6 +782,7 @@ export function SchemaForm<T extends z.ZodTypeAny>({
                         description={fieldHelp.description}
                         bullets={fieldHelp.bullets}
                         example={fieldHelp.example}
+                        classNames={fieldClassNames.partClassNames?.help}
                       />
                     ) : null}
                   </div>
@@ -749,12 +819,20 @@ export function SchemaForm<T extends z.ZodTypeAny>({
                     }
                     overrideOptions={filteredOptions}
                     formValues={values}
+                    classNames={resolvedClassNames}
+                    partClassNames={fieldClassNames.partClassNames}
+                    fieldPath={cfg.name}
+                    fieldStyles={fieldStyles}
+                    baseClassNames={classNames ?? {}}
+                    basePartClassNames={partClassNames ?? {}}
                   />
 
                   {showErrors && (
                     <FieldErrors
                       errors={allErrors}
                       testId={`error-${cfg.name}`}
+                      className={resolvedClassNames.errors}
+                      rowClassName={resolvedClassNames.errorRow}
                     />
                   )}
 
@@ -780,7 +858,7 @@ export function SchemaForm<T extends z.ZodTypeAny>({
       <LoadingOverlay visible={isLoading} message={loadingMessage} />
 
       <form
-        className={className ?? "space-y-6"}
+        className={cn(className ?? "space-y-6", classNames?.form)}
         data-testid="schema-form-element"
         onKeyDown={(e) => {
           // Alt+Enter submits from anywhere in the form, including focused
@@ -807,17 +885,23 @@ export function SchemaForm<T extends z.ZodTypeAny>({
       >
         {submitError ? <InlineError message={submitError} /> : null}
         {resolvedLayout ? (
-          <div className="space-y-6">
+          <div className={cn("space-y-6", classNames?.sections)}>
             {resolvedLayout.sections.map((section) => (
               <FormSectionView
                 key={section.id}
                 section={section}
                 renderField={renderField}
+                classNames={classNames}
               />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-12 gap-x-4 gap-y-5">
+          <div
+            className={cn(
+              "grid grid-cols-12 gap-x-4 gap-y-5",
+              classNames?.grid
+            )}
+          >
             {sortedFields.map((cfg: FieldConfig) =>
               renderField(cfg, flatSpanClass(cfg))
             )}
@@ -826,7 +910,7 @@ export function SchemaForm<T extends z.ZodTypeAny>({
 
         {children}
 
-        <Separator className="mb-3" />
+        <Separator className={cn("mb-3", classNames?.actionsSeparator)} />
 
         <form.Subscribe selector={(s) => [s.canSubmit, s.isSubmitting]}>
           {([canSubmit, isSubmitting]) => {
@@ -844,13 +928,19 @@ export function SchemaForm<T extends z.ZodTypeAny>({
             }
 
             return (
-              <div className="flex items-center justify-end gap-2">
+              <div
+                className={cn(
+                  "flex items-center justify-end gap-2",
+                  classNames?.actions
+                )}
+              >
                 {onCancel && (
                   <Button
                     type="button"
                     variant="outline"
                     onClick={onCancel}
                     disabled={Boolean(isSubmitting) || isFormDisabled}
+                    className={classNames?.cancelButton}
                   >
                     {t("common.cancel", { defaultValue: "Cancel" })}
                   </Button>
@@ -864,6 +954,7 @@ export function SchemaForm<T extends z.ZodTypeAny>({
                       form.reset()
                     }}
                     disabled={Boolean(isSubmitting) || isFormDisabled}
+                    className={classNames?.resetButton}
                   >
                     {t("common.reset", { defaultValue: "Reset" })}
                   </Button>
@@ -871,7 +962,10 @@ export function SchemaForm<T extends z.ZodTypeAny>({
                 <Button
                   type="submit"
                   disabled={Boolean(isSubmitting) || isFormDisabled}
-                  className={onCancel || onReset ? "" : "w-full"}
+                  className={cn(
+                    onCancel || onReset ? "" : "w-full",
+                    classNames?.submitButton
+                  )}
                   title={`${submitLabel} (${formatHotkey("alt+enter")})`}
                 >
                   {isSubmitting ? (

@@ -24,6 +24,7 @@ export const FlyoutMenu = forwardRef<HTMLDivElement, FlyoutMenuProps>(
       onClose,
       showHotkeys = true,
       showBadge = true,
+      classNames,
     },
     ref
   ) => {
@@ -36,15 +37,26 @@ export const FlyoutMenu = forwardRef<HTMLDivElement, FlyoutMenuProps>(
     return (
       <div
         ref={ref}
-        className={`fixed z-dropdown min-w-48 bg-sidebar text-sidebar-foreground border border-sidebar-border ${RADIUS.lg} shadow-lg py-1`}
+        className={cn(
+          `fixed z-dropdown min-w-48 bg-sidebar text-sidebar-foreground border border-sidebar-border ${RADIUS.lg} shadow-lg py-1`,
+          classNames?.flyout
+        )}
         style={style}
       >
-        <div className="px-3 py-2 border-b border-sidebar-border flex items-center gap-2">
+        <div
+          className={cn(
+            "px-3 py-2 border-b border-sidebar-border flex items-center gap-2",
+            classNames?.flyoutHeader
+          )}
+        >
           {showBack && (
             <button
               type="button"
               onClick={onGoBack}
-              className="p-1 rounded hover:bg-sidebar-accent transition-colors"
+              className={cn(
+                "p-1 rounded hover:bg-sidebar-accent transition-colors",
+                classNames?.flyoutBackButton
+              )}
             >
               <ArrowLeft size={14} />
             </button>
@@ -72,7 +84,8 @@ export const FlyoutMenu = forwardRef<HTMLDivElement, FlyoutMenuProps>(
                     isActive &&
                       "bg-sidebar-primary text-sidebar-primary-foreground font-medium hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
                     item.disabled &&
-                      "opacity-50 cursor-not-allowed hover:bg-transparent"
+                      "opacity-50 cursor-not-allowed hover:bg-transparent",
+                    classNames?.menuItem
                   )}
                 >
                   <div className="flex items-center gap-2">
@@ -85,7 +98,10 @@ export const FlyoutMenu = forwardRef<HTMLDivElement, FlyoutMenuProps>(
                   </div>
                   <ChevronRight
                     size={14}
-                    className="shrink-0 text-sidebar-foreground/80"
+                    className={cn(
+                      "shrink-0 text-sidebar-foreground/80",
+                      classNames?.menuDisclosureIcon
+                    )}
                   />
                 </button>
               )
@@ -97,7 +113,8 @@ export const FlyoutMenu = forwardRef<HTMLDivElement, FlyoutMenuProps>(
                   key={item.path}
                   className={cn(
                     "flex items-center gap-2 px-3 py-2 text-sm",
-                    "text-sidebar-foreground/60 opacity-70 cursor-not-allowed"
+                    "text-sidebar-foreground/60 opacity-70 cursor-not-allowed",
+                    classNames?.menuItem
                   )}
                   aria-disabled="true"
                   title={`${item.title}${item.badge ? ` (${String(item.badge)})` : ""}`}
@@ -109,7 +126,9 @@ export const FlyoutMenu = forwardRef<HTMLDivElement, FlyoutMenuProps>(
                     })}
                   </span>
                   {showBadge && item.badge ? (
-                    <span className={badgeClasses}>{item.badge}</span>
+                    <span className={cn(badgeClasses, classNames?.menuBadge)}>
+                      {item.badge}
+                    </span>
                   ) : null}
                 </div>
               )
@@ -126,7 +145,8 @@ export const FlyoutMenu = forwardRef<HTMLDivElement, FlyoutMenuProps>(
                   "flex items-center gap-2 px-3 py-2 text-sm",
                   "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors",
                   isActive &&
-                    "bg-sidebar-primary text-sidebar-primary-foreground font-medium hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground"
+                    "bg-sidebar-primary text-sidebar-primary-foreground font-medium hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
+                  classNames?.menuItem
                 )}
               >
                 {item.icon && <item.icon size={16} />}
@@ -137,10 +157,12 @@ export const FlyoutMenu = forwardRef<HTMLDivElement, FlyoutMenuProps>(
                   fallback="truncate"
                 />
                 {showBadge && item.badge ? (
-                  <span className={badgeClasses}>{item.badge}</span>
+                  <span className={cn(badgeClasses, classNames?.menuBadge)}>
+                    {item.badge}
+                  </span>
                 ) : null}
                 {showHotkeys && item.hotkey && !isActive && (
-                  <kbd className={hotkeyClasses}>
+                  <kbd className={cn(hotkeyClasses, classNames?.menuHotkey)}>
                     {formatHotkey(item.hotkey)}
                   </kbd>
                 )}
