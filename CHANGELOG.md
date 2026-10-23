@@ -12,12 +12,44 @@ Package versions are currently maintained independently:
 
 - `kittle-core` — `0.6.0`
 - `kittle-adapters` — `0.7.0`
-- `kittle-ui` — `0.2.0`
+- `kittle-ui` — `0.2.1`
 - `testing` — private workspace package, `0.2.0`
 
 ## [Unreleased]
 
-## UI package `0.2.0` — 2026-10-19
+## UI package `0.2.1` — 2026-10-23
+
+### Added
+
+- Exported `WidthSize` type and `WIDTH_CLASSES` token map from
+  `kittle-ui/core/table` so external drawers and steppers can share the same
+  responsive sizing tokens instead of hardcoding Tailwind width classes.
+- Exported `getTableDrawerWidthClass(width?)` utility that resolves a
+  `WidthSize` key to its Tailwind class string, falling back to `"md"`.
+- Added `OperationContext<TData>` interface, passed as the optional second
+  argument to `BaseOperationConfig.handler`. Provides `operationType`,
+  `width`, `widthClass`, `displayMode`, and `rowData` at the call site so
+  handlers can forward design-system width tokens to any external UI (custom
+  drawers, steppers, deep-linked routes) without reading private internals.
+- `useOperationHandler` now builds and forwards an `OperationContext` on every
+  handler invocation — existing `handler(data?)` signatures continue to work
+  unchanged (additive second parameter).
+
+### Fixed
+
+- `width` configured on a `handler`-based operation was previously a silent
+  no-op. The resolved `widthClass` is now available via `context.widthClass`.
+
+### Internal
+
+- `WIDTH_CLASSES` and `WidthSize` moved from a private constant inside
+  `OperationModal.tsx` to the canonical `core/table/types.ts` module.
+  `OperationModal` now imports them from that single source of truth.
+
+### Compatibility
+
+- No breaking changes. All existing `handler`, `component`, and `api`
+  operation configurations continue to work without modification.
 
 ### Added
 

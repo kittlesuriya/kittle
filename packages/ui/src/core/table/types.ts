@@ -40,6 +40,78 @@ export interface QueryParams {
 export type DocDrawerWidth = "sm" | "md" | "lg" | "xl" | "wide" | "full"
 
 // =============================================================================
+// Width Token System (shared across DataTable, OperationModal, and external drawers)
+// =============================================================================
+
+/**
+ * Canonical width size keys for all DataTable sheet/dialog operations.
+ * Use `getTableDrawerWidthClass` to resolve these to Tailwind utility strings.
+ */
+export type WidthSize =
+  | "sm"
+  | "md"
+  | "lg"
+  | "xl"
+  | "wide"
+  | "full"
+  | "detailSm"
+  | "detailLg"
+
+/**
+ * Canonical Tailwind width class map for DataTable sheet/dialog sizing.
+ * Exported so external drawers and steppers can share the same design tokens
+ * instead of hardcoding their own responsive width classes.
+ *
+ * @example
+ * import { WIDTH_CLASSES } from "kittle-ui"
+ * const cls = WIDTH_CLASSES["xl"] // "sm:!max-w-6xl"
+ */
+export const WIDTH_CLASSES: Record<WidthSize, string> = {
+  sm: "sm:!max-w-sm",       // ~384px
+  md: "sm:!max-w-xl",       // ~576px
+  lg: "sm:!max-w-4xl",      // ~896px
+  xl: "sm:!max-w-6xl",      // ~1152px
+  wide: "sm:!max-w-[92vw] lg:!max-w-[84vw] xl:!max-w-[82vw] 2xl:!max-w-[78vw]",
+  full: "!w-screen !max-w-none",
+  detailSm: "w-full sm:!max-w-[420px] sm:!w-[420px]", // Small detail drawer 420px
+  detailLg: "w-full sm:!max-w-[600px] sm:!w-[600px]", // Large detail drawer 600px
+} as const
+
+/**
+ * Resolves a `WidthSize` key to its Tailwind width class string.
+ * Falls back to `"md"` when no width is specified.
+ *
+ * @example
+ * const cls = getTableDrawerWidthClass("full") // "!w-screen !max-w-none"
+ */
+export function getTableDrawerWidthClass(width?: WidthSize): string {
+  return WIDTH_CLASSES[width ?? "md"]
+}
+
+/**
+ * Context object passed as the second argument to `BaseOperationConfig.handler`.
+ * Gives the handler access to the resolved width token and layout metadata so
+ * external drawers/steppers don't need to hardcode their own sizing classes.
+ *
+ * @example
+ * handler: (data, ctx) => {
+ *   openDrawer({ widthClass: ctx?.widthClass })
+ * }
+ */
+export interface OperationContext<TData = unknown> {
+  /** The operation key (e.g. "add", "edit", "delete"). */
+  operationType: string
+  /** The raw width size as configured on the operation. */
+  width?: WidthSize
+  /** Resolved Tailwind class string for the configured width. */
+  widthClass: string
+  /** The display mode for this operation. */
+  displayMode?: DisplayMode
+  /** Row data, same as the first argument — included for convenience. */
+  rowData?: TData
+}
+
+// =============================================================================
 // Column Configuration Types
 // =============================================================================
 
@@ -244,7 +316,18 @@ export interface BaseOperationConfig<TData = unknown> {
   }
 
   /** Option 3: Custom function handler for client-side logic */
-  handler?: (data?: TData) => void | Promise<void>
+  handler?: (
+    data?: TData,
+    /**
+     * Operation context passed by DataTable. Provides the resolved `widthClass`
+     * and layout metadata so external drawers can consume design tokens without
+     * hardcoding their own Tailwind width strings.
+     *
+     * Optional — existing handlers that only accept `(data?)` continue to work
+     * unchanged (additive, fully backward-compatible).
+     */
+    context?: OperationContext<TData>
+  ) => void | Promise<void>
 
   /** Optional: Confirmation settings */
   confirmation?: {
@@ -258,7 +341,7 @@ export interface BaseOperationConfig<TData = unknown> {
   displayMode?: DisplayMode
 
   /** Width size for sheet/dialog layouts. */
-  width?: "sm" | "md" | "lg" | "xl" | "wide" | "full" | "detailSm" | "detailLg"
+  width?: WidthSize
 
   /** Label for buttons (e.g. "Add User") */
   label?: string

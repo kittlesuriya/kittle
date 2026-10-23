@@ -21,7 +21,9 @@ import type {
   BaseOperationConfig,
   DisplayMode,
   ModalType,
+  WidthSize,
 } from "../../../core/table/types"
+import { WIDTH_CLASSES } from "../../../core/table/types"
 import { getOperationIcon } from "../operationIcons"
 import {
   OperationAnalyticsProvider,
@@ -30,21 +32,6 @@ import {
 import { useModalDepth } from "../../ui/modal"
 import { cn } from "../../../core/cn"
 
-/**
- * Width classes for sheet/dialog sizing
- */
-const WIDTH_CLASSES = {
-  sm: "sm:!max-w-sm", // ~384px (fallback)
-  md: "sm:!max-w-xl", // ~576px
-  lg: "sm:!max-w-4xl", // ~896px
-  xl: "sm:!max-w-6xl", // ~1152px
-  wide: "sm:!max-w-[92vw] lg:!max-w-[84vw] xl:!max-w-[82vw] 2xl:!max-w-[78vw]",
-  full: "!w-screen !max-w-none",
-  detailSm: "w-full sm:!max-w-[420px] sm:!w-[420px]", // Small detail drawer 420px
-  detailLg: "w-full sm:!max-w-[600px] sm:!w-[600px]", // Large detail drawer 600px
-} as const
-
-type WidthSize = keyof typeof WIDTH_CLASSES
 
 interface OperationModalProps<TData> {
   open: boolean

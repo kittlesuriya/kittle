@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { extractEntityId, useUiRuntime } from "../../../core/runtime"
 import { validateOperation } from "../../../core/table/validateOperation"
-import type { BaseOperationConfig } from "../../../core/table/types"
+import type { BaseOperationConfig, OperationContext } from "../../../core/table/types"
+import { WIDTH_CLASSES } from "../../../core/table/types"
 import type { OperationAnalyticsMeta } from "../../../core/table/operationAnalytics"
 
 interface UseOperationHandlerOptions<TData> {
@@ -219,9 +220,17 @@ export function useOperationHandler<TData>({
     async (data?: TData) => {
       if (!hasHandler || !operation?.handler) return
 
+      const context: OperationContext<TData> = {
+        operationType: operationKey,
+        width: operation.width,
+        widthClass: WIDTH_CLASSES[operation.width ?? "md"],
+        displayMode: operation.displayMode ?? "sheet",
+        rowData: data,
+      }
+
       try {
         setIsExecuting(true)
-        await Promise.resolve(operation.handler(data))
+        await Promise.resolve(operation.handler(data, context))
         onSuccess?.()
       } catch (error) {
         const message = formatError(error, "Operation failed")
@@ -231,7 +240,7 @@ export function useOperationHandler<TData>({
         setIsExecuting(false)
       }
     },
-    [hasHandler, operation, onSuccess, formatError, notify]
+    [hasHandler, operation, operationKey, onSuccess, formatError, notify]
   )
 
   // Unified execute function
