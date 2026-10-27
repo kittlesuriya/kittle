@@ -23,6 +23,7 @@ interface MarqueeTextProps {
 /** Visible breathing room between loop copies; the slide step adds the same
  * gap so each pass still lands the next copy exactly where the first stood. */
 const COPY_GAP_PX = 48
+const MARQUEE_REST_MS = 5000
 
 /** Shared `matchMedia` handle: creating one list per instance is pure garbage
  * (the change listener still attaches per mounted instance, only while
@@ -39,8 +40,8 @@ function reducedMotionNow(): boolean {
 /**
  * Single-line label that loops overflowed text — two passes, then a rest —
  * while its menu item is hovered or keyboard-highlighted. Timing lives
- * entirely in CSS (no timers anywhere): this component only measures widths
- * (copy one's width vs the wrapper) and exposes them as custom properties.
+ * entirely in CSS (no timers anywhere): this component measures widths and
+ * exposes the animation metrics as custom properties.
  * Labels that fit render statically. `prefers-reduced-motion` falls back to
  * wrapping with no animation. The full label is always exposed via `title`;
  * the repeated copies are aria-hidden so readers hear it once.
@@ -60,6 +61,8 @@ export function MarqueeText({
   // reads) until the first hover/focus intent, then behave like eager ones.
   const [armed, setArmed] = useState(mode !== "lazy")
   const arm = () => setArmed(true)
+  const cycleMs = metrics.passMs * 2 + MARQUEE_REST_MS
+  const restPercent = (MARQUEE_REST_MS / 2 / cycleMs) * 100
 
   useLayoutEffect(() => {
     if (!armed) return
@@ -131,7 +134,9 @@ export function MarqueeText({
             {
               "--marquee-step": `${metrics.copyWidth + COPY_GAP_PX}px`,
               "--marquee-gap": `${COPY_GAP_PX}px`,
-              "--marquee-cycle": `calc(${metrics.passMs}ms * 2 + 5000ms)`,
+              "--marquee-cycle": `${cycleMs}ms`,
+              "--marquee-rest-start": `${restPercent}%`,
+              "--marquee-rest-end": `${100 - restPercent}%`,
             } as CSSProperties
           }
         >

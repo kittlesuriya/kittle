@@ -1,6 +1,6 @@
 {
   "name": "kittle-ui",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Reusable React UI for the application security and execution specification: data tables, schema forms, query builders, navigation, feedback, and UI primitives.",
   "keywords": [
     "kittle",
@@ -27,9 +27,12 @@
   },
   "homepage": "https://github.com/kittlesuriya/kittle/tree/main/packages/ui",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "styles.css"
+  ],
   "files": [
-    "dist"
+    "dist",
+    "styles.css"
   ],
   "publishConfig": {
     "access": "public"
@@ -45,6 +48,7 @@
     "test": "vitest run"
   },
   "exports": {
+    "./styles.css": "./styles.css",
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"

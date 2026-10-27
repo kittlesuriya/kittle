@@ -1,0 +1,22 @@
+.marquee-track {
+  gap: var(--marquee-gap);
+  transform: translateX(0);
+}
+
+.group:is(:hover, :focus-within, [data-highlighted]) .marquee-track {
+  animation: kittle-ui-marquee-scroll var(--marquee-cycle) infinite;
+  animation-timing-function: linear(
+    0,
+    0 var(--marquee-rest-start),
+    1 var(--marquee-rest-end),
+    1
+  );
+}
+
+@keyframes kittle-ui-marquee-scroll {
+  to {
+    transform: translateX(
+      calc(0px - var(--marquee-step) - var(--marquee-step))
+    );
+  }
+}

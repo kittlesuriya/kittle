@@ -106,6 +106,14 @@ Tailwind content sources include the installed package, e.g. Tailwind v4:
 @source "../node_modules/kittle-ui/dist";
 ```
 
+Import the package stylesheet once to enable marquee scrolling in sidebar
+labels and row-action labels. The animation runs while an item is hovered or
+keyboard-focused/highlighted, and resets to the start when that state ends:
+
+```ts
+import "kittle-ui/styles.css"
+```
+
 ### Styling internal parts
 
 Use `className` to style a component's outer element and `classNames` to
